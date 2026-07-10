@@ -1,0 +1,3152 @@
+
+FILE: frontend/app/globals.css
+
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@import "tailwindcss";
+
+:root {
+  --color-brand: #D4850A;
+  --color-brand-dark: #A0622A;
+  --color-brand-deep: #6B3318;
+  --color-gold: #F5C842;
+  --color-gold-muted: #D4A017;
+
+  --color-bg: #0D0400;
+  --color-bg-raised: #1C0A00;
+  --color-surface: #2D1200;
+  --color-surface-raised: #3B1A06;
+  --color-surface-hover: #4F240A;
+
+  --color-text-primary: #F9EDD8;
+  --color-text-secondary: #D4A872;
+  --color-text-muted: #8B6038;
+  --color-text-disabled: #5F3E22;
+
+  --color-border: rgba(212, 133, 10, 0.15);
+  --color-border-strong: rgba(212, 133, 10, 0.3);
+  --color-border-glow: rgba(212, 133, 10, 0.5);
+
+  --radius-sm: 0.375rem;
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  --font-playfair: "Playfair Display", Georgia, serif;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-inter);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-raised);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-dark);
+}
+
+.font-display {
+  font-family: var(--font-playfair);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-playfair);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+@layer components {
+
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border;
+    background: linear-gradient(145deg, rgba(45, 18, 0, 0.9) 0%, rgba(28, 10, 0, 0.95) 100%);
+    border-color: var(--color-border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(212, 133, 10, 0.1);
+  }
+
+  .glass-card::before {
+    content: "";
+    @apply absolute inset-0 pointer-events-none;
+    background: linear-gradient(145deg, rgba(212, 133, 10, 0.04) 0%, transparent 60%);
+  }
+
+  .brand-card {
+    @apply relative overflow-hidden rounded-xl border;
+    background: linear-gradient(145deg, rgba(45, 18, 0, 0.9) 0%, rgba(28, 10, 0, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    border-color: var(--color-border-strong);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 133, 10, 0.2), inset 0 1px 0 rgba(212, 133, 10, 0.15);
+  }
+
+  .stat-card {
+    @apply relative overflow-hidden rounded-xl border p-5 transition-all duration-250;
+    background: linear-gradient(145deg, rgba(45, 18, 0, 0.9) 0%, rgba(28, 10, 0, 0.95) 100%);
+    border-color: var(--color-border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(212, 133, 10, 0.1);
+  }
+
+  .stat-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(212, 133, 10, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm;
+    background: linear-gradient(135deg, #D4850A 0%, #A0622A 100%);
+    color: #FFF8ED;
+    box-shadow: 0 4px 16px rgba(212, 133, 10, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transition: all var(--transition-fast);
+    border: 1px solid rgba(212, 133, 10, 0.4);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #E8970F 0%, #B07030 100%);
+    box-shadow: 0 6px 24px rgba(212, 133, 10, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    @apply relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm;
+    background: rgba(45, 18, 0, 0.8);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-strong);
+    transition: all var(--transition-fast);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-glow);
+    box-shadow: 0 0 12px rgba(212, 133, 10, 0.15);
+  }
+
+  .btn-ghost {
+    @apply relative inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-sm;
+    color: var(--color-text-secondary);
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(212, 133, 10, 0.08);
+    color: var(--color-text-primary);
+    border-color: var(--color-border);
+  }
+
+  .btn-danger {
+    @apply relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    color: white;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+    transition: all var(--transition-fast);
+  }
+
+  .btn-danger:hover {
+    box-shadow: 0 6px 24px rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .form-input {
+    @apply w-full px-4 py-3 rounded-xl text-sm outline-none;
+    background: rgba(45, 18, 0, 0.8);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-fast);
+    font-family: var(--font-inter);
+  }
+
+  .form-input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .form-input:focus {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgba(212, 133, 10, 0.15), 0 0 12px rgba(212, 133, 10, 0.1);
+  }
+
+  .form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .form-select {
+    @apply w-full px-4 py-3 rounded-xl text-sm outline-none appearance-none;
+    background: rgba(45, 18, 0, 0.8);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-fast);
+    font-family: var(--font-inter);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B6038' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2.5rem;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium mb-1.5;
+    color: var(--color-text-secondary);
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-amber {
+    background: rgba(212, 133, 10, 0.15);
+    color: #D4850A;
+    border: 1px solid rgba(212, 133, 10, 0.25);
+  }
+
+  .badge-green {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22C55E;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .badge-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .badge-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+
+  .badge-gray {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+  }
+
+  .divider {
+    @apply w-full h-px;
+    background: linear-gradient(90deg, transparent, rgba(212, 133, 10, 0.2) 50%, transparent);
+  }
+
+  .section-heading {
+    font-family: var(--font-playfair);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+  }
+
+  .page-header {
+    @apply flex items-center justify-between mb-8;
+  }
+
+  .avatar {
+    @apply relative inline-flex items-center justify-center rounded-full font-semibold text-sm shrink-0;
+    background: linear-gradient(135deg, #D4850A, #6B3318);
+    color: #FFF8ED;
+  }
+
+  .status-pending {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(212, 133, 10, 0.15);
+    color: #D4850A;
+    border: 1px solid rgba(212, 133, 10, 0.25);
+  }
+
+  .status-accepted {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+
+  .status-preparing {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+
+  .status-served {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.25);
+  }
+
+  .status-completed {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(34, 197, 94, 0.15);
+    color: #22C55E;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .status-cancelled {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .table-available {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(34, 197, 94, 0.15);
+    color: #22C55E;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .table-occupied {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(212, 133, 10, 0.15);
+    color: #D4850A;
+    border: 1px solid rgba(212, 133, 10, 0.25);
+  }
+
+  .table-ordering {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+
+  .table-needs_waiter {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  .table-bill_requested {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(245, 200, 66, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 200, 66, 0.25);
+  }
+
+  .nav-item {
+    @apply relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+  }
+
+  .nav-item:hover {
+    background: rgba(212, 133, 10, 0.08);
+    color: var(--color-text-secondary);
+  }
+
+  .nav-item.active {
+    background: rgba(212, 133, 10, 0.12);
+    color: var(--color-brand);
+    border: 1px solid rgba(212, 133, 10, 0.2);
+    box-shadow: inset 0 1px 0 rgba(212, 133, 10, 0.1);
+  }
+
+  .nav-item.active::before {
+    content: "";
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full;
+    background: var(--color-brand);
+    box-shadow: 0 0 8px rgba(212, 133, 10, 0.6);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #F5C842 0%, #D4850A 50%, #A0622A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-ring {
+    box-shadow: 0 0 0 1px rgba(212, 133, 10, 0.3), 0 0 20px rgba(212, 133, 10, 0.2);
+  }
+
+  .skeleton {
+    @apply rounded-lg;
+    background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-raised) 50%, var(--color-surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .notif-dot {
+    @apply absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full;
+    background: #EF4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .text-secondary-c {
+    color: var(--color-text-secondary);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-raised {
+    background-color: var(--color-bg-raised);
+  }
+
+  .border-brand {
+    border-color: var(--color-border);
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .transition-250 {
+    transition-duration: 250ms;
+  }
+
+  .transition-fast {
+    transition: all var(--transition-fast);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+
+FILE: frontend/app/layout.jsx
+
+
+import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
+import { ToastProvider } from "@/components/ui/toast-provider";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  weight: ["400", "500"],
+});
+
+export const metadata = {
+  title: {
+    default: "SmartMenu AI",
+    template: "%s · SmartMenu AI",
+  },
+  description:
+    "Premium QR-based restaurant ordering and management platform. Digital menus, real-time orders, staff management — all in one place.",
+  keywords: ["restaurant", "menu", "QR code", "ordering", "POS", "hospitality"],
+  authors: [{ name: "SmartMenu AI" }],
+  creator: "SmartMenu AI",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#D4850A",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html
+      lang="en"
+      className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body>
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+
+
+FILE: frontend/app/page.jsx
+
+
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
+export default function RootPage() {
+  const { user, profile, employee, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (profile?.is_platform_admin) {
+      router.replace("/platform/dashboard");
+      return;
+    }
+
+    if (!profile?.onboarding_complete) {
+      router.replace("/onboarding");
+      return;
+    }
+
+    const role = employee?.role;
+    if (role === "owner" || role === "manager") {
+      router.replace("/dashboard");
+    } else if (role === "waiter") {
+      router.replace("/waiter");
+    } else {
+      router.replace("/onboarding");
+    }
+  }, [user, profile, employee, loading, router]);
+
+  return <LoadingScreen message="Preparing your workspace…" />;
+}
+
+
+FILE: frontend/components/(oldauth)/accept-invite/page.jsx
+
+
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { employeeApi, authApi } from "@/lib/api";
+import Link from "next/link";
+
+export default function AcceptInvitePage() {
+  const params = useSearchParams();
+  const token = params.get("token") ?? "";
+  const { user, login, register, refreshBusiness } = useAuth();
+  const router = useRouter();
+
+  const [stage, setStage] = useState("loading");
+  const [inviteData, setInviteData] = useState(null);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ password: "", confirmPassword: "" });
+
+  useEffect(() => {
+    if (!token) { setStage("invalid"); return; }
+    (async () => {
+      try {
+        const res = await employeeApi.validateInviteToken(token);
+        if (!res.valid) {
+          setStage("invalid");
+          setError(
+            res.reason === "expired"
+              ? "This invite link has expired."
+              : res.reason === "accepted"
+                ? "This invite has already been accepted."
+                : "This invite link is not valid."
+          );
+          return;
+        }
+        setInviteData(res);
+        setStage(user ? "ready" : "register");
+      } catch {
+        setStage("invalid");
+        setError("Failed to validate invite link. Please try again.");
+      }
+    })();
+  }, [token, user]);
+
+  const accept = async () => {
+    setStage("accepting");
+    try {
+      await employeeApi.acceptInvite(token);
+      await refreshBusiness();
+      setStage("done");
+    } catch (err) {
+      setError(err.message);
+      setStage("error");
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match."); return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters."); return;
+    }
+    setStage("accepting");
+    try {
+      await register({
+        username: inviteData.invitation.invited_email.split("@")[0],
+        email: inviteData.invitation.invited_email,
+        password: form.password,
+        fullName: inviteData.invitation.invited_name,
+      });
+      await employeeApi.acceptInvite(token);
+      await refreshBusiness();
+      setStage("done");
+    } catch (err) {
+      setError(err.message);
+      setStage("error");
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setStage("accepting");
+    try {
+      await login(inviteData.invitation.invited_email, form.password);
+      await employeeApi.acceptInvite(token);
+      await refreshBusiness();
+      setStage("done");
+    } catch (err) {
+      setError(err.message);
+      setStage("login");
+    }
+  };
+
+  const Card = ({ children }) => (
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center px-4 py-12"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div className="flex items-center gap-3 mb-10">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg,#D4850A,#6B3318)", boxShadow: "0 4px 16px rgba(212,133,10,.35)" }}
+        >🍺</div>
+        <span className="text-xl font-display font-bold text-gradient">SmartMenu AI</span>
+      </div>
+      <div className="w-full max-w-md glass-card p-7">{children}</div>
+    </div>
+  );
+
+  if (stage === "loading" || stage === "accepting") {
+    return (
+      <Card>
+        <div className="text-center py-4">
+          <div className="w-10 h-10 rounded-full border-2 border-amber-600/30 border-t-amber-500 animate-spin mx-auto mb-4" />
+          <p style={{ color: "#D4A872" }}>
+            {stage === "accepting" ? "Accepting invite…" : "Validating link…"}
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (stage === "invalid") {
+    return (
+      <Card>
+        <div className="text-center py-4">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+            Invalid invite link
+          </h2>
+          <p className="text-sm mb-6" style={{ color: "#8B6038" }}>
+            {error || "This link is not valid."}
+          </p>
+          <Link href="/login" className="btn-secondary">Back to sign in</Link>
+        </div>
+      </Card>
+    );
+  }
+
+  if (stage === "done") {
+    const role = inviteData?.invitation?.role;
+    return (
+      <Card>
+        <div className="text-center py-4">
+          <div className="text-5xl mb-4">🎉</div>
+          <h2 className="text-xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+            You&apos;re in!
+          </h2>
+          <p className="text-sm mb-1" style={{ color: "#D4A872" }}>
+            You&apos;ve joined <strong style={{ color: "#F9EDD8" }}>{inviteData?.business?.business_name}</strong>
+          </p>
+          <p className="text-sm mb-7" style={{ color: "#8B6038" }}>
+            as a <strong style={{ color: "#D4850A" }}>{role}</strong>.
+          </p>
+          <button
+            className="btn-primary w-full h-11"
+            onClick={() => router.replace(role === "waiter" ? "/waiter" : "/dashboard")}
+          >
+            Go to my dashboard →
+          </button>
+        </div>
+      </Card>
+    );
+  }
+
+  const InviteInfo = () => (
+    <div
+      className="p-4 rounded-xl border mb-6"
+      style={{ background: "rgba(212,133,10,0.06)", borderColor: "rgba(212,133,10,0.2)" }}
+    >
+      <p className="text-xs uppercase tracking-wide font-semibold mb-2" style={{ color: "#D4850A" }}>
+        Invitation details
+      </p>
+      <p className="text-sm font-medium" style={{ color: "#F9EDD8" }}>
+        {inviteData?.business?.business_name}
+      </p>
+      <p className="text-xs" style={{ color: "#8B6038" }}>
+        Role: <span style={{ color: "#D4A872" }}>{inviteData?.invitation?.role}</span>
+        {inviteData?.branch && (
+          <> · Branch: <span style={{ color: "#D4A872" }}>{inviteData.branch.branch_name}</span></>
+        )}
+      </p>
+    </div>
+  );
+
+  const ErrorBar = () =>
+    error ? (
+      <div className="px-4 py-3 rounded-xl mb-4 text-sm border"
+        style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)", color: "#f87171" }}>
+        {error}
+      </div>
+    ) : null;
+
+  if (stage === "ready" || (stage === "error" && user)) {
+    return (
+      <Card>
+        <h2 className="text-2xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>Accept invite</h2>
+        <p className="text-sm mb-5" style={{ color: "#8B6038" }}>
+          Signed in as <strong style={{ color: "#D4A872" }}>{user?.email}</strong>
+        </p>
+        <InviteInfo />
+        <ErrorBar />
+        <button className="btn-primary w-full h-11" onClick={accept}>
+          Accept &amp; join →
+        </button>
+      </Card>
+    );
+  }
+
+  if (stage === "register") {
+    return (
+      <Card>
+        <h2 className="text-2xl font-display font-bold mb-1" style={{ color: "#F9EDD8" }}>Create your account</h2>
+        <p className="text-sm mb-5" style={{ color: "#8B6038" }}>
+          Set a password for <strong style={{ color: "#D4A872" }}>{inviteData?.invitation?.invited_email}</strong>
+        </p>
+        <InviteInfo />
+        <ErrorBar />
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="8+ characters" minLength={8} required
+              value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
+          </div>
+          <div>
+            <label className="form-label">Confirm password</label>
+            <input className="form-input" type="password" placeholder="••••••••" required
+              value={form.confirmPassword} onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))} />
+          </div>
+          <button type="submit" className="btn-primary w-full h-11">Create account &amp; join →</button>
+        </form>
+        <p className="text-center text-xs mt-4" style={{ color: "#8B6038" }}>
+          Already have an account?{" "}
+          <button className="font-medium" style={{ color: "#D4850A" }} onClick={() => setStage("login")}>
+            Sign in instead
+          </button>
+        </p>
+      </Card>
+    );
+  }
+
+  if (stage === "login") {
+    return (
+      <Card>
+        <h2 className="text-2xl font-display font-bold mb-1" style={{ color: "#F9EDD8" }}>Sign in to accept</h2>
+        <p className="text-sm mb-5" style={{ color: "#8B6038" }}>
+          Use the password for <strong style={{ color: "#D4A872" }}>{inviteData?.invitation?.invited_email}</strong>
+        </p>
+        <InviteInfo />
+        <ErrorBar />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="Your password" required
+              value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
+          </div>
+          <button type="submit" className="btn-primary w-full h-11">Sign in &amp; join →</button>
+        </form>
+      </Card>
+    );
+  }
+
+  return null;
+}
+
+
+FILE: frontend/components/(oldauth)/layout.jsx
+
+
+export const metadata = {
+  title: "Sign In",
+};
+
+export default function AuthLayout({ children }) {
+  return (
+    <div className="min-h-dvh flex" style={{ background: "var(--color-bg)" }}>
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] flex-col relative overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(160deg, #3B1A06 0%, #1C0A00 40%, #0D0400 100%)",
+          }}
+        />
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse, rgba(212,133,10,0.18) 0%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+        />
+        <div
+          className="absolute top-0 inset-x-0 h-1 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, #D4850A 40%, #F5C842 60%, #D4850A 80%, transparent)",
+            boxShadow: "0 0 20px rgba(212,133,10,0.6)",
+          }}
+        />
+
+        <div className="relative z-10 flex flex-col h-full p-10">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+              style={{
+                background: "linear-gradient(135deg, #D4850A, #6B3318)",
+                boxShadow: "0 4px 16px rgba(212,133,10,0.3)",
+              }}
+            >
+              🍺
+            </div>
+            <span
+              className="text-xl font-display font-bold"
+              style={{ color: "#F9EDD8" }}
+            >
+              SmartMenu AI
+            </span>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-center max-w-sm">
+            <p
+              className="text-xs font-semibold tracking-widest uppercase mb-4"
+              style={{ color: "#D4850A" }}
+            >
+              Premium Hospitality Platform
+            </p>
+            <h2
+              className="text-4xl xl:text-5xl font-display font-bold leading-tight mb-6"
+              style={{ color: "#F9EDD8" }}
+            >
+              The smarter way to run your restaurant
+            </h2>
+            <p className="text-base leading-relaxed" style={{ color: "#8B6038" }}>
+              QR menus, live orders, waiter calls, and staff management — all
+              beautifully unified for your team and your guests.
+            </p>
+
+            <ul className="mt-8 space-y-3">
+              {[
+                "Digital menus with QR codes per table",
+                "Real-time orders and waiter alerts",
+                "Multi-branch staff management",
+                "Revenue reports and insights",
+              ].map((feat) => (
+                <li key={feat} className="flex items-center gap-3">
+                  <span
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                    style={{
+                      background: "rgba(212,133,10,0.2)",
+                      color: "#D4850A",
+                      border: "1px solid rgba(212,133,10,0.3)",
+                    }}
+                  >
+                    ✓
+                  </span>
+                  <span className="text-sm" style={{ color: "#D4A872" }}>
+                    {feat}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-xs" style={{ color: "#5F3E22" }}>
+            © {new Date().getFullYear()} SmartMenu AI · Built for hospitality
+          </p>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative overflow-auto">
+        <div className="lg:hidden flex items-center gap-3 mb-10">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, #D4850A, #6B3318)",
+              boxShadow: "0 4px 16px rgba(212,133,10,0.3)",
+            }}
+          >
+            🍺
+          </div>
+          <span
+            className="text-lg font-display font-bold"
+            style={{ color: "#F9EDD8" }}
+          >
+            SmartMenu AI
+          </span>
+        </div>
+
+        <div
+          className="lg:hidden absolute top-0 inset-x-0 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(212,133,10,0.3), transparent)",
+          }}
+        />
+
+        <div className="w-full max-w-md">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+
+FILE: frontend/components/(oldauth)/login/page.jsx
+
+
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+
+export default function LoginPage() {
+  const { login, loading } = useAuth();
+  const router = useRouter();
+
+  const [form, setForm] = useState({ identifier: "", password: "" });
+  const [error, setError] = useState("");
+  const [showPass, setShowPass] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await login(form.identifier, form.password);
+      router.replace("/");
+    } catch (err) {
+      setError(err.message || "Invalid credentials. Please try again.");
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+          Welcome back
+        </h1>
+        <p className="text-sm" style={{ color: "#8B6038" }}>
+          Sign in to your SmartMenu workspace
+        </p>
+      </div>
+
+      {error && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm border"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            borderColor: "rgba(239,68,68,0.25)",
+            color: "#f87171",
+          }}
+        >
+          <span className="text-lg">⚠</span>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="form-label">Email or username</label>
+          <input
+            className="form-input"
+            type="text"
+            placeholder="your@email.com"
+            value={form.identifier}
+            onChange={(e) => setForm((f) => ({ ...f, identifier: e.target.value }))}
+            required
+            autoComplete="username"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="form-label mb-0">Password</label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium transition-colors"
+              style={{ color: "#D4850A" }}
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
+            <input
+              className="form-input pr-12"
+              type={showPass ? "text" : "password"}
+              placeholder="••••••••"
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              required
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium transition-colors"
+              style={{ color: "#8B6038" }}
+            >
+              {showPass ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn-primary w-full h-12 text-base mt-2"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              Signing in…
+            </span>
+          ) : (
+            "Sign in"
+          )}
+        </button>
+      </form>
+
+      <div className="flex items-center gap-4 my-6">
+        <div className="divider flex-1" />
+        <span className="text-xs" style={{ color: "#5F3E22" }}>
+          or
+        </span>
+        <div className="divider flex-1" />
+      </div>
+
+      <p className="text-center text-sm" style={{ color: "#8B6038" }}>
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/register"
+          className="font-semibold transition-colors"
+          style={{ color: "#D4850A" }}
+        >
+          Create one
+        </Link>
+      </p>
+
+      <p className="text-center text-xs mt-4" style={{ color: "#4F240A" }}>
+        Platform admin?{" "}
+        <Link
+          href="/setup-platform-master"
+          className="transition-colors"
+          style={{ color: "#6B3318" }}
+        >
+          Set up master account
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+
+FILE: frontend/components/(oldauth)/onboarding/page.jsx
+
+
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { businessApi } from "@/lib/api";
+
+const BUSINESS_TYPES = [
+  { value: "restaurant", label: "Restaurant", icon: "🍽️" },
+  { value: "bar",        label: "Bar",        icon: "🍺" },
+  { value: "cafe",       label: "Café",        icon: "☕" },
+  { value: "lounge",     label: "Lounge",     icon: "🛋️" },
+  { value: "club",       label: "Club",       icon: "🎵" },
+];
+
+const CURRENCIES = [
+  { code: "USD", symbol: "$", label: "US Dollar" },
+  { code: "EUR", symbol: "€", label: "Euro" },
+  { code: "GBP", symbol: "£", label: "British Pound" },
+  { code: "ZMW", symbol: "K",  label: "Zambian Kwacha" },
+  { code: "KES", symbol: "KSh", label: "Kenyan Shilling" },
+  { code: "ZAR", symbol: "R",  label: "South African Rand" },
+  { code: "NGN", symbol: "₦",  label: "Nigerian Naira" },
+  { code: "GHS", symbol: "₵",  label: "Ghanaian Cedi" },
+];
+
+const STEPS = [
+  { id: 1, label: "Business type" },
+  { id: 2, label: "Basic info" },
+  { id: 3, label: "Tables & branch" },
+  { id: 4, label: "Done" },
+];
+
+export default function OnboardingPage() {
+  const { user, profile, refreshBusiness } = useAuth();
+  const router = useRouter();
+
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    businessType: "",
+    businessName: "",
+    phone: "",
+    address: "",
+    city: "",
+    country: "",
+    currency: "USD",
+    serviceCharge: "",
+    branchName: "Main Branch",
+    numberOfTables: "5",
+  });
+
+  const set = (field, value) =>
+    setForm((f) => ({ ...f, [field]: value }));
+
+  const handleFinish = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await businessApi.createBusinessWithBranchAndTables({
+        businessName: form.businessName,
+        businessType: form.businessType,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        country: form.country,
+        currency: form.currency,
+        branchName: form.branchName,
+        numberOfTables: parseInt(form.numberOfTables) || 5,
+      });
+      await businessApi.updateOnboardingStep(3, true);
+      await refreshBusiness();
+      setStep(4);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToDashboard = async () => {
+    await refreshBusiness();
+    router.replace("/dashboard");
+  };
+
+  const stepDone = step === 4;
+
+  return (
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center px-4 py-12"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div className="flex items-center gap-3 mb-10">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, #D4850A, #6B3318)",
+            boxShadow: "0 4px 16px rgba(212,133,10,0.35)",
+          }}
+        >
+          🍺
+        </div>
+        <span className="text-xl font-display font-bold text-gradient">
+          SmartMenu AI
+        </span>
+      </div>
+
+      {!stepDone && (
+        <div className="flex items-center gap-2 mb-8">
+          {STEPS.slice(0, 3).map((s, i) => (
+            <div key={s.id} className="flex items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                style={{
+                  background:
+                    step > s.id
+                      ? "#22c55e"
+                      : step === s.id
+                      ? "linear-gradient(135deg, #D4850A, #A0622A)"
+                      : "rgba(45,18,0,0.8)",
+                  color: step >= s.id ? "white" : "#5F3E22",
+                  border:
+                    step === s.id
+                      ? "2px solid rgba(212,133,10,0.5)"
+                      : "2px solid rgba(107,51,24,0.3)",
+                  boxShadow: step === s.id ? "0 0 12px rgba(212,133,10,0.4)" : "none",
+                }}
+              >
+                {step > s.id ? "✓" : s.id}
+              </div>
+              {i < 2 && (
+                <div
+                  className="w-8 h-0.5 rounded-full"
+                  style={{
+                    background: step > s.id ? "#22c55e" : "rgba(107,51,24,0.3)",
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="w-full max-w-md glass-card p-7">
+        {error && (
+          <div
+            className="mb-5 px-4 py-3 rounded-xl text-sm border"
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              borderColor: "rgba(239,68,68,0.25)",
+              color: "#f87171",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="animate-fade-in">
+            <h2 className="text-2xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+              What type of venue?
+            </h2>
+            <p className="text-sm mb-6" style={{ color: "#8B6038" }}>
+              This helps us set up the right defaults for your menu.
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {BUSINESS_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => set("businessType", t.value)}
+                  className="p-4 rounded-xl border text-left transition-all duration-200"
+                  style={{
+                    background:
+                      form.businessType === t.value
+                        ? "rgba(212,133,10,0.12)"
+                        : "rgba(45,18,0,0.5)",
+                    borderColor:
+                      form.businessType === t.value
+                        ? "rgba(212,133,10,0.5)"
+                        : "rgba(107,51,24,0.3)",
+                    boxShadow:
+                      form.businessType === t.value
+                        ? "0 0 12px rgba(212,133,10,0.2)"
+                        : "none",
+                  }}
+                >
+                  <div className="text-2xl mb-2">{t.icon}</div>
+                  <div
+                    className="text-sm font-semibold"
+                    style={{
+                      color:
+                        form.businessType === t.value ? "#D4850A" : "#D4A872",
+                    }}
+                  >
+                    {t.label}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              className="btn-primary w-full h-11"
+              disabled={!form.businessType}
+              onClick={() => setStep(2)}
+            >
+              Continue →
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="animate-fade-in space-y-4">
+            <div>
+              <h2 className="text-2xl font-display font-bold mb-1" style={{ color: "#F9EDD8" }}>
+                Tell us about your business
+              </h2>
+              <p className="text-sm mb-5" style={{ color: "#8B6038" }}>
+                This appears on your digital menu and receipts.
+              </p>
+            </div>
+
+            <div>
+              <label className="form-label">Business name *</label>
+              <input
+                className="form-input"
+                placeholder="The Golden Lion Bar"
+                value={form.businessName}
+                onChange={(e) => set("businessName", e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label">Phone</label>
+              <input
+                className="form-input"
+                placeholder="+260 97 123 4567"
+                value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="form-label">City</label>
+                <input
+                  className="form-input"
+                  placeholder="Lusaka"
+                  value={form.city}
+                  onChange={(e) => set("city", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="form-label">Country</label>
+                <input
+                  className="form-input"
+                  placeholder="Zambia"
+                  value={form.country}
+                  onChange={(e) => set("country", e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="form-label">Currency</label>
+              <select
+                className="form-select"
+                value={form.currency}
+                onChange={(e) => set("currency", e.target.value)}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.symbol} — {c.label} ({c.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button className="btn-secondary flex-1 h-11" onClick={() => setStep(1)}>
+                ← Back
+              </button>
+              <button
+                className="btn-primary flex-1 h-11"
+                disabled={!form.businessName}
+                onClick={() => setStep(3)}
+              >
+                Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="animate-fade-in space-y-4">
+            <div>
+              <h2 className="text-2xl font-display font-bold mb-1" style={{ color: "#F9EDD8" }}>
+                Set up your first branch
+              </h2>
+              <p className="text-sm mb-5" style={{ color: "#8B6038" }}>
+                We&apos;ll generate QR codes for each table automatically.
+              </p>
+            </div>
+
+            <div>
+              <label className="form-label">Branch name</label>
+              <input
+                className="form-input"
+                placeholder="Main Branch"
+                value={form.branchName}
+                onChange={(e) => set("branchName", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="form-label">Number of tables</label>
+              <input
+                className="form-input"
+                type="number"
+                min="1"
+                max="100"
+                placeholder="5"
+                value={form.numberOfTables}
+                onChange={(e) => set("numberOfTables", e.target.value)}
+              />
+              <p className="text-xs mt-1.5" style={{ color: "#5F3E22" }}>
+                You can add or remove tables anytime from your dashboard.
+              </p>
+            </div>
+
+            <div
+              className="p-4 rounded-xl border"
+              style={{
+                background: "rgba(212,133,10,0.06)",
+                borderColor: "rgba(212,133,10,0.2)",
+              }}
+            >
+              <p className="text-sm font-semibold mb-1" style={{ color: "#D4850A" }}>
+                📌 What we&apos;ll create:
+              </p>
+              <ul className="space-y-1">
+                {[
+                  `Business: ${form.businessName || "Your Business"}`,
+                  `Branch: ${form.branchName}`,
+                  `${form.numberOfTables || 5} tables with QR codes`,
+                  "Default menu settings",
+                ].map((item) => (
+                  <li key={item} className="text-xs flex items-center gap-2" style={{ color: "#D4A872" }}>
+                    <span style={{ color: "#22c55e" }}>✓</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button className="btn-secondary flex-1 h-11" onClick={() => setStep(2)}>
+                ← Back
+              </button>
+              <button
+                className="btn-primary flex-1 h-11"
+                disabled={loading}
+                onClick={handleFinish}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Setting up…
+                  </span>
+                ) : (
+                  "Finish setup →"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="text-center animate-fade-in py-4">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl"
+              style={{
+                background: "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(21,128,61,0.2))",
+                border: "2px solid rgba(34,197,94,0.4)",
+                boxShadow: "0 0 20px rgba(34,197,94,0.2)",
+              }}
+            >
+              🎉
+            </div>
+            <h2
+              className="text-2xl font-display font-bold mb-2"
+              style={{ color: "#F9EDD8" }}
+            >
+              You&apos;re all set!
+            </h2>
+            <p className="text-sm mb-2" style={{ color: "#D4A872" }}>
+              <strong style={{ color: "#F9EDD8" }}>{form.businessName}</strong> is ready.
+            </p>
+            <p className="text-sm mb-7" style={{ color: "#8B6038" }}>
+              Your first branch and {form.numberOfTables} tables have been created with QR
+              codes. Time to build your menu!
+            </p>
+            <button className="btn-primary w-full h-12 text-base" onClick={goToDashboard}>
+              Go to dashboard →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+FILE: frontend/components/(oldauth)/register/page.jsx
+
+
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+
+export default function RegisterPage() {
+  const { register, loading } = useAuth();
+  const router = useRouter();
+
+  const [step, setStep] = useState(1);
+  const [accountType] = useState("business_owner");
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    try {
+      await register({
+        username: form.email.split("@")[0] + "_" + Date.now().toString(36),
+        email: form.email,
+        password: form.password,
+        fullName: form.fullName,
+        accountType: accountType ?? "business_owner",
+      });
+      router.replace("/onboarding");
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+          {step === 1 ? "Create your account" : "Your details"}
+        </h1>
+        <p className="text-sm" style={{ color: "#8B6038" }}>
+          {step === 1
+            ? "Start your SmartMenu journey"
+            : "Almost there — fill in your info"}
+        </p>
+      </div>
+
+      {step === 1 && (
+        <div className="space-y-4 animate-slide-up">
+          <p className="text-sm font-medium mb-3" style={{ color: "#D4A872" }}>
+            I want to:
+          </p>
+
+          <button
+            onClick={() => setStep(2)}
+            className="w-full text-left p-5 rounded-xl border transition-all duration-200 group"
+            style={{
+              background: "rgba(45,18,0,0.7)",
+              borderColor: "rgba(212,133,10,0.3)",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "rgba(212,133,10,0.6)";
+              e.currentTarget.style.boxShadow = "0 6px 28px rgba(212,133,10,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "rgba(212,133,10,0.3)";
+              e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.3)";
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, rgba(212,133,10,0.2), rgba(107,51,24,0.2))",
+                  border: "1px solid rgba(212,133,10,0.2)",
+                }}
+              >
+                🏪
+              </div>
+              <div>
+                <p className="font-semibold mb-1" style={{ color: "#F9EDD8" }}>
+                  Manage a restaurant or bar
+                </p>
+                <p className="text-sm" style={{ color: "#8B6038" }}>
+                  Set up menus, tables, staff, and track orders for your business
+                </p>
+              </div>
+              <div className="ml-auto" style={{ color: "#D4850A" }}>→</div>
+            </div>
+          </button>
+
+          <div
+            className="p-4 rounded-xl border text-sm"
+            style={{
+              background: "rgba(29,12,0,0.5)",
+              borderColor: "rgba(107,51,24,0.3)",
+              color: "#8B6038",
+            }}
+          >
+            <strong className="text-amber-600">Employee?</strong> Ask your manager to send
+            you an invite link. You&apos;ll register through that link.
+          </div>
+
+          <p className="text-center text-sm pt-2" style={{ color: "#8B6038" }}>
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold" style={{ color: "#D4850A" }}>
+              Sign in
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="animate-slide-up">
+          <button
+            onClick={() => setStep(1)}
+            className="flex items-center gap-2 text-sm mb-6 transition-colors"
+            style={{ color: "#8B6038" }}
+          >
+            ← Back
+          </button>
+
+          {error && (
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm border"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                borderColor: "rgba(239,68,68,0.25)",
+                color: "#f87171",
+              }}
+            >
+              <span>⚠</span> {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="form-label">Full name</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="Jane Smith"
+                value={form.fullName}
+                onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Email address</label>
+              <input
+                className="form-input"
+                type="email"
+                placeholder="jane@yourrestaurant.com"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Password</label>
+              <div className="relative">
+                <input
+                  className="form-input pr-12"
+                  type={showPass ? "text" : "password"}
+                  placeholder="8+ characters"
+                  value={form.password}
+                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                  required
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs"
+                  style={{ color: "#8B6038" }}
+                >
+                  {showPass ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label">Confirm password</label>
+              <input
+                className="form-input"
+                type="password"
+                placeholder="••••••••"
+                value={form.confirmPassword}
+                onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                required
+              />
+            </div>
+
+            {form.password.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex gap-1">
+                  {[8, 12, 16].map((threshold, i) => (
+                    <div
+                      key={i}
+                      className="h-1 flex-1 rounded-full transition-colors duration-300"
+                      style={{
+                        background:
+                          form.password.length >= threshold
+                            ? i === 0
+                              ? "#ef4444"
+                              : i === 1
+                              ? "#D4850A"
+                              : "#22c55e"
+                            : "rgba(255,255,255,0.08)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs" style={{ color: "#5F3E22" }}>
+                  {form.password.length < 8
+                    ? "Too short"
+                    : form.password.length < 12
+                    ? "Weak"
+                    : form.password.length < 16
+                    ? "Good"
+                    : "Strong"}
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn-primary w-full h-12 text-base mt-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Creating account…
+                </span>
+              ) : (
+                "Create account →"
+              )}
+            </button>
+
+            <p className="text-center text-xs pt-2" style={{ color: "#5F3E22" }}>
+              By registering you agree to our{" "}
+              <Link href="/terms" className="underline" style={{ color: "#8B6038" }}>
+                Terms of Service
+              </Link>
+            </p>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+FILE: frontend/components/(oldauth)/setup-platform-master/page.jsx
+
+
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { platformApi, setToken } from "@/lib/api";
+import Link from "next/link";
+
+export default function SetupPlatformMasterPage() {
+  const router = useRouter();
+  const [form, setForm] = useState({ email: "", password: "", fullName: "", confirmPassword: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (form.password !== form.confirmPassword) { setError("Passwords do not match."); return; }
+    if (form.password.length < 8) { setError("Password must be at least 8 characters."); return; }
+
+    setLoading(true);
+    try {
+      const res = await platformApi.setupPlatformMaster({
+        email: form.email,
+        password: form.password,
+        fullName: form.fullName,
+      });
+      if (res.token) setToken(res.token);
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center px-4 py-12"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div className="flex items-center gap-3 mb-10">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg,#D4850A,#6B3318)", boxShadow: "0 4px 16px rgba(212,133,10,.35)" }}
+        >🍺</div>
+        <span className="text-xl font-display font-bold text-gradient">SmartMenu AI</span>
+      </div>
+
+      <div className="w-full max-w-md glass-card p-7">
+        {done ? (
+          <div className="text-center py-4 animate-fade-in">
+            <div className="text-5xl mb-5">🛡️</div>
+            <h2 className="text-2xl font-display font-bold mb-2" style={{ color: "#F9EDD8" }}>
+              Platform master created!
+            </h2>
+            <p className="text-sm mb-7" style={{ color: "#8B6038" }}>
+              You now have full platform admin access. You&apos;re logged in automatically.
+            </p>
+            <button
+              className="btn-primary w-full h-11"
+              onClick={() => router.replace("/platform/dashboard")}
+            >
+              Go to platform dashboard →
+            </button>
+          </div>
+        ) : (
+          <>
+            <div
+              className="p-3 rounded-xl border mb-5 text-xs"
+              style={{
+                background: "rgba(245,200,66,0.06)",
+                borderColor: "rgba(245,200,66,0.2)",
+                color: "#D4A017",
+              }}
+            >
+              ⚠️ This page creates the top-level platform administrator. Only the designated
+              platform owner should complete this step.
+            </div>
+
+            <h2 className="text-2xl font-display font-bold mb-1" style={{ color: "#F9EDD8" }}>
+              Platform master setup
+            </h2>
+            <p className="text-sm mb-6" style={{ color: "#8B6038" }}>
+              One-time configuration for platform administrators.
+            </p>
+
+            {error && (
+              <div className="px-4 py-3 rounded-xl mb-4 text-sm border"
+                style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)", color: "#f87171" }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="form-label">Full name</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="Platform Owner"
+                  value={form.fullName}
+                  onChange={(e) => setForm(f => ({ ...f, fullName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Email address</label>
+                <input
+                  className="form-input"
+                  type="email"
+                  placeholder="admin@smartmenu.ai"
+                  value={form.email}
+                  onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label">Password</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  placeholder="Strong password (8+ chars)"
+                  value={form.password}
+                  onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
+                  required
+                  minLength={8}
+                />
+              </div>
+              <div>
+                <label className="form-label">Confirm password</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-primary w-full h-11" disabled={loading}>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Setting up…
+                  </span>
+                ) : (
+                  "Create platform master"
+                )}
+              </button>
+            </form>
+
+            <p className="text-center text-xs mt-4" style={{ color: "#5F3E22" }}>
+              <Link href="/login" style={{ color: "#8B6038" }}>← Back to sign in</Link>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+FILE: frontend/components/layout/owner-sidebar.jsx
+
+
+"use client";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { initials } from "@/lib/utils";
+import { useState } from "react";
+
+const NAV_ITEMS = [
+  { href: "/dashboard",          icon: "⊞",  label: "Dashboard" },
+  { href: "/menu",               icon: "📋", label: "Menu" },
+  { href: "/tables",             icon: "🪑", label: "Tables" },
+  { href: "/orders",             icon: "🧾", label: "Orders" },
+  { href: "/employees",          icon: "👥", label: "Employees",       roles: ["owner"] },
+  { href: "/reports",            icon: "📊", label: "Reports" },
+  { href: "/menu-customization", icon: "🎨", label: "Customise Menu",  roles: ["owner"] },
+  { href: "/ads",                icon: "📣", label: "Advertising",     roles: ["owner"] },
+  { href: "/settings",           icon: "⚙",  label: "Settings",        roles: ["owner"] },
+];
+
+export function OwnerSidebar({ role }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, employee, business, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.roles || item.roles.includes(role)
+  );
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
+
+  return (
+    <aside
+      className="relative flex flex-col shrink-0 h-dvh sticky top-0 overflow-hidden transition-all duration-300"
+      style={{
+        width: collapsed ? "72px" : "240px",
+        background: "linear-gradient(180deg, #1C0A00 0%, #0D0400 100%)",
+        borderRight: "1px solid rgba(212,133,10,0.12)",
+      }}
+    >
+      <div
+        className="absolute top-0 inset-x-0 pointer-events-none z-10"
+        style={{ height: "120px" }}
+        aria-hidden
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "3px",
+            background: "linear-gradient(90deg, transparent 0%, #F5C842 30%, #D4850A 60%, transparent 100%)",
+            boxShadow: "0 0 16px rgba(212,133,10,0.7), 0 0 40px rgba(212,133,10,0.3)",
+          }}
+        />
+        {[18, 42, 72, 108, 148, 190].map((left, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              top: "3px",
+              left: `${left}px`,
+              width: i % 2 === 0 ? "2px" : "3px",
+              height: `${16 + (i % 3) * 12}px`,
+              borderRadius: "0 0 99px 99px",
+              background: i % 3 === 0 ? "#F5C842" : "#D4850A",
+              opacity: 0.7,
+              boxShadow: `0 0 6px ${i % 3 === 0 ? "rgba(245,200,66,0.5)" : "rgba(212,133,10,0.5)"}`,
+            }}
+          />
+        ))}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            inset: 0,
+            background: "radial-gradient(ellipse at 50% 0%, rgba(212,133,10,0.12) 0%, transparent 70%)",
+          }}
+        />
+      </div>
+
+      <div
+        className="relative z-20 flex items-center px-4 pt-8 pb-4"
+        style={{ minHeight: "80px" }}
+      >
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base"
+          style={{
+            background: "linear-gradient(135deg, #D4850A, #6B3318)",
+            boxShadow: "0 4px 12px rgba(212,133,10,0.35)",
+          }}
+        >
+          🍺
+        </div>
+        {!collapsed && (
+          <div className="ml-3 min-w-0">
+            <p className="text-sm font-display font-bold truncate" style={{ color: "#F9EDD8" }}>
+              {business?.business_name ?? "SmartMenu AI"}
+            </p>
+            <p className="text-xs truncate capitalize" style={{ color: "#8B6038" }}>
+              {role}
+            </p>
+          </div>
+        )}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="ml-auto shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+          style={{
+            color: "#5F3E22",
+            background: "rgba(45,18,0,0.6)",
+            border: "1px solid rgba(107,51,24,0.3)",
+          }}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span style={{ fontSize: "10px" }}>{collapsed ? "▶" : "◀"}</span>
+        </button>
+      </div>
+
+      <div className="divider mx-3 mb-2" />
+
+      <nav className="flex-1 overflow-y-auto scrollbar-hide px-2 space-y-0.5 py-2">
+        {visibleItems.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-item ${active ? "active" : ""}`}
+              title={collapsed ? item.label : undefined}
+            >
+              <span className="text-base w-5 text-center shrink-0">{item.icon}</span>
+              {!collapsed && (
+                <span className="truncate text-sm">{item.label}</span>
+              )}
+              {!collapsed && item.badge != null && item.badge > 0 && (
+                <span
+                  className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: "rgba(212,133,10,0.2)", color: "#D4850A" }}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="divider mx-3 mt-2 mb-3" />
+
+      <div className="px-3 pb-5 space-y-1">
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${collapsed ? "justify-center" : ""}`}
+        >
+          <div
+            className="avatar w-8 h-8 text-xs shrink-0"
+            style={{ boxShadow: "0 0 10px rgba(212,133,10,0.2)" }}
+          >
+            {initials(employee?.full_name ?? user?.email ?? "U")}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold truncate" style={{ color: "#D4A872" }}>
+                {employee?.full_name ?? user?.email}
+              </p>
+              <p className="text-xs truncate capitalize" style={{ color: "#5F3E22" }}>
+                {employee?.role ?? "user"}
+              </p>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          className={`nav-item w-full ${collapsed ? "justify-center" : ""}`}
+        >
+          <span className="text-base w-5 text-center">↩</span>
+          {!collapsed && <span className="text-sm">Sign out</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+
+FILE: frontend/components/layout/waiter-bottom-nav.jsx
+
+
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const WAITER_NAV = [
+  { href: "/waiter",        icon: "🪑", label: "Tables" },
+  { href: "/waiter/orders", icon: "🧾", label: "Orders" },
+  { href: "/waiter/alerts", icon: "🔔", label: "Alerts" },
+];
+
+export function WaiterBottomNav() {
+  const pathname = usePathname();
+
+  return (
+    <nav
+      className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-around px-4 pb-safe"
+      style={{
+        background: "rgba(13,4,0,0.95)",
+        backdropFilter: "blur(16px)",
+        borderTop: "1px solid rgba(212,133,10,0.15)",
+        height: "64px",
+        boxShadow: "0 -4px 24px rgba(0,0,0,0.5)",
+      }}
+    >
+      {WAITER_NAV.map((item) => {
+        const active = pathname === item.href || (item.href !== "/waiter" && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-all"
+            style={{ color: active ? "#D4850A" : "#5F3E22" }}
+          >
+            <span
+              className="text-xl transition-transform duration-200"
+              style={{ transform: active ? "scale(1.15)" : "scale(1)" }}
+            >
+              {item.icon}
+            </span>
+            <span
+              className="text-xs font-medium"
+              style={{
+                color: active ? "#D4850A" : "#5F3E22",
+                textShadow: active ? "0 0 8px rgba(212,133,10,0.5)" : "none",
+              }}
+            >
+              {item.label}
+            </span>
+            {active && (
+              <div
+                className="absolute bottom-1 w-1 h-1 rounded-full"
+                style={{ background: "#D4850A", boxShadow: "0 0 6px rgba(212,133,10,0.8)" }}
+              />
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+
+FILE: frontend/components/ui/loading-screen.jsx
+
+
+"use client";
+import { useEffect, useState } from "react";
+
+export function LoadingScreen() {
+    const [dots, setDots] = useState("");
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+        }, 400);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ background: "#0D0400" }}>
+            <div className="text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto"
+                    style={{
+                        background: "linear-gradient(135deg, #D4850A, #6B3318)",
+                        boxShadow: "0 0 24px rgba(212,133,10,0.4)",
+                    }}>
+                    <span className="text-3xl">🍺</span>
+                </div>
+                <p className="text-sm font-display" style={{ color: "#D4A872", fontFamily: "var(--font-playfair)" }}>
+                    Loading{dots}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+
+FILE: frontend/components/ui/modal.jsx
+
+
+"use client";
+import { useEffect } from "react";
+
+const sizeMap = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg" };
+
+export function Modal({ open, onClose, title, children, size = "md", footer }) {
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    if (open) window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className={`w-full ${sizeMap[size]} glass-card animate-slide-up sm:animate-fade-in rounded-2xl overflow-hidden`}
+        style={{
+          border: "1px solid rgba(212,133,10,0.2)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,133,10,0.1)",
+        }}
+      >
+        {title && (
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b"
+            style={{ borderColor: "rgba(212,133,10,0.12)" }}
+          >
+            <h3 className="text-lg font-display font-semibold" style={{ color: "#F9EDD8" }}>
+              {title}
+            </h3>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors text-lg leading-none"
+              style={{ color: "#8B6038", background: "rgba(45,18,0,0.6)" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <div className="px-6 py-5 overflow-y-auto max-h-[70vh]">{children}</div>
+
+        {footer && (
+          <div
+            className="px-6 py-4 border-t flex items-center justify-end gap-3"
+            style={{ borderColor: "rgba(212,133,10,0.12)" }}
+          >
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+FILE: frontend/components/ui/page-header.jsx
+
+
+const colorMap = {
+  amber: { text: "#D4850A", bg: "rgba(212,133,10,0.12)", border: "rgba(212,133,10,0.2)" },
+  green: { text: "#22c55e", bg: "rgba(34,197,94,0.1)",  border: "rgba(34,197,94,0.2)" },
+  blue:  { text: "#3b82f6", bg: "rgba(59,130,246,0.1)", border: "rgba(59,130,246,0.2)" },
+  red:   { text: "#ef4444", bg: "rgba(239,68,68,0.1)",  border: "rgba(239,68,68,0.2)" },
+};
+
+export function PageHeader({ title, subtitle, actions, icon }) {
+  return (
+    <div className="flex items-start justify-between gap-4 mb-8">
+      <div className="flex items-center gap-3 min-w-0">
+        {icon && (
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+            style={{
+              background: "linear-gradient(135deg, rgba(212,133,10,0.2), rgba(107,51,24,0.15))",
+              border: "1px solid rgba(212,133,10,0.2)",
+            }}
+          >
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1
+            className="text-2xl font-display font-bold truncate"
+            style={{ color: "#F9EDD8" }}
+          >
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-sm mt-0.5" style={{ color: "#8B6038" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+    </div>
+  );
+}
+
+export function StatCard({ label, value, sub, icon, trend, color = "amber" }) {
+  const c = colorMap[color];
+  return (
+    <div className="stat-card">
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8B6038" }}>
+          {label}
+        </p>
+        {icon && (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+            style={{ background: c.bg, border: `1px solid ${c.border}` }}
+          >
+            {icon}
+          </div>
+        )}
+      </div>
+      <p className="text-3xl font-display font-bold mb-1" style={{ color: c.text }}>
+        {value}
+      </p>
+      {sub && <p className="text-xs" style={{ color: "#5F3E22" }}>{sub}</p>}
+      {trend && (
+        <div className="flex items-center gap-1 mt-2">
+          <span
+            className="text-xs font-semibold"
+            style={{ color: trend.value >= 0 ? "#22c55e" : "#ef4444" }}
+          >
+            {trend.value >= 0 ? "↑" : "↓"} {Math.abs(trend.value)}%
+          </span>
+          <span className="text-xs" style={{ color: "#5F3E22" }}>{trend.label}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function EmptyState({ icon, title, description, action }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
+        style={{
+          background: "rgba(45,18,0,0.6)",
+          border: "1px solid rgba(107,51,24,0.3)",
+        }}
+      >
+        {icon}
+      </div>
+      <h3 className="text-lg font-display font-semibold mb-2" style={{ color: "#D4A872" }}>
+        {title}
+      </h3>
+      {description && (
+        <p className="text-sm max-w-xs mb-6" style={{ color: "#5F3E22" }}>
+          {description}
+        </p>
+      )}
+      {action}
+    </div>
+  );
+}
+
+export function Skeleton({ className = "" }) {
+  return <div className={`skeleton ${className}`} />;
+}
+
+
+FILE: frontend/components/ui/toast-provider.jsx
+
+
+"use client";
+import { createContext, useContext, useState, useCallback } from "react";
+
+const ToastContext = createContext({ toast: () => { } });
+
+export function useToast() {
+    return useContext(ToastContext);
+}
+
+export function ToastProvider({ children }) {
+    const [toasts, setToasts] = useState([]);
+
+    const toast = useCallback((message, type = "info") => {
+        const id = Math.random().toString(36).slice(2);
+        setToasts((prev) => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 3500);
+    }, []);
+
+    const typeStyles = {
+        success: {
+            bg: "rgba(34,197,94,0.12)",
+            color: "#22c55e",
+            border: "rgba(34,197,94,0.3)",
+        },
+        error: {
+            bg: "rgba(239,68,68,0.12)",
+            color: "#ef4444",
+            border: "rgba(239,68,68,0.3)",
+        },
+        info: {
+            bg: "rgba(212,133,10,0.12)",
+            color: "#D4850A",
+            border: "rgba(212,133,10,0.3)",
+        },
+    };
+
+    return (
+        <ToastContext.Provider value={{ toast }}>
+            {children}
+            <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm">
+                {toasts.map((t) => {
+                    const s = typeStyles[t.type];
+                    return (
+                        <div
+                            key={t.id}
+                            className="px-5 py-3 rounded-xl text-sm shadow-lg backdrop-blur-md animate-slide-up"
+                            style={{
+                                background: s.bg,
+                                color: s.color,
+                                border: `1px solid ${s.border}`,
+                                backdropFilter: "blur(8px)",
+                            }}
+                        >
+                            {t.message}
+                        </div>
+                    );
+                })}
+            </div>
+        </ToastContext.Provider>
+    );
+}
+
+
+FILE: frontend/lib/api.js
+
+
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+
+export const getToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("smartmenu_jwt");
+};
+
+export const setToken = (token) => {
+  localStorage.setItem("smartmenu_jwt", token);
+};
+
+export const clearToken = () => {
+  localStorage.removeItem("smartmenu_jwt");
+  localStorage.removeItem("smartmenu_user");
+};
+
+async function callStrapi(endpoint, body, options = {}) {
+  const { auth = true, method = "POST" } = options;
+
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (auth) {
+    const token = getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${STRAPI_URL}/api/${endpoint}`, {
+    method,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const msg =
+      data?.error?.message ||
+      data?.message ||
+      `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
+
+export const authApi = {
+  login: async (identifier, password) => {
+    const data = await callStrapi(
+      "auth/local",
+      { identifier, password },
+      { auth: false }
+    );
+    setToken(data.jwt);
+    return data;
+  },
+
+  register: async (payload) => {
+    const data = await callStrapi(
+      "auth/local/register",
+      payload,
+      { auth: false }
+    );
+    setToken(data.jwt);
+    return data;
+  },
+
+  me: async () => {
+    return callStrapi("users/me?populate=*", undefined, {
+      method: "GET",
+    });
+  },
+
+  logout: () => {
+    clearToken();
+  },
+};
+
+export const businessApi = {
+  getMyBusiness: () =>
+    callStrapi("custom-functions/getMyBusiness", {}),
+
+  createBusinessWithBranchAndTables: (payload) =>
+    callStrapi("custom-functions/createBusinessWithBranchAndTables", payload),
+
+  updateOnboardingStep: (step, complete) =>
+    callStrapi("custom-functions/updateOnboardingStep", { step, complete }),
+
+  getBusinessReports: (payload) =>
+    callStrapi("custom-functions/getBusinessReports", payload, { auth: false }),
+};
+
+export const tableApi = {
+  getBusinessTables: (businessId, branchId) =>
+    callStrapi("custom-functions/getBusinessTables", { businessId, branchId }, { auth: false }),
+
+  createBusinessTable: (payload) =>
+    callStrapi("custom-functions/createBusinessTable", payload, { auth: false }),
+
+  updateTableStatus: (tableId, status) =>
+    callStrapi("custom-functions/updateTableStatus", { tableId, status }, { auth: false }),
+
+  assignWaiterToTable: (tableId, waiterId) =>
+    callStrapi("custom-functions/assignWaiterToTable", { tableId, waiterId }, { auth: false }),
+};
+
+export const menuApi = {
+  getPublicMenu: (businessId, tableId) =>
+    callStrapi("custom-functions/getPublicMenu", { businessId, tableId }, { auth: false }),
+
+  getCategories: (businessId) =>
+    callStrapi(`menu-categories?filters[business][id][$eq]=${businessId}&sort=sort_order:asc&populate=*`, undefined, {
+      method: "GET",
+    }),
+
+  createCategory: (payload) =>
+    callStrapi("menu-categories", { data: payload }),
+
+  updateCategory: (id, payload) =>
+    callStrapi(`menu-categories/${id}`, { data: payload }, { method: "PUT" }),
+
+  deleteCategory: (id) =>
+    callStrapi(`menu-categories/${id}`, undefined, { method: "DELETE" }),
+
+  getMenuItems: (businessId) =>
+    callStrapi(
+      `menu-items?filters[business][id][$eq]=${businessId}&populate[image]=true&populate[menu_category]=true&populate[variants]=true&populate[modifiers]=true&sort=name:asc`,
+      undefined,
+      { method: "GET" }
+    ),
+
+  createMenuItem: (payload) =>
+    callStrapi("menu-items", { data: payload }),
+
+  updateMenuItem: (id, payload) =>
+    callStrapi(`menu-items/${id}`, { data: payload }, { method: "PUT" }),
+
+  deleteMenuItem: (id) =>
+    callStrapi(`menu-items/${id}`, undefined, { method: "DELETE" }),
+
+  getMenuSettings: (businessId) =>
+    callStrapi(
+      `business-menu-settings?filters[business][id][$eq]=${businessId}&populate=*`,
+      undefined,
+      { method: "GET" }
+    ),
+
+  updateMenuSettings: (id, payload) =>
+    callStrapi(`business-menu-settings/${id}`, { data: payload }, { method: "PUT" }),
+};
+
+export const orderApi = {
+  getBusinessOrders: (payload) =>
+    callStrapi("custom-functions/getBusinessOrders", payload, { auth: false }),
+
+  placeOrder: (payload) =>
+    callStrapi("custom-functions/placeOrder", payload, { auth: false }),
+
+  getClientOrders: (customerSessionId) =>
+    callStrapi("custom-functions/getClientOrders", { customerSessionId }, { auth: false }),
+
+  updateOrderStatus: (orderId, status, waiterId) =>
+    callStrapi("custom-functions/updateOrderStatus", { orderId, status, waiterId }, { auth: false }),
+};
+
+export const waiterCallApi = {
+  callWaiter: (payload) =>
+    callStrapi("custom-functions/callWaiter", payload, { auth: false }),
+
+  acknowledgeCall: (callId, waiterId) =>
+    callStrapi("custom-functions/acknowledgeWaiterCall", { callId, waiterId }, { auth: false }),
+
+  resolveCall: (callId, tableId) =>
+    callStrapi("custom-functions/resolveWaiterCall", { callId, tableId }, { auth: false }),
+
+  getActiveCalls: (businessId) =>
+    callStrapi("custom-functions/getActiveWaiterCalls", { businessId }, { auth: false }),
+
+  getWaiterDashboard: (employeeId, businessId) =>
+    callStrapi("custom-functions/getWaiterDashboard", { employeeId, businessId }, { auth: false }),
+
+  toggleAvailability: (employeeId, is_active) =>
+    callStrapi("custom-functions/toggleWaiterAvailability", { employeeId, is_active }, { auth: false }),
+};
+
+export const employeeApi = {
+  getEmployees: (businessId) =>
+    callStrapi(
+      `employees?filters[business][id][$eq]=${businessId}&populate[user]=true&populate[branch]=true&sort=full_name:asc`,
+      undefined,
+      { method: "GET" }
+    ),
+
+  sendInvite: (payload) =>
+    callStrapi("custom-functions/sendEmployeeInvite", payload, { auth: false }),
+
+  validateInviteToken: (token) =>
+    callStrapi("custom-functions/validateInviteToken", { token }, { auth: false }),
+
+  acceptInvite: (token) =>
+    callStrapi("custom-functions/acceptInvite", { token }),
+
+  updateEmployee: (id, payload) =>
+    callStrapi(`employees/${id}`, { data: payload }, { method: "PUT" }),
+
+  deleteEmployee: (id) =>
+    callStrapi(`employees/${id}`, undefined, { method: "DELETE" }),
+};
+
+export const platformApi = {
+  setupPlatformMaster: (payload) =>
+    callStrapi("custom-functions/setupPlatformMaster", payload, { auth: false }),
+
+  getDashboard: () =>
+    callStrapi("custom-functions/platformGetDashboard", {}),
+
+  getAllBusinesses: () =>
+    callStrapi("custom-functions/platformGetAllBusinesses", {}),
+
+  createBusiness: (payload) =>
+    callStrapi("custom-functions/platformCreateBusiness", payload),
+
+  toggleBusiness: (businessId, is_active) =>
+    callStrapi("custom-functions/platformToggleBusiness", { businessId, is_active }),
+
+  updateBusinessPlan: (businessId, planType) =>
+    callStrapi("custom-functions/platformUpdateBusinessPlan", { businessId, planType }),
+};
+
+export const promotionApi = {
+  getPromotions: (businessId) =>
+    callStrapi(
+      `promotions?filters[business][id][$eq]=${businessId}&populate=*&sort=createdAt:desc`,
+      undefined,
+      { method: "GET" }
+    ),
+
+  createPromotion: (payload) =>
+    callStrapi("promotions", { data: payload }),
+
+  updatePromotion: (id, payload) =>
+    callStrapi(`promotions/${id}`, { data: payload }, { method: "PUT" }),
+
+  deletePromotion: (id) =>
+    callStrapi(`promotions/${id}`, undefined, { method: "DELETE" }),
+};
+
+export const branchApi = {
+  getBranches: (businessId) =>
+    callStrapi(
+      `branches?filters[business][id][$eq]=${businessId}&populate[manager]=true&sort=branch_name:asc`,
+      undefined,
+      { method: "GET" }
+    ),
+
+  createBranch: (payload) =>
+    callStrapi("branches", { data: payload }),
+
+  updateBranch: (id, payload) =>
+    callStrapi(`branches/${id}`, { data: payload }, { method: "PUT" }),
+
+  deleteBranch: (id) =>
+    callStrapi(`branches/${id}`, undefined, { method: "DELETE" }),
+};
+
+export const adApi = {
+  getAdCampaigns: (payload) =>
+    callStrapi("custom-functions/getAdCampaigns", payload, { auth: false }),
+
+  getCampaigns: () =>
+    callStrapi("ad-campaigns?populate[advertiser]=true&sort=createdAt:desc", undefined, { method: "GET" }),
+
+  createCampaign: (payload) =>
+    callStrapi("ad-campaigns", { data: payload }),
+
+  updateCampaign: (id, payload) =>
+    callStrapi(`ad-campaigns/${id}`, { data: payload }, { method: "PUT" }),
+
+  deleteCampaign: (id) =>
+    callStrapi(`ad-campaigns/${id}`, undefined, { method: "DELETE" }),
+
+  getAdvertisers: () =>
+    callStrapi("advertisers?sort=advertiser_name:asc", undefined, { method: "GET" }),
+
+  createAdvertiser: (payload) =>
+    callStrapi("advertisers", { data: payload }),
+
+  trackEvent: (payload) =>
+    callStrapi("ad-events", { data: payload }, { auth: false }),
+};
+
+export function flattenStrapiResponse(item) {
+  if (!item) return null;
+  if (Array.isArray(item)) return item.map(flattenStrapiResponse);
+
+  if (item.data !== undefined) {
+    if (item.data === null) return null;
+    if (Array.isArray(item.data)) return item.data.map(flattenStrapiResponse);
+    return flattenStrapiResponse(item.data);
+  }
+
+  const { id, attributes, ...rest } = item;
+  if (!attributes) return item;
+
+  const flat = { id, ...rest };
+  for (const [key, val] of Object.entries(attributes)) {
+    flat[key] = flattenStrapiResponse(val);
+    if (val && typeof val === "object" && !Array.isArray(val) && val.data !== undefined) {
+      const nested = flattenStrapiResponse(val);
+      if (nested && nested.id) flat[`${key}_id`] = nested.id;
+    }
+  }
+  return flat;
+}
+
+
+FILE: frontend/lib/auth-context.jsx
+
+
+"use client";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { authApi, businessApi, getToken, clearToken } from "./api";
+
+const AuthContext = createContext(null);
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
+  return ctx;
+}
+
+export function AuthProvider({ children }) {
+  const [state, setState] = useState({
+    user: null,
+    profile: null,
+    employee: null,
+    business: null,
+    loading: true,
+    error: null,
+  });
+
+  const loadSession = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setState((s) => ({ ...s, loading: false }));
+      return;
+    }
+
+    try {
+      const strapiUser = await authApi.me();
+      const ctx = await businessApi.getMyBusiness();
+
+      setState({
+        user: strapiUser,
+        profile: ctx.profile,
+        employee: ctx.employee,
+        business: ctx.business,
+        loading: false,
+        error: null,
+      });
+    } catch {
+      clearToken();
+      setState({
+        user: null,
+        profile: null,
+        employee: null,
+        business: null,
+        loading: false,
+        error: null,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
+
+  const login = async (identifier, password) => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const { user } = await authApi.login(identifier, password);
+      const ctx = await businessApi.getMyBusiness();
+      setState({
+        user,
+        profile: ctx.profile,
+        employee: ctx.employee,
+        business: ctx.business,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      setState((s) => ({ ...s, loading: false, error: err.message }));
+      throw err;
+    }
+  };
+
+  const register = async (payload) => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const { user } = await authApi.register(payload);
+      const ctx = await businessApi.getMyBusiness();
+      setState({
+        user,
+        profile: ctx.profile,
+        employee: ctx.employee,
+        business: ctx.business,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      setState((s) => ({ ...s, loading: false, error: err.message }));
+      throw err;
+    }
+  };
+
+  const logout = () => {
+    authApi.logout();
+    setState({
+      user: null,
+      profile: null,
+      employee: null,
+      business: null,
+      loading: false,
+      error: null,
+    });
+  };
+
+  const refreshBusiness = async () => {
+    try {
+      const ctx = await businessApi.getMyBusiness();
+      setState((s) => ({
+        ...s,
+        profile: ctx.profile,
+        employee: ctx.employee,
+        business: ctx.business,
+      }));
+    } catch {
+      // silent
+    }
+  };
+
+  const setError = (error) =>
+    setState((s) => ({ ...s, error }));
+
+  return (
+    <AuthContext.Provider
+      value={{ ...state, login, register, logout, refreshBusiness, setError }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+
+FILE: frontend/lib/utils.js
+
+
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+export function formatCurrency(amount, currency = "USD", locale = "en-US") {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function formatDate(date, opts = { day: "numeric", month: "short", year: "numeric" }) {
+  return new Intl.DateTimeFormat("en-US", opts).format(new Date(date));
+}
+
+export function formatRelativeTime(date) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export function formatTime(date) {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(date));
+}
+
+export function generateSessionId() {
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function getOrCreateSessionId() {
+  if (typeof window === "undefined") return generateSessionId();
+  const key = "smartmenu_session";
+  let id = sessionStorage.getItem(key);
+  if (!id) {
+    id = generateSessionId();
+    sessionStorage.setItem(key, id);
+  }
+  return id;
+}
+
+export function orderStatusLabel(status) {
+  const map = {
+    pending: "Pending",
+    accepted: "Accepted",
+    preparing: "Preparing",
+    served: "Served",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  return map[status] ?? status;
+}
+
+export function tableStatusLabel(status) {
+  const map = {
+    available: "Available",
+    occupied: "Occupied",
+    ordering: "Ordering",
+    needs_waiter: "Needs Waiter",
+    bill_requested: "Bill Requested",
+  };
+  return map[status] ?? status;
+}
+
+export function truncate(str, max) {
+  return str.length > max ? str.slice(0, max) + "…" : str;
+}
+
+export function initials(name) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase();
+}
+
+export function downloadUrl(url, filename) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+
+export const sleep = (ms) =>
+  new Promise((r) => setTimeout(r, ms));
+
+export const clamp = (n, min, max) =>
+  Math.min(Math.max(n, min), max);
+
+export function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+export function safeJson(str, fallback) {
+  if (!str) return fallback;
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+}
+
+export function buildMenuUrl(businessId, branchId, tableId) {
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return `${base}/m/${businessId}/${branchId}/${tableId}`;
+}
+
+export function calcSubtotal(items) {
+  return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+}

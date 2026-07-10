@@ -1,0 +1,1032 @@
+this is the app I am building, I need it to function very well
+depending on whether you are a business or a worker or a business of which or which kind and doing what or what, the app should flow very well for you, as should. 
+Smart Menu AI — Restaurant Management Platform
+A multi-tenant platform that lets restaurant/bar owners create digital menus, manage tables with QR codes, handle orders, and manage staff. Customers scan QR codes at tables to view menus and place orders.
+
+Entities (13 total)
+Core Business
+Business — Central entity. Fields: owner_id, business_name, business_type (bar/restaurant/lounge/cafe/club), plan_type (basic/premium/enterprise), subscription_status, currency, service_charge_percent, opening_hours, is_guest (demo mode), is_published
+Branch — Multi-location. Fields: business_id, branch_name, location, phone, manager_id
+Table — QR-coded tables. Fields: business_id, branch_id, table_name, table_number, qr_code_url, assigned_waiter_id, status (available/occupied/needs_waiter/ordering/bill_requested), capacity
+Employee — Staff. Fields: user_id, business_id, branch_id, role (owner/manager/waiter), permissions (15 granular permissions like manage_menu, manage_orders, view_reports)
+Menu
+MenuItem — Fields: business_id, category_id, name, description, price, image, tags, upsell_item_ids
+MenuCategory — Fields: business_id, branch_id, name, icon, sort_order
+BusinessMenuSettings — Visual customization. Fields: theme_style (modern_dark/premium_light/etc), layout_style, primary_color, button_color, header_style, product_card_style, show_ai_recommendations
+Orders & Service
+Order — Fields: business_id, table_id, items[] (menu_item_id/quantity/price/status), status (pending→completed), subtotal, service_charge, total, payment_status
+WaiterCall — Fields: business_id, table_id, waiter_id, status (pending/acknowledged/completed), message
+Advertising Platform
+AdCampaign — Fields: advertiser_id, campaign_type (platform_direct/business_own/google_adsense), placement, target_business_types, target_cities, scheduling, impressions/clicks
+AdPlacement — Fields: placement_key, location_on_menu (top_hero/cart_top/order_success), layout_type, aspect_ratio
+Advertiser — Fields: advertiser_name, contact_person, industry, logo
+BusinessAdSettings — Per-business ad mode: platform_ads/business_ads_only/no_ads/mixed_ads
+AdSettings — Global singleton. Fields: enable_google_adsense, adsense_publisher_id, slot IDs
+AdEvent — Tracking. Fields: ad_campaign_id, event_type (impression/click), business_id
+Platform Admin
+PlatformAdmin — Fields: user_id, email, role (platform_master)
+EmployeeInvitation — Fields: business_id, invited_email, role, invite_token, status
+Pages & Routes (20+ pages)
+Public (no auth)
+Route	Page
+/	LandingPage
+/m/:businessId/:branchId/:tableId	ClientMenu (customer QR scan)
+/demo-menu/*	DemoClientMenu
+/accept-invite	AcceptInvitePage
+/setup-platform-master	SetupPlatformMaster
+/debug-role	DebugRole
+Owner Dashboard
+Route	Page
+/	Dashboard (KPIs, charts, live orders)
+/menu	MenuManagement
+/tables	TableManagement
+/orders	OrdersPage
+/employees	EmployeeManagement
+/reports	ReportsPage
+/ads	AdsManagement
+/menu-customization	MenuCustomization
+/settings	SettingsPage
+/setup	BusinessSetup
+Manager Dashboard (subset of owner)
+/, /menu, /tables, /orders, /reports
+
+Waiter Dashboard
+Route	Page
+/waiter	WaiterTables
+/waiter/orders	WaiterOrders
+/waiter/alerts	WaiterAlerts
+Platform Admin / Master
+Route	Page
+/platform-admin	PlatformAdminLayout (overview, campaigns, advertisers, businesses, analytics, adsense)
+/platform-master	PlatformMasterLayout (overview, businesses, users, campaigns, advertisers, analytics, placements, ad rules, adsense, settings)
+Backend Functions (12)
+Function	Purpose
+createBusinessWithBranchAndTables	Full onboarding: business + branch + tables + menu settings
+createBusinessSetup	Alternative onboarding flow
+createBusinessTable	Create single table with QR code
+placeOrder	Customer places order
+getClientOrders	Fetch orders for a customer session
+callWaiter	Customer requests waiter
+getPublicMenu	Serve public menu data
+sendEmployeeInvite	Email-based staff invitation
+validateInviteToken	Verify invite token
+acceptInvite	Accept invitation + create employee record
+getAdCampaigns	Serve targeted ads to menus
+seedAds	Seed test ad data
+Design System — Samsung One UI
+Primary: Samsung Blue #1258C7 (HSL 211 83% 43%)
+Background: Pure black #000000 / Light #F2F2F7
+Cards: #0C0C0C / #FFFFFF
+Border Radius: 1rem (--radius)
+Fonts: Roboto (headings), Inter (body)
+Success: #30D158
+Danger: #FF453A
+Theme: Dark by default, optional light mode
+Local Development
+There's no separate .env file — this app runs entirely on the Base44 platform. The backend is serverless (Deno Deploy functions), and the database is managed by the platform. You cannot run it fully offline.
+
+However, for local UI-only development you can:
+
+# Clone if using GitHub sync, or just:
+npm install
+npm run dev
+The React frontend (Vite) runs locally at localhost:5173, but API calls go to the Base44 platform. The key files:
+
+src/App.jsx — Router + auth logic
+src/index.css — Design tokens
+src/tailwind.config.js — Theme mapping
+src/api/base44Client.js — Pre-initialized SDK
+entities/*.json — Database schemas
+functions/*.js — Backend (Deno Deploy)
+lib/AuthContext.jsx — Auth state management
+lib/guestDemo.js — Demo/guest mode
+For backend function edits, you develop them here and they deploy to Deno automatically. Secrets (API keys) are set via set_secrets tool — not in .env.
+
+# Smart Menu AI — Full Technical Build Breakdown
+
+## 1. Product Summary
+
+Smart Menu AI is a QR-based restaurant/bar ordering platform.
+
+Customers scan a table QR code, view the menu, place orders, call waiters, track order progress, view promotions, and see ads.
+
+Businesses manage menus, branches, tables, staff, orders, promotions, and reports.
+
+Platform owner controls all businesses, ads, support, and monetization.
+
+---
+
+# 2. Core User Roles
+
+## 1. Platform Owner
+
+Controls the whole platform.
+
+Can:
+
+* Create businesses
+* Create business owner accounts
+* Generate temporary passwords
+* Reset passwords
+* Manage all businesses
+* Manage ads
+* Manage advertisers
+* View platform analytics
+* Impersonate business owner for support
+
+---
+
+## 2. Business Owner
+
+Owns one business.
+
+Can:
+
+* Manage business profile
+* Create branches
+* Create tables
+* Generate QR codes
+* Manage menu
+* Invite staff
+* View reports
+* Create own promotions
+* View ads running on their menu
+
+---
+
+## 3. Branch Manager
+
+Manages one branch.
+
+Can:
+
+* View branch orders
+* Manage waiter activity
+* Update order status
+* View branch reports
+* Invite waiters if owner allows
+
+---
+
+## 4. Waiter
+
+Handles customer service.
+
+Can:
+
+* Set availability
+* Accept orders
+* Respond to waiter calls
+* Update order status
+
+---
+
+## 5. Client
+
+No login.
+
+Can:
+
+* Scan QR
+* View menu
+* Add to cart
+* Place order
+* Call waiter
+* Track order
+* View bill
+
+---
+
+# 3. App Modules
+
+## Platform Master
+
+Routes:
+
+* `/platform/dashboard`
+* `/platform/businesses`
+* `/platform/businesses/new`
+* `/platform/ads`
+* `/platform/advertisers`
+* `/platform/campaigns`
+* `/platform/support`
+* `/platform/reports`
+
+---
+
+## Business Owner
+
+Routes:
+
+* `/owner/dashboard`
+* `/owner/business`
+* `/owner/branches`
+* `/owner/tables`
+* `/owner/menu`
+* `/owner/orders`
+* `/owner/team`
+* `/owner/promotions`
+* `/owner/reports`
+* `/owner/settings`
+
+---
+
+## Branch Manager
+
+Routes:
+
+* `/manager/dashboard`
+* `/manager/orders`
+* `/manager/waiters`
+* `/manager/tables`
+
+---
+
+## Waiter
+
+Routes:
+
+* `/waiter/dashboard`
+* `/waiter/orders`
+* `/waiter/calls`
+
+---
+
+## Client QR Menu
+
+Public route:
+
+* `/m/:businessId/:branchId/:tableId`
+
+---
+
+# 4. Recommended Tech Stack
+
+## Frontend
+
+* Next.js
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* React Hook Form
+* Zod
+* QR code generator library
+* Zustand or React Context for lightweight state
+
+## Backend
+
+* Next.js API routes or NestJS
+* PostgreSQL
+* Prisma ORM
+
+## Auth
+
+* Supabase Auth, Clerk, or NextAuth
+* JWT/session-based auth
+* Role-based access control
+
+## Storage
+
+* Supabase Storage, AWS S3, or Cloudinary
+
+For images:
+
+* menu items
+* logos
+* ad creatives
+* promotion banners
+
+---
+
+# 5. Environment Variables
+
+Example `.env.local`:
+
+```env
+# APP
+NEXT_PUBLIC_APP_NAME="Smart Menu AI"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# DATABASE
+DATABASE_URL="postgresql://username:password@localhost:5432/smart_menu_ai"
+
+# AUTH
+NEXTAUTH_SECRET="replace_with_long_random_secret"
+NEXTAUTH_URL="http://localhost:3000"
+
+# EMAIL
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your_email@gmail.com"
+SMTP_PASS="your_app_password"
+SMTP_FROM="Smart Menu AI <your_email@gmail.com>"
+
+# STORAGE
+NEXT_PUBLIC_STORAGE_URL=""
+STORAGE_ACCESS_KEY=""
+STORAGE_SECRET_KEY=""
+
+# PLATFORM OWNER BOOTSTRAP
+PLATFORM_OWNER_EMAIL="jabulanizimba@gmail.com"
+
+# QR
+NEXT_PUBLIC_QR_BASE_URL="http://localhost:3000/m"
+
+# ADS
+ENABLE_ADS="true"
+
+# AI - FUTURE
+OPENAI_API_KEY=""
+ENABLE_AI_FEATURES="false"
+```
+
+---
+
+# 6. Database Schemas
+
+## User
+
+```ts
+User {
+  id: string
+  fullName: string
+  email: string
+  phone?: string
+  passwordHash: string
+  role: "platform_owner" | "business_owner" | "branch_manager" | "waiter"
+  mustChangePassword: boolean
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## Business
+
+```ts
+Business {
+  id: string
+  name: string
+  type: "restaurant" | "bar" | "cafe" | "lodge" | "club" | "pool_hall" | "car_wash" | "other"
+  ownerId: string
+  phone?: string
+  email?: string
+  logoUrl?: string
+  address?: string
+  city?: string
+  country?: string
+  currency: string
+  plan: "free" | "premium" | "enterprise"
+  status: "active" | "suspended" | "inactive"
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## Branch
+
+```ts
+Branch {
+  id: string
+  businessId: string
+  name: string
+  address?: string
+  city?: string
+  phone?: string
+  managerId?: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## Table
+
+```ts
+Table {
+  id: string
+  businessId: string
+  branchId: string
+  tableNumber: string
+  tableName?: string
+  capacity: number
+  qrCodeUrl: string
+  menuUrl: string
+  status: "available" | "occupied" | "ordering" | "needs_waiter"
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## Employee
+
+```ts
+Employee {
+  id: string
+  userId: string
+  businessId: string
+  branchId?: string
+  role: "branch_manager" | "waiter"
+  status: "active" | "inactive"
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## EmployeeInvitation
+
+```ts
+EmployeeInvitation {
+  id: string
+  businessId: string
+  branchId?: string
+  email: string
+  fullName?: string
+  role: "branch_manager" | "waiter"
+  token: string
+  status: "pending" | "accepted" | "expired" | "cancelled"
+  expiresAt: Date
+  acceptedAt?: Date
+  createdAt: Date
+}
+```
+
+---
+
+## MenuCategory
+
+```ts
+MenuCategory {
+  id: string
+  businessId: string
+  branchId?: string
+  name: string
+  description?: string
+  imageUrl?: string
+  sortOrder: number
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## MenuItem
+
+```ts
+MenuItem {
+  id: string
+  businessId: string
+  branchId?: string
+  categoryId: string
+  name: string
+  description: string
+  price: number
+  imageUrl?: string
+  preparationTime?: number
+  isAvailable: boolean
+  isFeatured: boolean
+  isPopular: boolean
+  isSpecialOffer: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## MenuItemVariant
+
+```ts
+MenuItemVariant {
+  id: string
+  menuItemId: string
+  name: string
+  price: number
+  isActive: boolean
+}
+```
+
+Example:
+
+* Single
+* Double
+* Bottle
+* Small
+* Large
+
+---
+
+## MenuItemModifier
+
+```ts
+MenuItemModifier {
+  id: string
+  menuItemId: string
+  name: string
+  price: number
+  isRequired: boolean
+  isActive: boolean
+}
+```
+
+Example:
+
+* Extra cheese
+* Coke mixer
+* Tonic mixer
+
+---
+
+## Promotion
+
+```ts
+Promotion {
+  id: string
+  businessId: string
+  branchId?: string
+  title: string
+  description: string
+  imageUrl?: string
+  type: "happy_hour" | "event" | "combo" | "special_offer"
+  startDate?: Date
+  endDate?: Date
+  startTime?: string
+  endTime?: string
+  isActive: boolean
+  createdAt: Date
+}
+```
+
+---
+
+## Order
+
+```ts
+Order {
+  id: string
+  businessId: string
+  branchId: string
+  tableId: string
+  orderNumber: string
+  status: "received" | "accepted" | "served" | "completed" | "cancelled"
+  waiterId?: string
+  subtotal: number
+  serviceCharge: number
+  discount: number
+  total: number
+  customerSessionId: string
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## OrderItem
+
+```ts
+OrderItem {
+  id: string
+  orderId: string
+  menuItemId: string
+  name: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  variantName?: string
+  modifiers?: JSON
+  notes?: string
+}
+```
+
+---
+
+## WaiterCall
+
+```ts
+WaiterCall {
+  id: string
+  businessId: string
+  branchId: string
+  tableId: string
+  waiterId?: string
+  status: "waiting" | "acknowledged" | "resolved"
+  message?: string
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## AdCampaign
+
+```ts
+AdCampaign {
+  id: string
+  advertiserId: string
+  title: string
+  description?: string
+  placement: "top_banner" | "sponsored_product" | "cart_banner"
+  imageUrl: string
+  mobileImageUrl?: string
+  tabletImageUrl?: string
+  desktopImageUrl?: string
+  ctaText?: string
+  ctaUrl?: string
+  targetBusinessIds?: string[]
+  targetCities?: string[]
+  targetCountries?: string[]
+  status: "draft" | "active" | "paused" | "ended"
+  startDate: Date
+  endDate: Date
+  impressions: number
+  clicks: number
+  createdAt: Date
+}
+```
+
+---
+
+## Advertiser
+
+```ts
+Advertiser {
+  id: string
+  name: string
+  contactPerson?: string
+  email?: string
+  phone?: string
+  logoUrl?: string
+  notes?: string
+  createdAt: Date
+}
+```
+
+---
+
+## AdEvent
+
+```ts
+AdEvent {
+  id: string
+  adCampaignId: string
+  businessId: string
+  tableId?: string
+  eventType: "impression" | "click"
+  createdAt: Date
+}
+```
+
+---
+
+## BusinessMenuSettings
+
+```ts
+BusinessMenuSettings {
+  id: string
+  businessId: string
+  theme: "classic" | "modern" | "lounge" | "cafe" | "sports_bar"
+  primaryColor: string
+  accentColor: string
+  backgroundColor: string
+  textColor: string
+  logoUrl?: string
+  coverImageUrl?: string
+  welcomeMessage?: string
+  showHero: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+---
+
+## ActivityLog
+
+```ts
+ActivityLog {
+  id: string
+  actorUserId: string
+  action: string
+  targetType: string
+  targetId?: string
+  metadata?: JSON
+  createdAt: Date
+}
+```
+
+---
+
+# 7. Main Workflows
+
+## Workflow 1: Platform Owner Creates Business
+
+1. Platform owner logs in.
+2. Opens `/platform/businesses/new`.
+3. Enters business details.
+4. Enters owner email.
+5. System creates:
+
+   * Business
+   * Business owner user
+   * Main branch
+   * Temporary password
+6. Owner receives credentials.
+7. Owner logs in.
+8. Owner must change password.
+
+---
+
+## Workflow 2: Business Owner Creates Table
+
+1. Owner opens `/owner/tables`.
+2. Clicks Add Table.
+3. Enters table number and capacity.
+4. System creates table.
+5. System generates QR menu link.
+6. Owner downloads QR.
+
+---
+
+## Workflow 3: Customer Orders
+
+1. Customer scans QR.
+2. Menu opens.
+3. Customer adds items to cart.
+4. Customer places order.
+5. Order status becomes `received`.
+6. All available waiters see the order.
+7. First waiter accepts.
+8. Order status updates on client tracker.
+9. Customer can call waiter.
+10. Waiter resolves call.
+
+---
+
+## Workflow 4: Ads
+
+1. Platform owner creates advertiser.
+2. Platform owner creates campaign.
+3. Campaign targets businesses.
+4. Customer menu displays ad.
+5. Impression is tracked.
+6. Click is tracked.
+7. Advertiser report shows performance.
+
+---
+
+# 8. Free Plan
+
+Included:
+
+* QR menu
+* Orders
+* Waiter calls
+* Branches
+* Tables
+* Staff
+* Own promotions
+* Event promotions
+* Featured products
+* Combo deals
+* Happy hour pricing
+* Basic reports
+
+Requirement:
+
+* Platform ads must display.
+
+---
+
+# 9. Premium Plan
+
+Includes:
+
+* Remove platform ads
+* AI upselling
+* Advanced analytics
+* Advanced branding
+* Priority support
+
+---
+
+# 10. Required Local Setup
+
+## Install Requirements
+
+```bash
+node -v
+npm -v
+git --version
+```
+
+Recommended:
+
+```bash
+Node.js 20+
+npm 10+
+PostgreSQL 15+
+```
+
+---
+
+## Local Run
+
+```bash
+git clone <repo-url>
+cd smart-menu-ai
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+App runs on:
+
+```text
+http://localhost:3000
+```
+
+---
+
+## Database Commands
+
+If using Prisma:
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+npx prisma studio
+```
+
+---
+
+# 11. MVP Success Test
+
+The app is not ready until this works:
+
+1. Platform owner creates business.
+2. Business owner logs in with temporary password.
+3. Business owner creates branch.
+4. Business owner creates table.
+5. QR code opens public menu.
+6. Business owner creates menu category.
+7. Business owner creates menu item.
+8. Customer places order.
+9. Waiter receives order.
+10. Waiter accepts order.
+11. Customer sees order tracker update.
+12. Customer calls waiter.
+13. Waiter responds.
+14. Bill updates.
+
+---
+
+# 12. Features To Delay
+
+Do not build these in V1:
+
+* Payments
+* AdSense
+* Full inventory
+* Payroll
+* Staff attendance
+* Reservations
+* Customer accounts
+* Loyalty program
+* Kitchen display
+* Accounting
+* Tax reporting
+
+---
+
+# 13. Design Direction
+
+Use Samsung One UI-inspired design principles:
+
+* Mobile-first
+* Rounded cards
+* Soft shadows
+* Large touch targets
+* Clean spacing
+* Light and dark mode
+* Bottom navigation on mobile
+* Simple forms
+* Minimal clutter
+
+Do not copy Samsung logos or branding.
+
+---
+
+# 14. Development Phases
+
+## Phase 1
+
+* Auth
+* Roles
+* Platform owner
+* Business creation
+* Branches
+* Tables
+* QR route
+
+## Phase 2
+
+* Menu categories
+* Menu items
+* Variants
+* Modifiers
+* Promotions
+
+## Phase 3
+
+* Cart
+* Orders
+* Waiter calls
+* Order tracker
+* Waiter dashboard
+
+## Phase 4
+
+* Ads
+* Platform campaigns
+* Ad tracking
+* Reports
+
+## Phase 5
+
+* Premium features
+* AI upselling
+* Advanced analytics
+* Advanced branding
+
+the following is my schema and all the strapi files i have created so far, minified
+================================================================================FILE:admin/app.example.tsx================================================================================importtype{StrapiApp}from'@strapi/strapi/admin';exportdefault{config:{locales:[//'ar',//'fr',//'cs',//'de',//'da',//'es',//'he',//'id',//'it',//'ja',//'ko',//'ms',//'nl',//'no',//'pl',//'pt-BR',//'pt',//'ru',//'sk',//'sv',//'th',//'tr',//'uk',//'vi',//'zh-Hans',//'zh',],},bootstrap(app:StrapiApp){console.log(app);},};================================================================================FILE:admin/tsconfig.json================================================================================{"compilerOptions":{"target":"ESNext","module":"ESNext","moduleResolution":"Bundler","useDefineForClassFields":true,"lib":["DOM","DOM.Iterable","ESNext"],"allowJs":false,"skipLibCheck":true,"esModuleInterop":true,"allowSyntheticDefaultImports":true,"strict":true,"forceConsistentCasingInFileNames":true,"resolveJsonModule":true,"noEmit":true,"jsx":"react-jsx"},"include":["../plugins/**/admin/src/**/*","./"],"exclude":["node_modules/","build/","dist/","**/*.test.ts"]}================================================================================FILE:admin/vite.config.example.ts================================================================================import{mergeConfig,typeUserConfig}from'vite';exportdefault(config:UserConfig)=>{//Important:alwaysreturnthemodifiedconfigreturnmergeConfig(config,{resolve:{alias:{'@':'/src',},},});};================================================================================FILE:api/activity-log/content-types/activity-log/schema.json================================================================================{"kind":"collectionType","collectionName":"activity_logs","info":{"singularName":"activity-log","pluralName":"activity-logs","displayName":"ActivityLog"},"options":{"draftAndPublish":false},"attributes":{"action":{"type":"string","required":true},"target_type":{"type":"string"},"target_id":{"type":"string"},"metadata":{"type":"json"},"actor_user":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"}}}================================================================================FILE:api/activity-log/controllers/activity-log.ts================================================================================/***activity-logcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::activity-log.activity-log');================================================================================FILE:api/activity-log/routes/activity-log.ts================================================================================/***activity-logrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::activity-log.activity-log');================================================================================FILE:api/activity-log/services/activity-log.ts================================================================================/***activity-logservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::activity-log.activity-log');================================================================================FILE:api/ad-campaign/content-types/ad-campaign/schema.json================================================================================{"kind":"collectionType","collectionName":"ad_campaigns","info":{"singularName":"ad-campaign","pluralName":"ad-campaigns","displayName":"AdCampaign"},"attributes":{"campaign_name":{"type":"string","required":true},"campaign_type":{"type":"enumeration","enum":["platform_direct","business_own","google_adsense"],"required":true},"status":{"type":"enumeration","enum":["draft","active","paused","ended"],"default":"draft"},"title":{"type":"string","required":true},"description":{"type":"text"},"cta_text":{"type":"string"},"cta_link":{"type":"string"},"placement":{"type":"string","required":true},"priority":{"type":"integer","default":5},"start_date":{"type":"date"},"end_date":{"type":"date"},"image_url":{"type":"media","multiple":false},"video_url":{"type":"media","multiple":false},"mobile_image_url":{"type":"media","multiple":false},"mobile_video_url":{"type":"media","multiple":false},"tablet_image_url":{"type":"media","multiple":false},"tablet_video_url":{"type":"media","multiple":false},"desktop_image_url":{"type":"media","multiple":false},"desktop_video_url":{"type":"media","multiple":false},"target_countries":{"type":"json"},"target_cities":{"type":"json"},"target_business_types":{"type":"json"},"target_plan_types":{"type":"json"},"schedule_days":{"type":"json"},"schedule_start_time":{"type":"time"},"schedule_end_time":{"type":"time"},"impressions":{"type":"integer","default":0},"clicks":{"type":"integer","default":0},"advertiser":{"type":"relation","relation":"manyToOne","target":"api::advertiser.advertiser"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"}}}================================================================================FILE:api/ad-campaign/controllers/ad-campaign.ts================================================================================import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::ad-campaign.ad-campaign',({strapi})=>({//POST/custom-functions/getAdCampaigns//{placementKey,businessId,planType,city,country,businessType}asyncgetAdCampaigns(ctx){try{const{placementKey,businessId,planType,city,country,businessType}=ctx.request.body;consttoday=newDate().toISOString().slice(0,10);letadSettings=null;if(businessId){adSettings=awaitstrapi.db.query('api::business-ad-setting.business-ad-setting').findOne({where:{business:businessId},});}constplatform=awaitstrapi.db.query('api::ad-campaign.ad-campaign').findMany({where:{campaign_type:'platform_direct',status:'active',placement:placementKey},populate:['image_url','video_url','mobile_image_url','mobile_video_url','tablet_image_url','tablet_video_url','desktop_image_url','desktop_video_url'],orderBy:{priority:'asc'},});constbusiness=businessId?awaitstrapi.db.query('api::ad-campaign.ad-campaign').findMany({where:{campaign_type:'business_own',status:'active',placement:placementKey,business:businessId},populate:['image_url','video_url','mobile_image_url','mobile_video_url','tablet_image_url','tablet_video_url','desktop_image_url','desktop_video_url'],orderBy:{priority:'asc'},}):[];constisActive=(c)=>{if(c.start_date&&c.start_date>today)returnfalse;if(c.end_date&&c.end_date<today)returnfalse;if(c.target_plan_types?.length&&planType&&!c.target_plan_types.includes(planType))returnfalse;if(c.target_countries?.length&&country&&!c.target_countries.includes(country))returnfalse;if(c.target_cities?.length&&city&&!c.target_cities.includes(city))returnfalse;if(c.target_business_types?.length&&businessType&&!c.target_business_types.includes(businessType))returnfalse;returntrue;};letchosen=[];letmode='platform_ads';constrejected=[];if(adSettings?.platform_admin_override){mode=adSettings.ad_mode;if(mode==='no_ads')chosen=[];elseif(mode==='platform_ads')chosen=platform.filter(isActive);elseif(mode==='business_ads_only')chosen=business.filter(isActive);elseif(mode==='mixed_ads')chosen=[...platform,...business].filter(isActive);}elseif(adSettings?.force_platform_ads){chosen=platform.filter(isActive);}elseif(!planType||planType==='basic'){chosen=platform.filter(isActive);if(chosen.length===0)chosen=business.filter(isActive);}else{mode=adSettings?.ad_mode||'no_ads';if(mode==='business_ads_only')chosen=business.filter(isActive);elseif(mode==='platform_ads')chosen=platform.filter(isActive);elseif(mode==='mixed_ads')chosen=[...platform,...business].filter(isActive);}constmediaUrl=(m)=>m?.url||null;constmapped=chosen.map(c=>({id:c.id,campaign_name:c.campaign_name,title:c.title,description:c.description,cta_text:c.cta_text,cta_link:c.cta_link,image_url:mediaUrl(c.image_url),video_url:mediaUrl(c.video_url),mobile_image_url:mediaUrl(c.mobile_image_url),mobile_video_url:mediaUrl(c.mobile_video_url),tablet_image_url:mediaUrl(c.tablet_image_url),tablet_video_url:mediaUrl(c.tablet_video_url),desktop_image_url:mediaUrl(c.desktop_image_url),desktop_video_url:mediaUrl(c.desktop_video_url),impressions:c.impressions,clicks:c.clicks,}));ctx.send({campaigns:mapped,useAdSense:false,debug:{adMode:mode,total_fetched:platform.length+business.length,total_matched:mapped.length,rejected},});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/ad-campaign/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/getAdCampaigns',handler:'ad-campaign.getAdCampaigns',config:{auth:{enabled:false}}},],};================================================================================FILE:api/ad-campaign/routes/ad-campaign.ts================================================================================/***ad-campaignrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::ad-campaign.ad-campaign');================================================================================FILE:api/ad-campaign/services/ad-campaign.ts================================================================================/***ad-campaignservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::ad-campaign.ad-campaign');================================================================================FILE:api/ad-event/content-types/ad-event/schema.json================================================================================{"kind":"collectionType","collectionName":"ad_events","info":{"singularName":"ad-event","pluralName":"ad-events","displayName":"AdEvent"},"attributes":{"event_type":{"type":"enumeration","enum":["impression","click"],"required":true},"placement_key":{"type":"string"},"user_session_id":{"type":"string"},"ad_campaign":{"type":"relation","relation":"manyToOne","target":"api::ad-campaign.ad-campaign"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"table":{"type":"relation","relation":"manyToOne","target":"api::table.table"}}}================================================================================FILE:api/ad-event/controllers/ad-event.ts================================================================================import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::ad-event.ad-event',({strapi})=>({asynccreate(ctx){constresponse=awaitsuper.create(ctx);const{ad_campaign_id,event_type}=ctx.request.body.data||ctx.request.body||{};if(ad_campaign_id&&(event_type==='impression'||event_type==='click')){constfield=event_type==='impression'?'impressions':'clicks';constcampaign=awaitstrapi.db.query('api::ad-campaign.ad-campaign').findOne({where:{id:ad_campaign_id}});if(campaign){awaitstrapi.db.query('api::ad-campaign.ad-campaign').update({where:{id:ad_campaign_id},data:{[field]:(campaign[field]||0)+1},});}}returnresponse;},}));================================================================================FILE:api/ad-event/routes/ad-event.ts================================================================================/***ad-eventrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::ad-event.ad-event');================================================================================FILE:api/ad-event/services/ad-event.ts================================================================================/***ad-eventservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::ad-event.ad-event');================================================================================FILE:api/advertiser/content-types/advertiser/schema.json================================================================================{"kind":"collectionType","collectionName":"advertisers","info":{"singularName":"advertiser","pluralName":"advertisers","displayName":"Advertiser"},"attributes":{"advertiser_name":{"type":"string","required":true},"contact_person":{"type":"string"},"email":{"type":"email"},"phone":{"type":"string"},"industry":{"type":"string"},"notes":{"type":"text"},"logo":{"type":"media","multiple":false},"is_active":{"type":"boolean","default":true}}}================================================================================FILE:api/advertiser/controllers/advertiser.ts================================================================================/***advertisercontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::advertiser.advertiser');================================================================================FILE:api/advertiser/routes/advertiser.ts================================================================================/***advertiserrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::advertiser.advertiser');================================================================================FILE:api/advertiser/services/advertiser.ts================================================================================/***advertiserservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::advertiser.advertiser');================================================================================FILE:api/branch/content-types/branch/schema.json================================================================================{"kind":"collectionType","collectionName":"branches","info":{"singularName":"branch","pluralName":"branches","displayName":"Branch"},"attributes":{"branch_name":{"type":"string","required":true},"location":{"type":"string"},"address":{"type":"string"},"city":{"type":"string"},"phone":{"type":"string"},"is_active":{"type":"boolean","default":true},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business","inversedBy":"branches"},"manager":{"type":"relation","relation":"manyToOne","target":"api::employee.employee"},"tables":{"type":"relation","relation":"oneToMany","target":"api::table.table","mappedBy":"branch"}}}================================================================================FILE:api/branch/controllers/branch.ts================================================================================/***branchcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::branch.branch');================================================================================FILE:api/branch/routes/branch.ts================================================================================/***branchrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::branch.branch');================================================================================FILE:api/branch/services/branch.ts================================================================================/***branchservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::branch.branch');================================================================================FILE:api/business/content-types/business/lifecycles.ts================================================================================//api/business/content-types/business/lifecycles.ts//AutomaticallycreatesdefaultBusinessMenuSettingandBusinessAdSetting//everytimeanewBusinessiscreated,sothefrontendneverhastocheck//whethertheserecordsexistbeforereadingthem.exportdefault{asyncafterCreate(event:any){const{result}=event;conststrapi=(globalasany).strapi;try{awaitstrapi.db.query('api::business-menu-setting.business-menu-setting').create({data:{business:result.id,theme_style:'modern_dark',layout_style:'classic_list',header_style:'floating_glass',category_style:'rounded_pills',product_card_style:'large_image',show_hero:true,show_ai_recommendations:true,status:'draft',publishedAt:newDate(),},});}catch(err){strapi.log.error(`[BusinessLifecycle]Failedtocreatemenusettingsforbusiness${result.id}:${err.message}`);}try{awaitstrapi.db.query('api::business-ad-setting.business-ad-setting').create({data:{business:result.id,ad_mode:'platform_ads',platform_admin_override:false,force_platform_ads:false,allow_google_adsense:false,publishedAt:newDate(),},});}catch(err){strapi.log.error(`[BusinessLifecycle]Failedtocreateadsettingsforbusiness${result.id}:${err.message}`);}strapi.log.info(`[BusinessLifecycle]Auto-provisionedsettingsforbusiness${result.id}("${result.business_name}")`);},};================================================================================FILE:api/business/content-types/business/schema.json================================================================================{"kind":"collectionType","collectionName":"businesses","info":{"singularName":"business","pluralName":"businesses","displayName":"Business"},"attributes":{"business_name":{"type":"string","required":true},"business_type":{"type":"enumeration","enum":["restaurant","bar","lounge","cafe","club"],"default":"restaurant"},"logo":{"type":"media","multiple":false,"allowedTypes":["images"]},"address":{"type":"string"},"city":{"type":"string"},"country":{"type":"string"},"phone":{"type":"string"},"currency":{"type":"string","default":"USD"},"plan_type":{"type":"enumeration","enum":["basic","premium"],"default":"basic"},"service_charge_percent":{"type":"decimal","default":0},"is_active":{"type":"boolean","default":true},"is_published":{"type":"boolean","default":false},"owner":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user"},"branches":{"type":"relation","relation":"oneToMany","target":"api::branch.branch","mappedBy":"business"}}}================================================================================FILE:api/business/controllers/business.ts================================================================================import{factories}from'@strapi/strapi';importcryptofrom'crypto';exportdefaultfactories.createCoreController('api::business.business',({strapi})=>({//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/createBusinessWithBranchAndTables//Calledbyanewlyregisteredbusinessownerduringonboardingstep2.//Creates:business→branch→Ntables→owneremployeerecord→updatesprofile.//─────────────────────────────────────────────────────────────────────────────asynccreateBusinessWithBranchAndTables(ctx){try{const{businessName,businessType,logo,phone,address,city,country,currency,planType,branchName,numberOfTables,}=ctx.request.body;if(!businessName)returnctx.badRequest('businessNameisrequired');constuser=ctx.state.user;//1.Createbusinessconstbusiness=awaitstrapi.db.query('api::business.business').create({data:{business_name:businessName,business_type:businessType||'restaurant',logo:logo||null,phone:phone||'',address:address||'',city:city||'',country:country||'',currency:currency||'USD',plan_type:planType||'basic',is_active:true,is_published:false,owner:user?.id||null,publishedAt:newDate(),},});//2.Createdefaultbranchconstbranch=awaitstrapi.db.query('api::branch.branch').create({data:{branch_name:branchName||'MainBranch',business:business.id,is_active:true,publishedAt:newDate(),},});//3.CreatetablesandgenerateQRURLsconsttableCount=Math.min(Math.max(parseInt(numberOfTables)||1,1),100);constappUrl=process.env.FRONTEND_URL||'http://localhost:5173';for(leti=1;i<=tableCount;i++){consttable=awaitstrapi.db.query('api::table.table').create({data:{table_name:`Table${i}`,table_number:i,capacity:4,status:'available',business:business.id,branch:branch.id,publishedAt:newDate(),},});//SavetheQRmenuURLnowthatwehavethetableIDawaitstrapi.db.query('api::table.table').update({where:{id:table.id},data:{qr_code_url:`${appUrl}/m/${business.id}/${branch.id}/${table.id}`},});}//4.Createowneremployeerecordif(user?.id){awaitstrapi.db.query('api::employee.employee').create({data:{full_name:user.username||user.email||'',role:'owner',is_active:true,permissions:{manage_menu:true,manage_orders:true,manage_employees:true,view_reports:true,manage_tables:true,manage_billing:true,},user:user.id,business:business.id,branch:branch.id,publishedAt:newDate(),},});//5.Advanceonboardingstepto2(businesscreated)constprofile=awaitstrapi.db.query('api::user-profile.user-profile').findOne({where:{user:user.id},});if(profile){awaitstrapi.db.query('api::user-profile.user-profile').update({where:{id:profile.id},data:{onboarding_step:2,business:business.id},});}}ctx.send({success:true,businessId:business.id,branchId:branch.id,tablesCreated:tableCount,});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getMyBusiness//Returnsthecurrentuser'sbusiness,employeerecord,andonboardingprofile.//Usedoneverydashboardloadtohydrateappstate.//─────────────────────────────────────────────────────────────────────────────asyncgetMyBusiness(ctx){try{constuser=ctx.state.user;if(!user)returnctx.unauthorized('Notauthenticated');constemployee=awaitstrapi.db.query('api::employee.employee').findOne({where:{user:user.id},populate:['business','branch'],});if(!employee){returnctx.send({business:null,employee:null,profile:null});}constbusiness=awaitstrapi.db.query('api::business.business').findOne({where:{id:employee.business?.id},populate:['logo','branches'],});constprofile=awaitstrapi.db.query('api::user-profile.user-profile').findOne({where:{user:user.id},});ctx.send({business:business?{id:business.id,business_name:business.business_name,business_type:business.business_type,plan_type:business.plan_type,currency:business.currency,city:business.city,country:business.country,service_charge_percent:business.service_charge_percent,is_active:business.is_active,is_published:business.is_published,logo:business.logo?.url||null,branches:(business.branches||[]).map((b)=>({id:b.id,branch_name:b.branch_name,})),}:null,employee:{id:employee.id,full_name:employee.full_name,role:employee.role,permissions:employee.permissions,branch_id:employee.branch?.id||null,},profile:profile?{onboarding_step:profile.onboarding_step,onboarding_complete:profile.onboarding_complete,account_type:profile.account_type,must_change_password:profile.must_change_password,is_platform_admin:profile.is_platform_admin,}:null,});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/updateOnboardingStep//{step:number,complete?:boolean}//Frontendcallsthisaftereachonboardingstepisfinished.//─────────────────────────────────────────────────────────────────────────────asyncupdateOnboardingStep(ctx){try{constuser=ctx.state.user;if(!user)returnctx.unauthorized('Notauthenticated');const{step,complete}=ctx.request.body;constprofile=awaitstrapi.db.query('api::user-profile.user-profile').findOne({where:{user:user.id},});if(!profile)returnctx.notFound('Userprofilenotfound');awaitstrapi.db.query('api::user-profile.user-profile').update({where:{id:profile.id},data:{onboarding_step:step??profile.onboarding_step,onboarding_complete:complete??profile.onboarding_complete,},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getBusinessReports//{businessId,dateFrom?,dateTo?}//Returnssummarystats+topitems+orders-by-daychartdata.//─────────────────────────────────────────────────────────────────────────────asyncgetBusinessReports(ctx){try{const{businessId,dateFrom,dateTo}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');constdateFilter:any={};if(dateFrom)dateFilter.$gte=newDate(dateFrom);if(dateTo)dateFilter.$lte=newDate(dateTo);constordersWhere:any={business:businessId};if(Object.keys(dateFilter).length)ordersWhere.createdAt=dateFilter;const[allOrders,completedOrders,cancelledOrders]=awaitPromise.all([strapi.db.query('api::order.order').findMany({where:ordersWhere}),strapi.db.query('api::order.order').findMany({where:{...ordersWhere,status:'completed'},}),strapi.db.query('api::order.order').findMany({where:{...ordersWhere,status:'cancelled'},}),]);consttotalRevenue=completedOrders.reduce((s,o)=>s+(o.total||0),0);constavgOrderValue=completedOrders.length>0?totalRevenue/completedOrders.length:0;//TopsellingitemsconstitemCounts:Record<string,{name:string;count:number;revenue:number}>={};for(constorderofcompletedOrders){for(constitemoforder.items||[]){if(!itemCounts[item.name]){itemCounts[item.name]={name:item.name,count:0,revenue:0};}itemCounts[item.name].count+=item.quantity||1;itemCounts[item.name].revenue+=(item.price||0)*(item.quantity||1);}}consttopItems=Object.values(itemCounts).sort((a,b)=>b.count-a.count).slice(0,10);//OrdersbydayforchartconstordersByDay:Record<string,number>={};for(constorderofallOrders){constday=newDate(order.createdAt).toISOString().slice(0,10);ordersByDay[day]=(ordersByDay[day]||0)+1;}//RevenuebydayforchartconstrevenueByDay:Record<string,number>={};for(constorderofcompletedOrders){constday=newDate(order.createdAt).toISOString().slice(0,10);revenueByDay[day]=+(((revenueByDay[day]||0)+(order.total||0)).toFixed(2));}ctx.send({summary:{totalOrders:allOrders.length,completedOrders:completedOrders.length,cancelledOrders:cancelledOrders.length,pendingOrders:allOrders.length-completedOrders.length-cancelledOrders.length,totalRevenue:+totalRevenue.toFixed(2),avgOrderValue:+avgOrderValue.toFixed(2),},topItems,ordersByDay,revenueByDay,});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/business/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/createBusinessWithBranchAndTables',handler:'business.createBusinessWithBranchAndTables',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/getMyBusiness',handler:'business.getMyBusiness',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/updateOnboardingStep',handler:'business.updateOnboardingStep',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/getBusinessReports',handler:'business.getBusinessReports',config:{auth:{enabled:false}},},],};================================================================================FILE:api/business/routes/business.ts================================================================================/***businessrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::business.business');================================================================================FILE:api/business/services/business.ts================================================================================/***businessservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::business.business');================================================================================FILE:api/business-ad-setting/content-types/business-ad-setting/schema.json================================================================================{"kind":"collectionType","collectionName":"business_ad_settings","info":{"singularName":"business-ad-setting","pluralName":"business-ad-settings","displayName":"BusinessAdSetting"},"attributes":{"ad_mode":{"type":"enumeration","enum":["platform_ads","business_ads_only","mixed_ads","google_adsense","no_ads"],"default":"platform_ads"},"platform_admin_override":{"type":"boolean","default":false},"force_platform_ads":{"type":"boolean","default":false},"allow_google_adsense":{"type":"boolean","default":false},"business":{"type":"relation","relation":"oneToOne","target":"api::business.business"}}}================================================================================FILE:api/business-ad-setting/controllers/business-ad-setting.ts================================================================================/***business-ad-settingcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::business-ad-setting.business-ad-setting');================================================================================FILE:api/business-ad-setting/routes/business-ad-setting.ts================================================================================/***business-ad-settingrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::business-ad-setting.business-ad-setting');================================================================================FILE:api/business-ad-setting/services/business-ad-setting.ts================================================================================/***business-ad-settingservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::business-ad-setting.business-ad-setting');================================================================================FILE:api/business-menu-setting/content-types/business-menu-setting/schema.json================================================================================{"kind":"collectionType","collectionName":"business_menu_settings","info":{"singularName":"business-menu-setting","pluralName":"business-menu-settings","displayName":"BusinessMenuSetting"},"attributes":{"display_name":{"type":"string"},"tagline":{"type":"string"},"welcome_message":{"type":"text"},"opening_hours":{"type":"string"},"location_text":{"type":"string"},"theme_style":{"type":"string","default":"modern_dark"},"primary_color":{"type":"string"},"accent_color":{"type":"string"},"button_color":{"type":"string"},"text_color":{"type":"string"},"background_color":{"type":"string"},"card_color":{"type":"string"},"layout_style":{"type":"string","default":"classic_list"},"header_style":{"type":"string","default":"floating_glass"},"category_style":{"type":"string","default":"rounded_pills"},"product_card_style":{"type":"string","default":"large_image"},"show_hero":{"type":"boolean","default":true},"hero_text":{"type":"string"},"promo_text":{"type":"string"},"cover_image_url":{"type":"media","multiple":false},"cover_video_url":{"type":"media","multiple":false},"show_ai_recommendations":{"type":"boolean","default":true},"status":{"type":"enumeration","enum":["draft","published"],"default":"draft"},"published_at":{"type":"datetime"},"business":{"type":"relation","relation":"oneToOne","target":"api::business.business"}}}================================================================================FILE:api/business-menu-setting/controllers/business-menu-setting.ts================================================================================/***business-menu-settingcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::business-menu-setting.business-menu-setting');================================================================================FILE:api/business-menu-setting/routes/business-menu-setting.ts================================================================================/***business-menu-settingrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::business-menu-setting.business-menu-setting');================================================================================FILE:api/business-menu-setting/services/business-menu-setting.ts================================================================================/***business-menu-settingservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::business-menu-setting.business-menu-setting');================================================================================FILE:api/custom-controller/content-types/custom-controller/schema.json================================================================================{"kind":"collectionType","collectionName":"custom_controllers","info":{"singularName":"custom-controller","pluralName":"custom-controllers","displayName":"customControllers"},"options":{"draftAndPublish":true},"pluginOptions":{},"attributes":{}}================================================================================FILE:api/custom-controller/controllers/custom-controller.ts================================================================================/***custom-controllercontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::custom-controller.custom-controller');================================================================================FILE:api/custom-controller/routes/custom-controller.ts================================================================================/***custom-controllerrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::custom-controller.custom-controller');================================================================================FILE:api/custom-controller/services/custom-controller.ts================================================================================/***custom-controllerservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::custom-controller.custom-controller');================================================================================FILE:api/employee/content-types/employee/schema.json================================================================================{"kind":"collectionType","collectionName":"employees","info":{"singularName":"employee","pluralName":"employees","displayName":"Employee"},"attributes":{"full_name":{"type":"string","required":true},"phone":{"type":"string"},"role":{"type":"enumeration","enum":["owner","manager","waiter"],"required":true},"is_active":{"type":"boolean","default":true},"permissions":{"type":"json"},"user":{"type":"relation","relation":"oneToOne","target":"plugin::users-permissions.user"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"branch":{"type":"relation","relation":"manyToOne","target":"api::branch.branch"},"assigned_tables":{"type":"relation","relation":"oneToMany","target":"api::table.table"}}}================================================================================FILE:api/employee/controllers/employee.ts================================================================================/***employeecontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::employee.employee');================================================================================FILE:api/employee/routes/employee.ts================================================================================/***employeerouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::employee.employee');================================================================================FILE:api/employee/services/employee.ts================================================================================/***employeeservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::employee.employee');================================================================================FILE:api/employee-invitation/content-types/employee-invitation/schema.json================================================================================{"kind":"collectionType","collectionName":"employee_invitations","info":{"singularName":"employee-invitation","pluralName":"employee-invitations","displayName":"EmployeeInvitation"},"attributes":{"invited_name":{"type":"string","required":true},"invited_email":{"type":"email","required":true},"phone":{"type":"string"},"role":{"type":"enumeration","enum":["manager","waiter"]},"invite_token":{"type":"string","unique":true},"status":{"type":"enumeration","enum":["pending","accepted","expired","cancelled"],"default":"pending"},"expires_at":{"type":"datetime"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"branch":{"type":"relation","relation":"manyToOne","target":"api::branch.branch"}}}================================================================================FILE:api/employee-invitation/controllers/employee-invitation.ts================================================================================import{factories}from'@strapi/strapi';importcryptofrom'crypto';constINVITE_BASE=process.env.FRONTEND_URL||'https://juicy-dine-smart-flow.base44.app';exportdefaultfactories.createCoreController('api::employee-invitation.employee-invitation',({strapi})=>({//POST/custom-functions/sendEmployeeInvite//{invited_name,invited_email,phone,role,branch_id,business_id,business_name}asyncsendEmployeeInvite(ctx){try{const{invited_name,invited_email,phone,role,branch_id,business_id,business_name}=ctx.request.body;if(!invited_name||!invited_email||!role||!business_id){returnctx.send({error:'invited_name,invited_email,roleandbusiness_idarerequired'},400);}//Cancelanypriorpendinginviteforthesameemail+businessconstexisting=awaitstrapi.db.query('api::employee-invitation.employee-invitation').findMany({where:{invited_email,business:business_id,status:'pending'},});for(constinvofexisting){awaitstrapi.db.query('api::employee-invitation.employee-invitation').update({where:{id:inv.id},data:{status:'cancelled'},});}consttoken=crypto.randomBytes(24).toString('hex');constexpiresAt=newDate(Date.now()+7*24*60*60*1000);//7daysconstinvitation=awaitstrapi.db.query('api::employee-invitation.employee-invitation').create({data:{invited_name,invited_email,phone:phone||'',role,branch:branch_id||null,business:business_id,invite_token:token,status:'pending',expires_at:expiresAt,publishedAt:newDate(),},});constinviteLink=`${INVITE_BASE}/accept-invite?token=${token}`;letemailSent=false;try{awaitstrapi.plugins['email'].services.email.send({to:invited_email,subject:`You'vebeeninvitedtojoin${business_name||'arestaurant'}onSmartMenu`,text:`Hi${invited_name},\n\nYou'vebeeninvitedtojoin${business_name||'arestaurant'}asa${role}.\n\nAcceptyourinvitehere:${inviteLink}\n\nThislinkexpiresin7days.`,});emailSent=true;}catch(mailErr){strapi.log.warn(`[sendEmployeeInvite]Emailsendfailed:${mailErr.message}`);emailSent=false;}ctx.send({success:true,invitationId:invitation.id,inviteLink,emailSent,});}catch(err){ctx.throw(500,err.message);}},//POST/custom-functions/validateInviteToken{token}asyncvalidateInviteToken(ctx){try{const{token}=ctx.request.body;if(!token)returnctx.send({valid:false,reason:'invalid'});constinvitation=awaitstrapi.db.query('api::employee-invitation.employee-invitation').findOne({where:{invite_token:token},populate:['business','branch'],});if(!invitation)returnctx.send({valid:false,reason:'invalid'});if(invitation.status==='accepted')returnctx.send({valid:false,reason:'accepted'});if(invitation.status==='cancelled')returnctx.send({valid:false,reason:'invalid'});if(invitation.expires_at&&newDate(invitation.expires_at)<newDate()){if(invitation.status!=='expired'){awaitstrapi.db.query('api::employee-invitation.employee-invitation').update({where:{id:invitation.id},data:{status:'expired'},});}returnctx.send({valid:false,reason:'expired'});}ctx.send({valid:true,invitation:{id:invitation.id,invited_name:invitation.invited_name,invited_email:invitation.invited_email,role:invitation.role,},business:invitation.business?{id:invitation.business.id,business_name:invitation.business.business_name,}:null,branch:invitation.branch?{id:invitation.branch.id,branch_name:invitation.branch.branch_name,}:null,});}catch(err){ctx.throw(500,err.message);}},//POST/custom-functions/acceptInvite{token}—requiresauthenticateduser(ctx.state.user)asyncacceptInvite(ctx){try{const{token}=ctx.request.body;constuser=ctx.state.user;if(!user)returnctx.send({success:false,error:'Notauthenticated'},401);if(!token)returnctx.send({success:false,error:'Tokenisrequired'},400);constinvitation=awaitstrapi.db.query('api::employee-invitation.employee-invitation').findOne({where:{invite_token:token},populate:['business','branch'],});if(!invitation)returnctx.send({success:false,error:'Invalidinvitelink'});if(invitation.status!=='pending')returnctx.send({success:false,error:'Invitationalreadyusedorexpired'});if(invitation.invited_email.toLowerCase()!==user.email.toLowerCase()){returnctx.send({success:false,error:'Thisinvitewassenttoadifferentemailaddress'});}constDEFAULT_PERMISSIONS={manager:{view_orders:true,manage_menu:true,assign_waiters:true,view_daily_reports:true,approve_cancellations:true},waiter:{view_assigned_tables:true,receive_orders:true,update_order_status:true,receive_waiter_calls:true},};constemployee=awaitstrapi.db.query('api::employee.employee').create({data:{full_name:invitation.invited_name,phone:invitation.phone||'',role:invitation.role,is_active:true,permissions:DEFAULT_PERMISSIONS[invitation.role]||{},user:user.id,business:invitation.business.id,branch:invitation.branch?.id||null,publishedAt:newDate(),},});awaitstrapi.db.query('api::employee-invitation.employee-invitation').update({where:{id:invitation.id},data:{status:'accepted'},});ctx.send({success:true,employeeId:employee.id,business_id:invitation.business.id,role:invitation.role,});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/employee-invitation/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/sendEmployeeInvite',handler:'employee-invitation.sendEmployeeInvite',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/validateInviteToken',handler:'employee-invitation.validateInviteToken',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/acceptInvite',handler:'employee-invitation.acceptInvite',config:{auth:{enabled:false}},},],};================================================================================FILE:api/employee-invitation/routes/employee-invitation.ts================================================================================/***employee-invitationrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::employee-invitation.employee-invitation');================================================================================FILE:api/employee-invitation/services/employee-invitation.ts================================================================================/***employee-invitationservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::employee-invitation.employee-invitation');================================================================================FILE:api/global-ad-setting/content-types/global-ad-setting/schema.json================================================================================{"kind":"singleType","collectionName":"global_ad_settings","info":{"singularName":"global-ad-setting","pluralName":"global-ad-settings","displayName":"GlobalAdSetting"},"attributes":{"enable_google_adsense":{"type":"boolean","default":false},"adsense_publisher_id":{"type":"string"},"top_banner_slot_id":{"type":"string"},"inline_slot_id":{"type":"string"},"cart_slot_id":{"type":"string"},"order_success_slot_id":{"type":"string"}}}================================================================================FILE:api/global-ad-setting/controllers/global-ad-setting.ts================================================================================/***global-ad-settingcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::global-ad-setting.global-ad-setting');================================================================================FILE:api/global-ad-setting/routes/global-ad-setting.ts================================================================================/***global-ad-settingrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::global-ad-setting.global-ad-setting');================================================================================FILE:api/global-ad-setting/services/global-ad-setting.ts================================================================================/***global-ad-settingservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::global-ad-setting.global-ad-setting');================================================================================FILE:api/menu-category/content-types/menu-category/schema.json================================================================================{"kind":"collectionType","collectionName":"menu_categories","info":{"singularName":"menu-category","pluralName":"menu-categories","displayName":"MenuCategory"},"attributes":{"name":{"type":"string","required":true},"icon":{"type":"string"},"sort_order":{"type":"integer","default":0},"is_active":{"type":"boolean","default":true},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"menu_items":{"type":"relation","relation":"oneToMany","target":"api::menu-item.menu-item","mappedBy":"menu_category"}}}================================================================================FILE:api/menu-category/controllers/menu-category.ts================================================================================/***menu-categorycontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::menu-category.menu-category');================================================================================FILE:api/menu-category/routes/menu-category.ts================================================================================/***menu-categoryrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::menu-category.menu-category');================================================================================FILE:api/menu-category/services/menu-category.ts================================================================================/***menu-categoryservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::menu-category.menu-category');================================================================================FILE:api/menu-item/content-types/menu-item/schema.json================================================================================{"kind":"collectionType","collectionName":"menu_items","info":{"singularName":"menu-item","pluralName":"menu-items","displayName":"MenuItem"},"attributes":{"name":{"type":"string","required":true},"description":{"type":"text"},"price":{"type":"decimal","required":true},"image":{"type":"media","multiple":false,"allowedTypes":["images"]},"preparation_time":{"type":"string"},"tags":{"type":"string"},"is_available":{"type":"boolean","default":true},"is_popular":{"type":"boolean","default":false},"is_featured":{"type":"boolean","default":false},"is_special_offer":{"type":"boolean","default":false},"is_sponsored":{"type":"boolean","default":false},"menu_category":{"type":"relation","relation":"manyToOne","target":"api::menu-category.menu-category","inversedBy":"menu_items"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"variants":{"type":"relation","relation":"oneToMany","target":"api::menu-item-variant.menu-item-variant","mappedBy":"menu_item"},"modifiers":{"type":"relation","relation":"oneToMany","target":"api::menu-item-modifier.menu-item-modifier","mappedBy":"menu_item"}}}================================================================================FILE:api/menu-item/controllers/menu-item.ts================================================================================/***menu-itemcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::menu-item.menu-item');================================================================================FILE:api/menu-item/routes/menu-item.ts================================================================================/***menu-itemrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::menu-item.menu-item');================================================================================FILE:api/menu-item/services/menu-item.ts================================================================================/***menu-itemservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::menu-item.menu-item');================================================================================FILE:api/menu-item-modifier/content-types/menu-item-modifier/schema.json================================================================================{"kind":"collectionType","collectionName":"menu_item_modifiers","info":{"singularName":"menu-item-modifier","pluralName":"menu-item-modifiers","displayName":"MenuItemModifier"},"attributes":{"name":{"type":"string","required":true},"price":{"type":"decimal","default":0},"is_required":{"type":"boolean","default":false},"is_active":{"type":"boolean","default":true},"menu_item":{"type":"relation","relation":"manyToOne","target":"api::menu-item.menu-item","inversedBy":"modifiers"}}}================================================================================FILE:api/menu-item-modifier/controllers/menu-item-modifier.ts================================================================================/***menu-item-modifiercontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::menu-item-modifier.menu-item-modifier');================================================================================FILE:api/menu-item-modifier/routes/menu-item-modifier.ts================================================================================/***menu-item-modifierrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::menu-item-modifier.menu-item-modifier');================================================================================FILE:api/menu-item-modifier/services/menu-item-modifier.ts================================================================================/***menu-item-modifierservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::menu-item-modifier.menu-item-modifier');================================================================================FILE:api/menu-item-variant/content-types/menu-item-variant/schema.json================================================================================{"kind":"collectionType","collectionName":"menu_item_variants","info":{"singularName":"menu-item-variant","pluralName":"menu-item-variants","displayName":"MenuItemVariant"},"attributes":{"name":{"type":"string","required":true},"price":{"type":"decimal","required":true},"is_active":{"type":"boolean","default":true},"menu_item":{"type":"relation","relation":"manyToOne","target":"api::menu-item.menu-item","inversedBy":"variants"}}}================================================================================FILE:api/menu-item-variant/controllers/menu-item-variant.ts================================================================================/***menu-item-variantcontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::menu-item-variant.menu-item-variant');================================================================================FILE:api/menu-item-variant/routes/menu-item-variant.ts================================================================================/***menu-item-variantrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::menu-item-variant.menu-item-variant');================================================================================FILE:api/menu-item-variant/services/menu-item-variant.ts================================================================================/***menu-item-variantservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::menu-item-variant.menu-item-variant');================================================================================FILE:api/order/content-types/order/lifecycle.ts================================================================================//src/api/order/content-types/order/lifecycle.tsimportsocketfrom'../../../../services/socket-client';exportdefault{afterCreate(event:any){const{result}=event;//Emittheeventtothesocketserver//TheSocketserverwillthenbroadcastthistotherelevantroomsocket.emit('new_order_created',{businessId:result.business?.id,order:result,message:'Neworderarrived'});},};================================================================================FILE:api/order/content-types/order/lifecycles.ts================================================================================//api/order/content-types/order/lifecycles.ts//Emitssocketeventsonordercreateandstatuschange.//Alsowritestotheactivitylogoncreate.exportdefault{asyncafterCreate(event:any){const{result}=event;conststrapi=(globalasany).strapi;//Socket:notifyallstaffwatchingthisbusinesstry{constsocket=require('../../../../services/socket-client').default;socket.emit('new_order_created',{businessId:result.business?.id,tableId:result.table?.id,orderId:result.id,orderNumber:result.order_number,status:result.status,total:result.total,itemCount:(result.items||[]).length,customerSessionId:result.customer_session_id,});}catch(err){strapi.log.warn(`[OrderLifecycleafterCreate]Socketemitfailed:${err.message}`);}//Activitylogtry{awaitstrapi.db.query('api::activity-log.activity-log').create({data:{action:'order_created',target_type:'order',target_id:String(result.id),metadata:{order_number:result.order_number,total:result.total,item_count:(result.items||[]).length,},business:result.business?.id||null,publishedAt:newDate(),},});}catch(err){strapi.log.warn(`[OrderLifecycleafterCreate]Activitylogfailed:${err.message}`);}},asyncafterUpdate(event:any){const{result,params}=event;conststrapi=(globalasany).strapi;//Onlyemitifthestatusfieldwasactuallypartoftheupdateif(!params.data?.status)return;try{constsocket=require('../../../../services/socket-client').default;socket.emit('order_status_updated',{businessId:result.business?.id,tableId:result.table?.id,orderId:result.id,orderNumber:result.order_number,newStatus:result.status,customerSessionId:result.customer_session_id,});}catch(err){strapi.log.warn(`[OrderLifecycleafterUpdate]Socketemitfailed:${err.message}`);}},};================================================================================FILE:api/order/content-types/order/schema.json================================================================================{"kind":"collectionType","collectionName":"orders","info":{"singularName":"order","pluralName":"orders","displayName":"Order"},"attributes":{"order_number":{"type":"string","unique":true},"status":{"type":"enumeration","enum":["pending","accepted","preparing","served","completed","cancelled"],"default":"pending"},"payment_status":{"type":"enumeration","enum":["unpaid","paid"],"default":"unpaid"},"subtotal":{"type":"decimal"},"service_charge":{"type":"decimal"},"total":{"type":"decimal"},"notes":{"type":"text"},"customer_session_id":{"type":"string"},"items":{"type":"component","repeatable":true,"component":"order.order-item"},"table":{"type":"relation","relation":"manyToOne","target":"api::table.table"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"waiter":{"type":"relation","relation":"manyToOne","target":"api::employee.employee"}}}================================================================================FILE:api/order/controllers/order.ts================================================================================import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::order.order',({strapi})=>({//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getPublicMenu//{businessId,tableId?}//Public—noauth.Returnseverythingthecustomermenupageneedsinonecall://businessinfo,tableinfo,menusettings,categories,items(withvariants&//modifiers),andactivepromotions.//─────────────────────────────────────────────────────────────────────────────asyncgetPublicMenu(ctx){try{const{businessId,tableId}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');const[business,table,menuSettings,categories,items,promotions]=awaitPromise.all([strapi.db.query('api::business.business').findOne({where:{id:businessId},populate:['logo'],}),tableId?strapi.db.query('api::table.table').findOne({where:{id:tableId},populate:['assigned_waiter','branch'],}):Promise.resolve(null),strapi.db.query('api::business-menu-setting.business-menu-setting').findOne({where:{business:businessId},populate:['cover_image_url'],}),strapi.db.query('api::menu-category.menu-category').findMany({where:{business:businessId,is_active:true},orderBy:{sort_order:'asc'},}),strapi.db.query('api::menu-item.menu-item').findMany({where:{business:businessId,is_available:true},populate:['image','menu_category','variants','modifiers'],}),strapi.db.query('api::promotion.promotion').findMany({where:{business:businessId,is_active:true},populate:['image'],}),]);if(!business)returnctx.notFound('Businessnotfound');ctx.send({business:{id:business.id,business_name:business.business_name,business_type:business.business_type,plan_type:business.plan_type,currency:business.currency,city:business.city,country:business.country,service_charge_percent:business.service_charge_percent||0,logo:business.logo?.url||null,},table:table?{id:table.id,table_number:table.table_number,table_name:table.table_name,status:table.status,capacity:table.capacity,branch_id:table.branch?.id||null,assigned_waiter_id:table.assigned_waiter?.id||null,assigned_waiter_name:table.assigned_waiter?.full_name||null,}:null,menuSettings:menuSettings?{theme_style:menuSettings.theme_style,layout_style:menuSettings.layout_style,header_style:menuSettings.header_style,category_style:menuSettings.category_style,product_card_style:menuSettings.product_card_style,primary_color:menuSettings.primary_color,accent_color:menuSettings.accent_color,button_color:menuSettings.button_color,text_color:menuSettings.text_color,background_color:menuSettings.background_color,card_color:menuSettings.card_color,show_hero:menuSettings.show_hero,hero_text:menuSettings.hero_text,welcome_message:menuSettings.welcome_message,promo_text:menuSettings.promo_text,display_name:menuSettings.display_name,tagline:menuSettings.tagline,opening_hours:menuSettings.opening_hours,location_text:menuSettings.location_text,cover_image_url:menuSettings.cover_image_url?.url||null,show_ai_recommendations:menuSettings.show_ai_recommendations,}:null,categories:categories.map((c)=>({id:c.id,name:c.name,icon:c.icon,sort_order:c.sort_order,})),items:items.map((i)=>({id:i.id,name:i.name,description:i.description,price:i.price,image:i.image?.url||null,is_available:i.is_available,is_popular:i.is_popular,is_featured:i.is_featured,is_special_offer:i.is_special_offer,is_sponsored:i.is_sponsored,preparation_time:i.preparation_time,tags:i.tags,category_id:i.menu_category?.id||null,variants:(i.variants||[]).filter((v)=>v.is_active).map((v)=>({id:v.id,name:v.name,price:v.price})),modifiers:(i.modifiers||[]).filter((m)=>m.is_active).map((m)=>({id:m.id,name:m.name,price:m.price,is_required:m.is_required,})),})),promotions:promotions.map((p)=>({id:p.id,title:p.title,description:p.description,type:p.type,image:p.image?.url||null,start_time:p.start_time,end_time:p.end_time,start_date:p.start_date,end_date:p.end_date,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getClientOrders//{customerSessionId}//Public—returnsallordersforthecurrentcustomersession(tabtracker).//─────────────────────────────────────────────────────────────────────────────asyncgetClientOrders(ctx){try{const{customerSessionId}=ctx.request.body;if(!customerSessionId)returnctx.send({orders:[]});constorders=awaitstrapi.db.query('api::order.order').findMany({where:{customer_session_id:customerSessionId},orderBy:{createdAt:'desc'},limit:50,});ctx.send({orders:orders.map((o)=>({id:o.id,order_number:o.order_number,status:o.status,payment_status:o.payment_status,items:o.items,subtotal:o.subtotal,service_charge:o.service_charge,total:o.total,notes:o.notes,created_date:o.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/placeOrder//{businessId,tableId,tableNumber?,waiterId?,customerSessionId,items[],notes?}//Public—customerplacesanorder.Calculatesservicecharge,generatesorder//number,updatestablestatusto'ordering'.//─────────────────────────────────────────────────────────────────────────────asyncplaceOrder(ctx){try{const{businessId,tableId,waiterId,customerSessionId,items=[],notes='',}=ctx.request.body;if(!businessId||!tableId||!items.length){returnctx.badRequest('businessId,tableIdanditemsarerequired');}constsubtotal=items.reduce((s,i)=>s+(i.price*i.quantity),0);constbusiness=awaitstrapi.db.query('api::business.business').findOne({where:{id:businessId},});constserviceChargePercent=business?.service_charge_percent||0;constserviceCharge=+(subtotal*(serviceChargePercent/100)).toFixed(2);consttotal=+(subtotal+serviceCharge).toFixed(2);constorderNumber=`ORD-${Date.now().toString(36).toUpperCase()}`;constorder=awaitstrapi.db.query('api::order.order').create({data:{order_number:orderNumber,status:'pending',payment_status:'unpaid',subtotal,service_charge:serviceCharge,total,notes,customer_session_id:customerSessionId,items:items.map((i)=>({name:i.name,quantity:i.quantity,price:i.price,notes:i.notes||'',status:'pending',variant_name:i.variant_name||null,modifiers:i.modifiers||[],})),table:tableId,business:businessId,waiter:waiterId||null,publishedAt:newDate(),},});//Movetableinto'ordering'stateawaitstrapi.db.query('api::table.table').update({where:{id:tableId},data:{status:'ordering'},});ctx.send({success:true,order:{id:order.id,order_number:order.order_number}});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/updateOrderStatus//{orderId,status,waiterId?}//Usedbywaitersandmanagerstoadvanceanorderthroughitslifecycle.//Whenanorderreaches'completed'or'cancelled',freesthetableifno//otheractiveordersremainonit.//─────────────────────────────────────────────────────────────────────────────asyncupdateOrderStatus(ctx){try{const{orderId,status,waiterId}=ctx.request.body;constvalidStatuses=['pending','accepted','preparing','served','completed','cancelled'];if(!orderId||!validStatuses.includes(status)){returnctx.badRequest('orderIdandavalidstatusarerequired');}constupdateData:any={status};if(waiterId)updateData.waiter=waiterId;constorder=awaitstrapi.db.query('api::order.order').update({where:{id:orderId},data:updateData,populate:['table'],});//Freethetablewhenallordersonitaredoneif(['completed','cancelled'].includes(status)&&order.table?.id){constactiveOrders=awaitstrapi.db.query('api::order.order').count({where:{table:order.table.id,status:{$notIn:['completed','cancelled']},id:{$ne:orderId},},});if(activeOrders===0){awaitstrapi.db.query('api::table.table').update({where:{id:order.table.id},data:{status:'available'},});}}ctx.send({success:true,order:{id:order.id,status:order.status}});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getBusinessOrders//{businessId,branchId?,status?,limit?}//Usedbyowner/manager/waiterdashboardstolistorders.//─────────────────────────────────────────────────────────────────────────────asyncgetBusinessOrders(ctx){try{const{businessId,branchId,status,limit=50}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');constwhere:any={business:businessId};if(status)where.status=status;//branchIdfilteringviatablerelationisnotdirectlysupportedinfindMany;//fetchandfilterinmemorywhenbranchIdisprovided.constorders=awaitstrapi.db.query('api::order.order').findMany({where,populate:['table','waiter'],orderBy:{createdAt:'desc'},limit:Math.min(limit,200),});constfiltered=branchId?orders.filter((o)=>String(o.table?.branch)===String(branchId)):orders;ctx.send({orders:filtered.map((o)=>({id:o.id,order_number:o.order_number,status:o.status,payment_status:o.payment_status,items:o.items,subtotal:o.subtotal,service_charge:o.service_charge,total:o.total,notes:o.notes,customer_session_id:o.customer_session_id,table:o.table?{id:o.table.id,table_number:o.table.table_number,table_name:o.table.table_name,}:null,waiter:o.waiter?{id:o.waiter.id,full_name:o.waiter.full_name}:null,created_date:o.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/order/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/getPublicMenu',handler:'order.getPublicMenu',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/getClientOrders',handler:'order.getClientOrders',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/placeOrder',handler:'order.placeOrder',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/updateOrderStatus',handler:'order.updateOrderStatus',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/getBusinessOrders',handler:'order.getBusinessOrders',config:{auth:{enabled:false}},},],};================================================================================FILE:api/order/routes/order.ts================================================================================/***orderrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::order.order');================================================================================FILE:api/order/services/order.ts================================================================================/***orderservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::order.order');================================================================================FILE:api/platform-admin/content-types/platform-admin/schema.json================================================================================{"kind":"collectionType","collectionName":"platform_admins","info":{"singularName":"platform-admin","pluralName":"platform-admins","displayName":"PlatformAdmin"},"attributes":{"email":{"type":"email","required":true,"unique":true},"role":{"type":"string","default":"platform_master"},"is_active":{"type":"boolean","default":true},"user":{"type":"relation","relation":"oneToOne","target":"plugin::users-permissions.user"}}}================================================================================FILE:api/platform-admin/controllers/platform-admin.ts================================================================================import{factories}from'@strapi/strapi';importcryptofrom'crypto';//─────────────────────────────────────────────────────────────────────────────//Helper—verifythecallerisanactiveplatformadmin.//Returnstheadminrecordornull(andhasalreadysentanerrorresponse).//─────────────────────────────────────────────────────────────────────────────asyncfunctionrequirePlatformAdmin(ctx:any,strapi:any){constuser=ctx.state.user;if(!user){ctx.unauthorized('Notauthenticated');returnnull;}constadmin=awaitstrapi.db.query('api::platform-admin.platform-admin').findOne({where:{user:user.id,is_active:true}});if(!admin){ctx.forbidden('Platformadminaccessrequired');returnnull;}returnadmin;}exportdefaultfactories.createCoreController('api::platform-admin.platform-admin',({strapi})=>({//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/setupPlatformMaster(PUBLIC—one-timeonly)//{email,password,fullName}//Createsthefirstplatformmasteraccount.Guardsagainstre-creation//unlesstheemailmatchesPLATFORM_OWNER_EMAILenvvar.//─────────────────────────────────────────────────────────────────────────asyncsetupPlatformMaster(ctx){try{const{email,password,fullName}=ctx.request.body;if(!email||!password)returnctx.badRequest('emailandpasswordarerequired');constexisting=awaitstrapi.db.query('api::platform-admin.platform-admin').findOne({where:{role:'platform_master',is_active:true}});constplatformOwnerEmail=process.env.PLATFORM_OWNER_EMAIL;if(existing&&email!==platformOwnerEmail){returnctx.forbidden('Platformmasterisalreadyconfigured');}//Resolveorcreatetheauthuserletuser=awaitstrapi.db.query('plugin::users-permissions.user').findOne({where:{email}});if(!user){constpluginStore=strapi.store({type:'plugin',name:'users-permissions'});constsettings=awaitpluginStore.get({key:'advanced'});constdefaultRole=awaitstrapi.db.query('plugin::users-permissions.role').findOne({where:{type:settings?.default_role||'authenticated'}});user=awaitstrapi.plugins['users-permissions'].services.user.add({username:fullName||email.split('@')[0],email,password,role:defaultRole?.id,confirmed:true,blocked:false,});}//Createorupdatetheplatform-adminrecordif(existing){awaitstrapi.db.query('api::platform-admin.platform-admin').update({where:{id:existing.id},data:{user:user.id,is_active:true},});}else{awaitstrapi.db.query('api::platform-admin.platform-admin').create({data:{email,role:'platform_master',is_active:true,user:user.id,publishedAt:newDate(),},});}//Create/updateuserprofileconstexistingProfile=awaitstrapi.db.query('api::user-profile.user-profile').findOne({where:{user:user.id}});if(!existingProfile){awaitstrapi.db.query('api::user-profile.user-profile').create({data:{full_name:fullName||'',is_platform_admin:true,onboarding_complete:true,onboarding_step:99,user:user.id,publishedAt:newDate(),},});}else{awaitstrapi.db.query('api::user-profile.user-profile').update({where:{id:existingProfile.id},data:{is_platform_admin:true,onboarding_complete:true,onboarding_step:99},});}constjwt=strapi.plugins['users-permissions'].services.jwt.issue({id:user.id});ctx.send({success:true,token:jwt,user:{id:user.id,email:user.email,role:'platform_master'},});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/platformCreateBusiness(authrequired)//{businessName,businessType,ownerEmail,ownerFullName,//phone,address,city,country,currency,planType}//Platformmastercreatesabusiness+owneruser(withtemppassword).//Sendscredentialemailiftheownerisanewuser.//─────────────────────────────────────────────────────────────────────────asyncplatformCreateBusiness(ctx){try{constadmin=awaitrequirePlatformAdmin(ctx,strapi);if(!admin)return;const{businessName,businessType,ownerEmail,ownerFullName,phone,address,city,country,currency,planType,}=ctx.request.body;if(!businessName||!ownerEmail){returnctx.badRequest('businessNameandownerEmailarerequired');}//ResolveorcreateowneruserletownerUser=awaitstrapi.db.query('plugin::users-permissions.user').findOne({where:{email:ownerEmail}});consttempPassword=crypto.randomBytes(8).toString('hex');letisNewUser=false;if(!ownerUser){isNewUser=true;constpluginStore=strapi.store({type:'plugin',name:'users-permissions'});constsettings=awaitpluginStore.get({key:'advanced'});constdefaultRole=awaitstrapi.db.query('plugin::users-permissions.role').findOne({where:{type:settings?.default_role||'authenticated'}});ownerUser=awaitstrapi.plugins['users-permissions'].services.user.add({username:ownerFullName||ownerEmail.split('@')[0],email:ownerEmail,password:tempPassword,role:defaultRole?.id,confirmed:true,blocked:false,});}//Createbusiness(lifecycleauto-createsmenu+adsettings)constbusiness=awaitstrapi.db.query('api::business.business').create({data:{business_name:businessName,business_type:businessType||'restaurant',phone:phone||'',address:address||'',city:city||'',country:country||'',currency:currency||'USD',plan_type:planType||'basic',is_active:true,is_published:false,owner:ownerUser.id,publishedAt:newDate(),},});//Createdefaultbranchconstbranch=awaitstrapi.db.query('api::branch.branch').create({data:{branch_name:'MainBranch',business:business.id,is_active:true,publishedAt:newDate(),},});//Createowneremployeerecordawaitstrapi.db.query('api::employee.employee').create({data:{full_name:ownerFullName||ownerEmail,role:'owner',is_active:true,permissions:{manage_menu:true,manage_orders:true,manage_employees:true,view_reports:true,manage_tables:true,manage_billing:true,},user:ownerUser.id,business:business.id,branch:branch.id,publishedAt:newDate(),},});//Createuserprofile(marksmust_change_passwordfornewusers)constexistingProfile=awaitstrapi.db.query('api::user-profile.user-profile').findOne({where:{user:ownerUser.id}});if(!existingProfile){awaitstrapi.db.query('api::user-profile.user-profile').create({data:{full_name:ownerFullName||'',account_type:'business_owner',must_change_password:isNewUser,onboarding_step:isNewUser?1:2,onboarding_complete:false,user:ownerUser.id,business:business.id,publishedAt:newDate(),},});}//Emailcredentialstonewusersif(isNewUser){try{awaitstrapi.plugins['email'].services.email.send({to:ownerEmail,subject:`YourSmartMenuAIaccountisready—${businessName}`,text:[`Hi${ownerFullName||'there'},`,'',`Yourbusiness"${businessName}"hasbeensetuponSmartMenuAI.`,'',`Logindetails:`,`Email:${ownerEmail}`,`Password:${tempPassword}`,'',`Pleaseloginandchangeyourpasswordimmediately.`,'',process.env.FRONTEND_URL||'https://your-app.com',].join('\n'),});}catch(mailErr){strapi.log.warn(`[platformCreateBusiness]Emailfailed:${mailErr.message}`);}}ctx.send({success:true,businessId:business.id,branchId:branch.id,ownerUserId:ownerUser.id,isNewUser,tempPassword:isNewUser?tempPassword:null,});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/platformGetDashboard(authrequired)//Returnsplatform-wideKPIsandthe5mostrecentlycreatedbusinesses.//─────────────────────────────────────────────────────────────────────────asyncplatformGetDashboard(ctx){try{constadmin=awaitrequirePlatformAdmin(ctx,strapi);if(!admin)return;const[totalBusinesses,totalOrders,totalEmployees,totalCampaigns]=awaitPromise.all([strapi.db.query('api::business.business').count({}),strapi.db.query('api::order.order').count({}),strapi.db.query('api::employee.employee').count({}),strapi.db.query('api::ad-campaign.ad-campaign').count({where:{status:'active'},}),]);constrecentBusinesses=awaitstrapi.db.query('api::business.business').findMany({orderBy:{createdAt:'desc'},limit:5,populate:['owner'],});ctx.send({stats:{totalBusinesses,totalOrders,totalEmployees,totalCampaigns},recentBusinesses:recentBusinesses.map((b)=>({id:b.id,business_name:b.business_name,business_type:b.business_type,plan_type:b.plan_type,is_active:b.is_active,owner_email:b.owner?.email||null,created_at:b.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/platformGetAllBusinesses(authrequired)//Returnseverybusinesswithowneremailandbranchcount.//─────────────────────────────────────────────────────────────────────────asyncplatformGetAllBusinesses(ctx){try{constadmin=awaitrequirePlatformAdmin(ctx,strapi);if(!admin)return;constbusinesses=awaitstrapi.db.query('api::business.business').findMany({populate:['owner','logo','branches'],orderBy:{createdAt:'desc'},});ctx.send({businesses:businesses.map((b)=>({id:b.id,business_name:b.business_name,business_type:b.business_type,plan_type:b.plan_type,is_active:b.is_active,is_published:b.is_published,city:b.city,country:b.country,logo:b.logo?.url||null,owner_email:b.owner?.email||null,branch_count:(b.branches||[]).length,created_at:b.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/platformToggleBusiness(authrequired)//{businessId,is_active}//Suspendorreactivateabusiness.//─────────────────────────────────────────────────────────────────────────asyncplatformToggleBusiness(ctx){try{constadmin=awaitrequirePlatformAdmin(ctx,strapi);if(!admin)return;const{businessId,is_active}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');awaitstrapi.db.query('api::business.business').update({where:{id:businessId},data:{is_active},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────//POST/custom-functions/platformUpdateBusinessPlan(authrequired)//{businessId,planType}//Upgrade/downgradeabusinessbetweenbasicandpremium.//─────────────────────────────────────────────────────────────────────────asyncplatformUpdateBusinessPlan(ctx){try{constadmin=awaitrequirePlatformAdmin(ctx,strapi);if(!admin)return;const{businessId,planType}=ctx.request.body;if(!businessId||!planType){returnctx.badRequest('businessIdandplanTypearerequired');}awaitstrapi.db.query('api::business.business').update({where:{id:businessId},data:{plan_type:planType},});//Ifdowngradingtobasic,forceplatformadsbackonif(planType==='basic'){constadSetting=awaitstrapi.db.query('api::business-ad-setting.business-ad-setting').findOne({where:{business:businessId}});if(adSetting){awaitstrapi.db.query('api::business-ad-setting.business-ad-setting').update({where:{id:adSetting.id},data:{ad_mode:'platform_ads'},});}}ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/platform-admin/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/setupPlatformMaster',handler:'platform-admin.setupPlatformMaster',config:{auth:{enabled:false}},//Public—one-timesetup},{method:'POST',path:'/custom-functions/platformCreateBusiness',handler:'platform-admin.platformCreateBusiness',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/platformGetDashboard',handler:'platform-admin.platformGetDashboard',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/platformGetAllBusinesses',handler:'platform-admin.platformGetAllBusinesses',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/platformToggleBusiness',handler:'platform-admin.platformToggleBusiness',config:{auth:{enabled:true}},},{method:'POST',path:'/custom-functions/platformUpdateBusinessPlan',handler:'platform-admin.platformUpdateBusinessPlan',config:{auth:{enabled:true}},},],}================================================================================FILE:api/platform-admin/routes/platform-admin.ts================================================================================/***platform-adminrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::platform-admin.platform-admin');================================================================================FILE:api/platform-admin/services/platform-admin.ts================================================================================/***platform-adminservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::platform-admin.platform-admin');================================================================================FILE:api/promotion/content-types/promotion/schema.json================================================================================{"kind":"collectionType","collectionName":"promotions","info":{"singularName":"promotion","pluralName":"promotions","displayName":"Promotion"},"attributes":{"title":{"type":"string","required":true},"description":{"type":"text"},"type":{"type":"enumeration","enum":["happy_hour","event","combo","special_offer"],"required":true},"image":{"type":"media","multiple":false,"allowedTypes":["images"]},"start_date":{"type":"date"},"end_date":{"type":"date"},"start_time":{"type":"time"},"end_time":{"type":"time"},"is_active":{"type":"boolean","default":true},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"branch":{"type":"relation","relation":"manyToOne","target":"api::branch.branch"},"applicable_items":{"type":"relation","relation":"manyToMany","target":"api::menu-item.menu-item"}}}================================================================================FILE:api/promotion/controllers/promotion.ts================================================================================/***promotioncontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::promotion.promotion');================================================================================FILE:api/promotion/routes/promotion.ts================================================================================/***promotionrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::promotion.promotion');================================================================================FILE:api/promotion/services/promotion.ts================================================================================/***promotionservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::promotion.promotion');================================================================================FILE:api/table/content-types/table/schema.json================================================================================{"kind":"collectionType","collectionName":"tables","info":{"singularName":"table","pluralName":"tables","displayName":"Table"},"attributes":{"table_number":{"type":"integer","required":true},"table_name":{"type":"string"},"capacity":{"type":"integer","default":4},"status":{"type":"enumeration","enum":["available","occupied","needs_waiter","ordering","bill_requested"],"default":"available"},"qr_code_url":{"type":"string"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"branch":{"type":"relation","relation":"manyToOne","target":"api::branch.branch"},"assigned_waiter":{"type":"relation","relation":"oneToOne","target":"api::employee.employee"}}}================================================================================FILE:api/table/controllers/table.ts================================================================================import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::table.table',({strapi})=>({//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/createBusinessTable//{businessId,branchId?,tableName?,tableNumber,capacity?,assignedWaiterId?}//Createsasingletableandimmediatelygenerates+savesitsQRmenuURL.//IfnobranchIdissupplied,findsorcreatesthebusiness'sfirstbranch.//─────────────────────────────────────────────────────────────────────────────asynccreateBusinessTable(ctx){try{const{businessId,branchId,tableName,tableNumber,capacity,assignedWaiterId,}=ctx.request.body;if(!businessId)returnctx.send({success:false,error:'businessIdisrequired'});//ResolvebranchletfinalBranchId=branchId;if(!finalBranchId){constexisting=awaitstrapi.db.query('api::branch.branch').findOne({where:{business:businessId},});if(existing){finalBranchId=existing.id;}else{constbranch=awaitstrapi.db.query('api::branch.branch').create({data:{branch_name:'MainBranch',business:businessId,is_active:true,publishedAt:newDate(),},});finalBranchId=branch.id;}}//CreatethetablerecordfirsttogetitsIDconsttable=awaitstrapi.db.query('api::table.table').create({data:{table_name:tableName||`Table${tableNumber}`,table_number:tableNumber,capacity:capacity||4,status:'available',business:businessId,branch:finalBranchId,assigned_waiter:assignedWaiterId||null,publishedAt:newDate(),},});//BuildandsavetheQR/menuURLnowthatwehavetherealtableIDconstappUrl=process.env.FRONTEND_URL||'http://localhost:5173';constqrCodeUrl=`${appUrl}/m/${businessId}/${finalBranchId}/${table.id}`;awaitstrapi.db.query('api::table.table').update({where:{id:table.id},data:{qr_code_url:qrCodeUrl},});ctx.send({success:true,table:{id:table.id,table_number:table.table_number,table_name:table.table_name,qr_code_url:qrCodeUrl,},});}catch(err){ctx.send({success:false,error:err.message});}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getBusinessTables//{businessId,branchId?}//Returnsalltablesforabusiness(oraspecificbranch),orderedbynumber.//─────────────────────────────────────────────────────────────────────────────asyncgetBusinessTables(ctx){try{const{businessId,branchId}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');constwhere:any={business:businessId};if(branchId)where.branch=branchId;consttables=awaitstrapi.db.query('api::table.table').findMany({where,populate:['branch','assigned_waiter'],orderBy:{table_number:'asc'},});ctx.send({tables:tables.map((t)=>({id:t.id,table_number:t.table_number,table_name:t.table_name,capacity:t.capacity,status:t.status,qr_code_url:t.qr_code_url,branch:t.branch?{id:t.branch.id,branch_name:t.branch.branch_name}:null,assigned_waiter:t.assigned_waiter?{id:t.assigned_waiter.id,full_name:t.assigned_waiter.full_name}:null,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/updateTableStatus//{tableId,status}//Updatesatable'sstatusandemitsasocketeventsothelivetableboard//updatesinrealtimeforallstaff.//─────────────────────────────────────────────────────────────────────────────asyncupdateTableStatus(ctx){try{const{tableId,status}=ctx.request.body;constvalidStatuses=['available','occupied','needs_waiter','ordering','bill_requested',];if(!tableId||!validStatuses.includes(status)){returnctx.badRequest('tableIdandavalidstatusarerequired');}awaitstrapi.db.query('api::table.table').update({where:{id:tableId},data:{status},});try{constsocket=require('../../../services/socket-client').default;socket.emit('table_status_updated',{tableId,status});}catch(_){//Socketnotcritical—tablestatusstillupdatedinDB}ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/assignWaiterToTable//{tableId,waiterId}//Assigns(orunassignswhenwaiterIdisnull)awaitertoatable.//─────────────────────────────────────────────────────────────────────────────asyncassignWaiterToTable(ctx){try{const{tableId,waiterId}=ctx.request.body;if(!tableId)returnctx.badRequest('tableIdisrequired');awaitstrapi.db.query('api::table.table').update({where:{id:tableId},data:{assigned_waiter:waiterId||null},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/table/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/createBusinessTable',handler:'table.createBusinessTable',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/getBusinessTables',handler:'table.getBusinessTables',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/updateTableStatus',handler:'table.updateTableStatus',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/assignWaiterToTable',handler:'table.assignWaiterToTable',config:{auth:{enabled:false}},},],};================================================================================FILE:api/table/routes/table.ts================================================================================/***tablerouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::table.table');================================================================================FILE:api/table/services/table.ts================================================================================/***tableservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::table.table');================================================================================FILE:api/user-profile/content-types/user-profile/schema.json================================================================================{"kind":"collectionType","collectionName":"user_profiles","info":{"singularName":"user-profile","pluralName":"user-profiles","displayName":"UserProfile"},"attributes":{"full_name":{"type":"string"},"phone":{"type":"string"},"avatar":{"type":"media","multiple":false,"allowedTypes":["images"]},"account_type":{"type":"enumeration","enum":["business_owner","employee"]},"onboarding_complete":{"type":"boolean","default":false},"onboarding_step":{"type":"integer","default":0},"must_change_password":{"type":"boolean","default":false},"is_platform_admin":{"type":"boolean","default":false},"user":{"type":"relation","relation":"oneToOne","target":"plugin::users-permissions.user"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"}}}================================================================================FILE:api/user-profile/controllers/user-profile.ts================================================================================/***user-profilecontroller*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreController('api::user-profile.user-profile');================================================================================FILE:api/user-profile/routes/user-profile.ts================================================================================/***user-profilerouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::user-profile.user-profile');================================================================================FILE:api/user-profile/services/user-profile.ts================================================================================/***user-profileservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::user-profile.user-profile');================================================================================FILE:api/waiter-call/content-types/waiter-call/schema.json================================================================================{"kind":"collectionType","collectionName":"waiter_calls","info":{"singularName":"waiter-call","pluralName":"waiter-calls","displayName":"WaiterCall"},"attributes":{"message":{"type":"string"},"status":{"type":"enumeration","enum":["pending","acknowledged","completed"],"default":"pending"},"table":{"type":"relation","relation":"manyToOne","target":"api::table.table"},"business":{"type":"relation","relation":"manyToOne","target":"api::business.business"},"waiter":{"type":"relation","relation":"manyToOne","target":"api::employee.employee"}}}================================================================================FILE:api/waiter-call/controllers/waiter-call.ts================================================================================import{factories}from'@strapi/strapi';importsocketfrom'../../../services/socket-client';exportdefaultfactories.createCoreController('api::waiter-call.waiter-call',({strapi})=>({//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/callWaiter//{businessId,tableId,tableNumber?,waiterId?,message?}//Customerrequestsawaiter.Setstablestatusto'needs_waiter'andemits//asocketeventsoallavailablewaitersseethealertimmediately.//─────────────────────────────────────────────────────────────────────────────asynccallWaiter(ctx){try{const{businessId,tableId,tableNumber,waiterId,message=''}=ctx.request.body;if(!businessId||!tableId){returnctx.badRequest('businessIdandtableIdarerequired');}constcall=awaitstrapi.db.query('api::waiter-call.waiter-call').create({data:{message,status:'pending',table:tableId,business:businessId,waiter:waiterId||null,publishedAt:newDate(),},});awaitstrapi.db.query('api::table.table').update({where:{id:tableId},data:{status:'needs_waiter'},});socket.emit('waiter_calls_event',{type:'create',data:{id:call.id,business_id:businessId,table_id:tableId,table_number:tableNumber,message,status:'pending',},});ctx.send({success:true,callId:call.id});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/acknowledgeWaiterCall//{callId,waiterId}//Waiterclaimsacall.Statusmovesto'acknowledged'sootherwaitersknow//itisbeinghandled.//─────────────────────────────────────────────────────────────────────────────asyncacknowledgeWaiterCall(ctx){try{const{callId,waiterId}=ctx.request.body;if(!callId)returnctx.badRequest('callIdisrequired');constcall=awaitstrapi.db.query('api::waiter-call.waiter-call').update({where:{id:callId},data:{status:'acknowledged',waiter:waiterId||null},});socket.emit('waiter_calls_event',{type:'acknowledged',data:{id:call.id,status:'acknowledged',waiter_id:waiterId},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/resolveWaiterCall//{callId,tableId?}//Marksacallascompletedandrevertstablestatusbackto'occupied'(or//'available'iftherearenoremainingactiveordersonthattable).//─────────────────────────────────────────────────────────────────────────────asyncresolveWaiterCall(ctx){try{const{callId,tableId}=ctx.request.body;if(!callId)returnctx.badRequest('callIdisrequired');awaitstrapi.db.query('api::waiter-call.waiter-call').update({where:{id:callId},data:{status:'completed'},});if(tableId){constactiveOrders=awaitstrapi.db.query('api::order.order').count({where:{table:tableId,status:{$notIn:['completed','cancelled']},},});awaitstrapi.db.query('api::table.table').update({where:{id:tableId},data:{status:activeOrders>0?'occupied':'available'},});}socket.emit('waiter_calls_event',{type:'resolved',data:{id:callId,status:'completed'},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getActiveWaiterCalls//{businessId,branchId?}//Returnsallpendingandacknowledgedcallsforthebusiness—usedbythe//waiteralertsscreenandmanagerdashboard.//─────────────────────────────────────────────────────────────────────────────asyncgetActiveWaiterCalls(ctx){try{const{businessId}=ctx.request.body;if(!businessId)returnctx.badRequest('businessIdisrequired');constcalls=awaitstrapi.db.query('api::waiter-call.waiter-call').findMany({where:{business:businessId,status:{$in:['pending','acknowledged']},},populate:['table','waiter'],orderBy:{createdAt:'asc'},});ctx.send({calls:calls.map((c)=>({id:c.id,message:c.message,status:c.status,table:c.table?{id:c.table.id,table_number:c.table.table_number,table_name:c.table.table_name,}:null,waiter:c.waiter?{id:c.waiter.id,full_name:c.waiter.full_name}:null,created_at:c.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/toggleWaiterAvailability//{employeeId,is_active}//Waitertogglestheirshifton/off.Whenoff,theywon'treceivenewcalls.//─────────────────────────────────────────────────────────────────────────────asynctoggleWaiterAvailability(ctx){try{const{employeeId,is_active}=ctx.request.body;if(!employeeId)returnctx.badRequest('employeeIdisrequired');awaitstrapi.db.query('api::employee.employee').update({where:{id:employeeId},data:{is_active},});ctx.send({success:true});}catch(err){ctx.throw(500,err.message);}},//─────────────────────────────────────────────────────────────────────────────//POST/custom-functions/getWaiterDashboard//{employeeId,businessId}//Singlecallthatreturnseverythingawaiterneeds:theirassignedtables,//activewaitercallsforthebusiness,andtheirin-progressorders.//─────────────────────────────────────────────────────────────────────────────asyncgetWaiterDashboard(ctx){try{const{employeeId,businessId}=ctx.request.body;if(!employeeId||!businessId){returnctx.badRequest('employeeIdandbusinessIdarerequired');}const[assignedTables,activeCalls,activeOrders]=awaitPromise.all([strapi.db.query('api::table.table').findMany({where:{assigned_waiter:employeeId},orderBy:{table_number:'asc'},}),strapi.db.query('api::waiter-call.waiter-call').findMany({where:{business:businessId,status:{$in:['pending','acknowledged']},},populate:['table'],orderBy:{createdAt:'asc'},}),strapi.db.query('api::order.order').findMany({where:{business:businessId,waiter:employeeId,status:{$notIn:['completed','cancelled']},},populate:['table'],orderBy:{createdAt:'desc'},limit:20,}),]);ctx.send({assignedTables:assignedTables.map((t)=>({id:t.id,table_number:t.table_number,table_name:t.table_name,status:t.status,capacity:t.capacity,})),activeCalls:activeCalls.map((c)=>({id:c.id,message:c.message,status:c.status,table:c.table?{id:c.table.id,table_number:c.table.table_number}:null,created_at:c.createdAt,})),activeOrders:activeOrders.map((o)=>({id:o.id,order_number:o.order_number,status:o.status,total:o.total,items:o.items,table:o.table?{id:o.table.id,table_number:o.table.table_number}:null,created_at:o.createdAt,})),});}catch(err){ctx.throw(500,err.message);}},}));================================================================================FILE:api/waiter-call/routes/01-custom-routes.ts================================================================================exportdefault{routes:[{method:'POST',path:'/custom-functions/callWaiter',handler:'waiter-call.callWaiter',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/acknowledgeWaiterCall',handler:'waiter-call.acknowledgeWaiterCall',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/resolveWaiterCall',handler:'waiter-call.resolveWaiterCall',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/getActiveWaiterCalls',handler:'waiter-call.getActiveWaiterCalls',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/toggleWaiterAvailability',handler:'waiter-call.toggleWaiterAvailability',config:{auth:{enabled:false}},},{method:'POST',path:'/custom-functions/getWaiterDashboard',handler:'waiter-call.getWaiterDashboard',config:{auth:{enabled:false}},},],};================================================================================FILE:api/waiter-call/routes/waiter-call.ts================================================================================/***waiter-callrouter*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreRouter('api::waiter-call.waiter-call');================================================================================FILE:api/waiter-call/services/waiter-call.ts================================================================================/***waiter-callservice*/import{factories}from'@strapi/strapi';exportdefaultfactories.createCoreService('api::waiter-call.waiter-call');================================================================================FILE:code_collection.js================================================================================//main();importfsfrom'fs';importpathfrom'path';import{promisify}from'util';import{fileURLToPath}from'url';//Get__dirnameequivalentinESmodulesconst__filename=fileURLToPath(import.meta.url);const__dirname=path.dirname(__filename);//Usefs.promisesdirectly(noneedforpromisify)const{readdir,stat,readFile,writeFile}=fs.promises;//============================================//CONFIGURATION-Customizetheseasneeded//============================================//Directoriestoignore(byname-anywhereinthetree)constIGNORED_DIRECTORIES=['node_modules','.git','.tmp','.vscode','.idea','dist','build','public','coverage','.next','.strapi','.nuxt','.cache','.DS_Store'];//Specificdirectorypathstoignore(relativetoroot)constIGNORED_DIRECTORY_PATHS=['app/(auth)','components/Map','components/Rider','lib/api','app/(main)','app/finding-driver','app/trip-summary'];//Filestoignore(byfilename-anywhereinthetree)constIGNORED_FILES=['package-lock.json','yarn.lock','pnpm-lock.yaml','.gitignore','.env','.env.local','.env.development','.env.production','code.txt','code.min.txt','Thumbs.db','desktop.ini','collect-code.js'//Thisscriptitself];//Specificfilepathstoignore(relativetoroot)constIGNORED_FILE_PATHS=['lib/hooks/useAuth.js','lib/hooks/useRide.js','app/page.js'];//FileextensionstoignoreconstIGNORED_FILE_EXTENSIONS=['.log','.tmp','.temp','.bak','.swp','.swo','.pid','.seed','.pem','.cert','.key','.zip','.rar','.7z','.gz','.tar','.jpg','.jpeg','.png','.gif','.ico','.svg','.mp3','.mp4','.avi','.mov','.wmv','.exe','.dll','.so','.dylib','.pdf','.doc','.docx','.xls','.xlsx'];//Customignoreditems-AddyourownhereconstCUSTOM_IGNORED_FILES=[//'secrets.json',//'private.key'];constCUSTOM_IGNORED_PATHS=[//'app/specific-folder/specific-file.js'];//CombineallignoredfilesconstALL_IGNORED_FILES=[...IGNORED_FILES,...CUSTOM_IGNORED_FILES];constALL_IGNORED_FILE_PATHS=[...IGNORED_FILE_PATHS,...CUSTOM_IGNORED_PATHS];//OutputfileconfigurationconstOUTPUT_FILE=path.join(process.cwd(),'code.txt');constOUTPUT_MIN_FILE=path.join(process.cwd(),'code.min.txt');//Statisticstrackingletstats={processed:0,skipped:0,errors:0};//============================================//HELPERFUNCTIONS//============================================/***Getnormalizedrelativepathfromrootdirectory*/functiongetRelativePath(filePath){constrelative=path.relative(process.cwd(),filePath);returnrelative?relative.replace(/\\/g,'/'):'.';}/***Checkifadirectoryshouldbeignored*/functionshouldIgnoreDirectory(dirPath){constrelativePath=getRelativePath(dirPath);constdirName=path.basename(dirPath);//Checkbydirectoryname(global)if(IGNORED_DIRECTORIES.includes(dirName)){returntrue;}//Checkexactdirectorypathif(IGNORED_DIRECTORY_PATHS.includes(relativePath)){returntrue;}returnfalse;}/***Checkifafileshouldbeignored*/functionshouldIgnoreFile(fileName,filePath){constrelativePath=getRelativePath(filePath);constext=path.extname(fileName).toLowerCase();//Checkbyfilenameif(ALL_IGNORED_FILES.includes(fileName)){returntrue;}//Checkbyextensionif(IGNORED_FILE_EXTENSIONS.includes(ext)){returntrue;}//Checkexactfilepathif(ALL_IGNORED_FILE_PATHS.includes(relativePath)){returntrue;}//CheckiffileisinanignoreddirectoryconstfileDir=path.dirname(relativePath);if(IGNORED_DIRECTORY_PATHS.includes(fileDir)){returntrue;}//Checkhiddenfiles(exceptallowedones)if(fileName.startsWith('.')&&!fileName.startsWith('.env')){constallowedHidden=['.eslintrc','.prettierrc','.babelrc','.npmrc'];if(!allowedHidden.some(allowed=>fileName.startsWith(allowed))){returntrue;}}returnfalse;}/***Recursivelytraversedirectoryandcollectallnon-ignoredfiles*/asyncfunctiontraverseDirectory(dirPath){constfiles=[];//Skipifthisdirectoryshouldbeignoredif(shouldIgnoreDirectory(dirPath)){console.log(`⏭️Skippingdirectory:${getRelativePath(dirPath)}`);stats.skipped++;returnfiles;}try{constitems=awaitreaddir(dirPath);for(constitemofitems){constfullPath=path.join(dirPath,item);try{constfileStat=awaitstat(fullPath);if(fileStat.isDirectory()){constsubFiles=awaittraverseDirectory(fullPath);files.push(...subFiles);}elseif(fileStat.isFile()){if(!shouldIgnoreFile(item,fullPath)){files.push(fullPath);}else{console.log(`⏭️Skippingfile:${getRelativePath(fullPath)}`);stats.skipped++;}}}catch(err){console.error(`❌Erroraccessing${fullPath}:${err.message}`);stats.errors++;}}}catch(err){console.error(`❌Errorreadingdirectory${dirPath}:${err.message}`);stats.errors++;}returnfiles;}/***Readfilecontentwithencodingdetection*/asyncfunctionreadFileContent(filePath){try{constbuffer=awaitreadFile(filePath);//TryUTF-8firsttry{returnbuffer.toString('utf8');}catch(err){//Fallbacktolatin1forbinaryfilesreturn`[BINARYFILE]\n${buffer.toString('base64')}\n[/BINARYFILE]`;}}catch(err){console.error(`❌Errorreadingfile:${err.message}`);stats.errors++;return`[ERROR:${err.message}]`;}}/***Formatfilesizefordisplay*/functionformatFileSize(bytes){if(bytes<1024)return`${bytes}bytes`;if(bytes<1024*1024)return`${(bytes/1024).toFixed(2)}KB`;return`${(bytes/(1024*1024)).toFixed(2)}MB`;}/***Displayconfigurationsummary*/functiondisplayConfig(){console.log('\n⚙️Configuration:');console.log(`•Ignoreddirectories(byname):${IGNORED_DIRECTORIES.length}`);console.log(`•Ignoreddirectorypaths:${IGNORED_DIRECTORY_PATHS.length}`);console.log(`•Ignoredfiles(byname):${ALL_IGNORED_FILES.length}`);console.log(`•Ignoredfilepaths:${ALL_IGNORED_FILE_PATHS.length}`);console.log(`•Ignoredextensions:${IGNORED_FILE_EXTENSIONS.length}`);if(IGNORED_DIRECTORY_PATHS.length>0){console.log('\n📁Ignoreddirectories:');IGNORED_DIRECTORY_PATHS.forEach(dir=>console.log(`-${dir}`));}if(ALL_IGNORED_FILE_PATHS.length>0){console.log('\n📄Ignoredfiles:');ALL_IGNORED_FILE_PATHS.forEach(file=>console.log(`-${file}`));}}//============================================//MAINFUNCTIONS//============================================/***Createthecompletesourcecodedocument*/asyncfunctioncreateCodeDocument(){console.log('\n📂Scanningdirectory:',process.cwd());console.log('🔍Gatheringfiles...\n');constallFiles=awaittraverseDirectory(process.cwd());if(allFiles.length===0){console.log('❌Nofilesfoundtoprocess!');returnnull;}console.log(`\n📊Found${allFiles.length}filestoprocess\n`);letoutputContent='';//Processeachfilefor(leti=0;i<allFiles.length;i++){constfilePath=allFiles[i];constrelativePath=getRelativePath(filePath);console.log(`📝Processing(${i+1}/${allFiles.length}):${relativePath}`);//AddfileheaderwithpathoutputContent+=`\n${'='.repeat(80)}\n`;outputContent+=`FILE:${relativePath}\n`;outputContent+=`${'='.repeat(80)}\n\n`;//Addfilecontentconstcontent=awaitreadFileContent(filePath);outputContent+=content;//Ensuretrailingnewlineif(content&&!content.endsWith('\n')){outputContent+='\n';}stats.processed++;}//Writetofiletry{awaitwriteFile(OUTPUT_FILE,outputContent,'utf8');console.log(`\n✅Created:${OUTPUT_FILE}`);console.log(`📏Size:${formatFileSize(outputContent.length)}`);returnoutputContent;}catch(err){console.error(`❌Errorwritingfile:${err.message}`);returnnull;}}/***Createminifiedversion(removeallwhitespace)*/asyncfunctioncreateMinifiedVersion(sourceContent){if(!sourceContent){console.log('❌Nosourcecontenttominify');returnfalse;}console.log('\n⚡Creatingminifiedversion...');try{//Removeallwhitespaceconstminified=sourceContent.replace(/\s/g,'');awaitwriteFile(OUTPUT_MIN_FILE,minified,'utf8');console.log(`✅Created:${OUTPUT_MIN_FILE}`);console.log(`📏Size:${formatFileSize(minified.length)}`);constreduction=((1-minified.length/sourceContent.length)*100).toFixed(2);console.log(`📉Reduction:${reduction}%`);returntrue;}catch(err){console.error(`❌Errorcreatingminifiedfile:${err.message}`);returnfalse;}}/***Displayfinalsummary*/functiondisplaySummary(){console.log('\n'+'='.repeat(50));console.log('📊SUMMARY');console.log('='.repeat(50));console.log(`✅Filesprocessed:${stats.processed}`);console.log(`⏭️Files/directoriesskipped:${stats.skipped}`);console.log(`❌Errorsencountered:${stats.errors}`);console.log(`📁Outputfiles:`);console.log(`-${path.basename(OUTPUT_FILE)}`);console.log(`-${path.basename(OUTPUT_MIN_FILE)}`);console.log('\n🎉Done!');}//============================================//SCRIPTENTRYPOINT//============================================asyncfunctionmain(){console.log('🔍SourceCodeCollector');console.log('='.repeat(50));displayConfig();try{constsourceContent=awaitcreateCodeDocument();if(!sourceContent){console.log('❌Failedtocreatecodedocument');return;}awaitcreateMinifiedVersion(sourceContent);displaySummary();}catch(error){console.error('💥Unexpectederror:',error.message);if(error.stack)console.error(error.stack);}}//Runthescriptmain();================================================================================FILE:components/order/order-item.json================================================================================{"collectionName":"components_order_items","info":{"displayName":"OrderItem","icon":"shopping-cart"},"attributes":{"menu_item":{"type":"relation","relation":"oneToOne","target":"api::menu-item.menu-item"},"name":{"type":"string"},"quantity":{"type":"integer","default":1},"price":{"type":"decimal"},"notes":{"type":"text"},"status":{"type":"enumeration","enum":["pending","preparing","served"]}}}================================================================================FILE:extensions/strapi-server.ts================================================================================//src/extensions/users-permissions/strapi-server.ts//ExtendsStrapi'sbuilt-inregisterendpointsothateverynewuser//automaticallygetsaUserProfilerecord.Theprofiletracks://-account_type(setbythefrontendonthenextonboardingstep)//-onboarding_step//-must_change_password//Thefrontendsends{accountType?,fullName?}alongsidethestandard//{username,email,password}fields.exportdefault(plugin:any)=>{constoriginalRegister=plugin.controllers.auth.register;plugin.controllers.auth.register=async(ctx:any)=>{//RundefaultStrapiregistrationfirstawaitoriginalRegister(ctx);//Onlyproceedifregistrationsucceededandwehaveauserbackif(ctx.response.status!==200||!ctx.body?.user?.id)return;const{user}=ctx.bodyasany;const{accountType,fullName}=ctx.request.bodyasany;conststrapi=(globalasany).strapi;try{awaitstrapi.db.query('api::user-profile.user-profile').create({data:{full_name:fullName||user.username||'',//accountTypeisnulluntiltheuserpicksitonthenextscreenaccount_type:accountType||null,onboarding_step:0,onboarding_complete:false,must_change_password:false,is_platform_admin:false,user:user.id,publishedAt:newDate(),},});}catch(err){strapi.log.warn(`[users-permissionsextension]FailedtocreateUserProfileforuser${user.id}:${err.message}`);//Registrationitselfalreadysucceeded—don'tfailthewholerequest}};returnplugin;};================================================================================FILE:index.ts================================================================================//importtype{Core}from'@strapi/strapi';exportdefault{/***Anasynchronousregisterfunctionthatrunsbefore*yourapplicationisinitialized.**Thisgivesyouanopportunitytoextendcode.*/register(/*{strapi}:{strapi:Core.Strapi}*/){},/***Anasynchronousbootstrapfunctionthatrunsbefore*yourapplicationgetsstarted.**Thisgivesyouanopportunitytosetupyourdatamodel,*runjobs,orperformsomespeciallogic.*/bootstrap(/*{strapi}:{strapi:Core.Strapi}*/){},};================================================================================FILE:services/socket-client.ts================================================================================////src/services/socket-client.ts//import{io}from'socket.io-client';////ConnectStrapitoyourdedicatedSocketServer//constsocket=io(process.env.SOCKET_SERVER_URL||'http://localhost:4000',{//autoConnect:true,//});//exportdefaultsocket;import{io}from'socket.io-client';constSOCKET_SERVER_URL=process.env.SOCKET_SERVER_URL||'http://localhost:4000';constsocket=io(SOCKET_SERVER_URL,{autoConnect:true,reconnection:true,});socket.on('connect',()=>{console.log(`StrapiBackendconnectedtoSocketServer[${socket.id}]`);});exportdefaultsocket;
+and the current socket server is as Follows
+//smartmenuai\sockets\server.js
+const { Server } = require("socket.io");
+
+const io = new Server({
+    cors: {
+        origin: "*", // Adjust this to your production domain for security
+    }
+});
+
+io.on("connection", (socket) => {
+    console.log(`Client connected: ${socket.id}`);
+
+    // 1. Join room: Clients (Waiters/Kitchen) join by their Business ID
+    socket.on("join_business_room", (businessId) => {
+        if (businessId) {
+            socket.join(`business_${businessId}`);
+            console.log(`Socket ${socket.id} joined business_${businessId}`);
+        }
+    });
+
+    // 2. Handle 'waiter_calls_event' from Strapi
+    // Payload expected: { type: 'create'|'update', data: { business_id: ..., ... } }
+    socket.on("waiter_calls_event", (payload) => {
+        const businessId = payload.data?.business_id;
+        if (businessId) {
+            console.log(`Broadcasting Waiter Call to business_${businessId}`);
+            io.to(`business_${businessId}`).emit("waiter-calls_event", payload);
+        }
+    });
+
+    // 3. Handle 'orders_event' from Strapi
+    // Payload expected: { type: 'create'|'update', data: { business_id: ..., ... } }
+    socket.on("orders_event", (payload) => {
+        const businessId = payload.data?.business_id;
+        if (businessId) {
+            console.log(`Broadcasting Order Event to business_${businessId}`);
+            io.to(`business_${businessId}`).emit("orders_event", payload);
+        }
+    });
+
+    socket.on("disconnect", () => {
+        console.log(`Client disconnected: ${socket.id}`);
+    });
+});
+
+io.listen(4000);
+console.log("Socket server running on port 4000");
+give me any other additions or changes i need to add in order to fully have the app running smoothly
+
+and remember, the user(of any kind, a business, etc), must create an account via an email or username, then select which account they want to have, and then they must go through steps of onboarding, based on the needs of the project, they can invite employees, assign tables, etc
+give me all the frontend files that need to be developed(noy updated, developed), beginning with all the files in the enxt js's app, in it the (auth) and the (main) folders
+and also give me all the files files in the component, etc, then the config files later  
+I need this app to have very premium styles, very refined styles, gradients, shadows, etc
+i need the main theme color of this to be brown, table and beer brown

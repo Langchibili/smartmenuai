@@ -1,0 +1,1 @@
+Content TypePlatform MasterOwnerManagerWaiterPublicBusiness✅✅*❌❌❌Branch✅✅❌❌❌Table✅✅✅*❌❌Employee✅✅❌❌❌Employee Invitation✅✅❌❌❌Menu Category✅✅✅*❌❌Menu Item✅✅✅*❌❌Order✅✅✅✅*❌Waiter Call✅✅✅✅*❌Ad Campaign✅✅*❌❌❌Advertiser✅❌❌❌❌Ad Event✅✅*❌❌❌Business Ad Setting✅✅*❌❌❌Business Menu Setting✅✅❌❌❌Global Ad Setting✅❌❌❌❌Platform Admin✅❌❌❌❌

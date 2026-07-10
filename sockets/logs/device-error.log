@@ -1,0 +1,5 @@
+{"level":"error","message":"❌ Connection error to main server:","timestamp":"2026-07-08T00:58:30.591Z"}
+{"level":"error","message":"Error saving device to backend:","timestamp":"2026-07-09T03:31:49.837Z"}
+{"level":"error","message":"Error saving current location to backend:","timestamp":"2026-07-09T03:31:51.027Z"}
+{"level":"error","message":"Error saving device to backend:","timestamp":"2026-07-09T19:47:48.168Z"}
+{"level":"error","message":"Error saving current location to backend:","timestamp":"2026-07-09T19:48:03.283Z"}

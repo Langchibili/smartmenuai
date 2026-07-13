@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tables",
+  "info": {
+    "singularName": "table",
+    "pluralName": "tables",
+    "displayName": "Table"
+  },
+  "attributes": {
+    "table_number": {
+      "type": "integer",
+      "required": true
+    },
+    "table_name": {
+      "type": "string"
+    },
+    "capacity": {
+      "type": "integer",
+      "default": 4
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "available",
+        "occupied",
+        "needs_waiter",
+        "ordering",
+        "bill_requested"
+      ],
+      "default": "available"
+    },
+    "qr_code_url": {
+      "type": "string"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "branch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::branch.branch"
+    },
+    "assigned_waiter": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::employee.employee"
+    }
+  }
+}

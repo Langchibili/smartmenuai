@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "promotions",
+  "info": {
+    "singularName": "promotion",
+    "pluralName": "promotions",
+    "displayName": "Promotion"
+  },
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "description": { "type": "text" },
+    "type": {
+      "type": "enumeration",
+      "enum": ["happy_hour", "event", "combo", "special_offer"],
+      "required": true
+    },
+    "image": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "start_date": { "type": "date" },
+    "end_date": { "type": "date" },
+    "start_time": { "type": "time" },
+    "end_time": { "type": "time" },
+    "is_active": { "type": "boolean", "default": true },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "branch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::branch.branch"
+    },
+    "applicable_items": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::menu-item.menu-item"
+    }
+  }
+}

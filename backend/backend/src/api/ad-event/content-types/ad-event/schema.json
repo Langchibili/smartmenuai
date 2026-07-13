@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ad_events",
+  "info": {
+    "singularName": "ad-event",
+    "pluralName": "ad-events",
+    "displayName": "Ad Event"
+  },
+  "attributes": {
+    "event_type": {
+      "type": "enumeration",
+      "enum": [
+        "impression",
+        "click"
+      ],
+      "required": true
+    },
+    "placement_key": {
+      "type": "string"
+    },
+    "user_session_id": {
+      "type": "string"
+    },
+    "ad_campaign": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::ad-campaign.ad-campaign"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "table": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::table.table"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "menu_items",
+  "info": {
+    "singularName": "menu-item",
+    "pluralName": "menu-items",
+    "displayName": "MenuItem"
+  },
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "description": { "type": "text" },
+    "price": { "type": "decimal", "required": true },
+    "image": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "preparation_time": { "type": "string" },
+    "tags": { "type": "string" },
+    "is_available": { "type": "boolean", "default": true },
+    "is_popular": { "type": "boolean", "default": false },
+    "is_featured": { "type": "boolean", "default": false },
+    "is_special_offer": { "type": "boolean", "default": false },
+    "is_sponsored": { "type": "boolean", "default": false },
+    "menu_category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::menu-category.menu-category",
+      "inversedBy": "menu_items"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "variants": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::menu-item-variant.menu-item-variant",
+      "mappedBy": "menu_item"
+    },
+    "modifiers": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::menu-item-modifier.menu-item-modifier",
+      "mappedBy": "menu_item"
+    }
+  }
+}

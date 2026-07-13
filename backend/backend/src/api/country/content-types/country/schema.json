@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "countries",
+  "info": {
+    "singularName": "country",
+    "pluralName": "countries",
+    "displayName": "Country",
+    "name": "country"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": true
+    },
+    "content-type-builder": {
+      "visible": true
+    }
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 2,
+      "required": true,
+      "unique": true
+    },
+    "phoneCode": {
+      "type": "string",
+      "required": true
+    },
+    "currency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::currency.currency"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "acceptedMobileMoneyPayments": {
+      "type": "json"
+    },
+    "phoneNumberRegex": {
+      "type": "string"
+    },
+    "phoneNumberDigitLenth": {
+      "type": "integer",
+      "default": 9
+    }
+  }
+}

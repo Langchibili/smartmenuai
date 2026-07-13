@@ -1,0 +1,30 @@
+{
+  "kind": "singleType",
+  "collectionName": "global_ad_settings",
+  "info": {
+    "singularName": "global-ad-setting",
+    "pluralName": "global-ad-settings",
+    "displayName": "Global Ad Setting"
+  },
+  "attributes": {
+    "enable_google_adsense": {
+      "type": "boolean",
+      "default": false
+    },
+    "adsense_publisher_id": {
+      "type": "string"
+    },
+    "top_banner_slot_id": {
+      "type": "string"
+    },
+    "inline_slot_id": {
+      "type": "string"
+    },
+    "cart_slot_id": {
+      "type": "string"
+    },
+    "order_success_slot_id": {
+      "type": "string"
+    }
+  }
+}

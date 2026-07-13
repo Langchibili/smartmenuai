@@ -1,0 +1,14 @@
+{
+  "kind": "collectionType",
+  "collectionName": "custom_controllers",
+  "info": {
+    "singularName": "custom-controller",
+    "pluralName": "custom-controllers",
+    "displayName": "customControllers"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {}
+}

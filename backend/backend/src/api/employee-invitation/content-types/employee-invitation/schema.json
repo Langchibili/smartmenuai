@@ -1,0 +1,56 @@
+{
+  "kind": "collectionType",
+  "collectionName": "employee_invitations",
+  "info": {
+    "singularName": "employee-invitation",
+    "pluralName": "employee-invitations",
+    "displayName": "Employee Invitation"
+  },
+  "attributes": {
+    "invited_name": {
+      "type": "string",
+      "required": true
+    },
+    "invited_email": {
+      "type": "email",
+      "required": true
+    },
+    "phone": {
+      "type": "string"
+    },
+    "role": {
+      "type": "enumeration",
+      "enum": [
+        "manager",
+        "waiter"
+      ]
+    },
+    "invite_token": {
+      "type": "string",
+      "unique": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "accepted",
+        "expired",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "expires_at": {
+      "type": "datetime"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "branch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::branch.branch"
+    }
+  }
+}

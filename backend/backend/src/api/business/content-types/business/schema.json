@@ -1,0 +1,80 @@
+{
+  "kind": "collectionType",
+  "collectionName": "businesses",
+  "info": {
+    "singularName": "business",
+    "pluralName": "businesses",
+    "displayName": "Business"
+  },
+  "attributes": {
+    "business_name": {
+      "type": "string",
+      "required": true
+    },
+    "business_type": {
+      "type": "enumeration",
+      "enum": [
+        "restaurant",
+        "bar",
+        "lounge",
+        "cafe",
+        "club"
+      ],
+      "default": "restaurant"
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "plan_type": {
+      "type": "enumeration",
+      "enum": [
+        "basic",
+        "premium"
+      ],
+      "default": "basic"
+    },
+    "service_charge_percent": {
+      "type": "decimal",
+      "default": 0
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": false
+    },
+    "owner": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "branches": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::branch.branch",
+      "mappedBy": "business"
+    }
+  }
+}

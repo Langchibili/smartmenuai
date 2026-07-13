@@ -45,7 +45,8 @@
 # # Secrets
 # Secrets.js
 
-
+*.zip
+*.txt
 backend/node_modules
 backend/src-old
 backend-err

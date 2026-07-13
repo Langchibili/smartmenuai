@@ -1,0 +1,132 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ad_campaigns",
+  "info": {
+    "singularName": "ad-campaign",
+    "pluralName": "ad-campaigns",
+    "displayName": "Ad Campaign"
+  },
+  "attributes": {
+    "campaign_name": {
+      "type": "string",
+      "required": true
+    },
+    "campaign_type": {
+      "type": "enumeration",
+      "enum": [
+        "platform_direct",
+        "business_own",
+        "google_adsense"
+      ],
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "active",
+        "paused",
+        "ended"
+      ],
+      "default": "draft"
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "cta_text": {
+      "type": "string"
+    },
+    "cta_link": {
+      "type": "string"
+    },
+    "placement": {
+      "type": "string",
+      "required": true
+    },
+    "priority": {
+      "type": "integer",
+      "default": 5
+    },
+    "start_date": {
+      "type": "date"
+    },
+    "end_date": {
+      "type": "date"
+    },
+    "image_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "video_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "mobile_image_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "mobile_video_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "tablet_image_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "tablet_video_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "desktop_image_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "desktop_video_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "target_countries": {
+      "type": "json"
+    },
+    "target_cities": {
+      "type": "json"
+    },
+    "target_business_types": {
+      "type": "json"
+    },
+    "target_plan_types": {
+      "type": "json"
+    },
+    "schedule_days": {
+      "type": "json"
+    },
+    "schedule_start_time": {
+      "type": "time"
+    },
+    "schedule_end_time": {
+      "type": "time"
+    },
+    "impressions": {
+      "type": "integer",
+      "default": 0
+    },
+    "clicks": {
+      "type": "integer",
+      "default": 0
+    },
+    "advertiser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::advertiser.advertiser"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    }
+  }
+}

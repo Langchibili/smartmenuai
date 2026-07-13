@@ -1,0 +1,62 @@
+{
+  "kind": "collectionType",
+  "collectionName": "user_profiles",
+  "info": {
+    "singularName": "user-profile",
+    "pluralName": "user-profiles",
+    "displayName": "UserProfile"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "full_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "account_type": {
+      "type": "enumeration",
+      "enum": [
+        "business_owner",
+        "employee"
+      ]
+    },
+    "onboarding_complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "onboarding_step": {
+      "type": "integer",
+      "default": 0
+    },
+    "must_change_password": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_platform_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "user_profile"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    }
+  }
+}

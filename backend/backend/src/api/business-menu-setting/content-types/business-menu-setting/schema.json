@@ -1,0 +1,102 @@
+{
+  "kind": "collectionType",
+  "collectionName": "business_menu_settings",
+  "info": {
+    "singularName": "business-menu-setting",
+    "pluralName": "business-menu-settings",
+    "displayName": "Business Menu Setting"
+  },
+  "attributes": {
+    "display_name": {
+      "type": "string"
+    },
+    "tagline": {
+      "type": "string"
+    },
+    "welcome_message": {
+      "type": "text"
+    },
+    "opening_hours": {
+      "type": "string"
+    },
+    "location_text": {
+      "type": "string"
+    },
+    "theme_style": {
+      "type": "string",
+      "default": "modern_dark"
+    },
+    "primary_color": {
+      "type": "string"
+    },
+    "accent_color": {
+      "type": "string"
+    },
+    "button_color": {
+      "type": "string"
+    },
+    "text_color": {
+      "type": "string"
+    },
+    "background_color": {
+      "type": "string"
+    },
+    "card_color": {
+      "type": "string"
+    },
+    "layout_style": {
+      "type": "string",
+      "default": "classic_list"
+    },
+    "header_style": {
+      "type": "string",
+      "default": "floating_glass"
+    },
+    "category_style": {
+      "type": "string",
+      "default": "rounded_pills"
+    },
+    "product_card_style": {
+      "type": "string",
+      "default": "large_image"
+    },
+    "show_hero": {
+      "type": "boolean",
+      "default": true
+    },
+    "hero_text": {
+      "type": "string"
+    },
+    "promo_text": {
+      "type": "string"
+    },
+    "cover_image_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "cover_video_url": {
+      "type": "media",
+      "multiple": false
+    },
+    "show_ai_recommendations": {
+      "type": "boolean",
+      "default": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "published"
+      ],
+      "default": "draft"
+    },
+    "published_at": {
+      "type": "datetime"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::business.business"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "kind": "collectionType",
+  "collectionName": "activity_logs",
+  "info": {
+    "singularName": "activity-log",
+    "pluralName": "activity-logs",
+    "displayName": "ActivityLog"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "action": { "type": "string", "required": true },
+    "target_type": { "type": "string" },
+    "target_id": { "type": "string" },
+    "metadata": { "type": "json" },
+    "actor_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    }
+  }
+}

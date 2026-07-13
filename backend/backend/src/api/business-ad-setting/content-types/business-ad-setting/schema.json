@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "business_ad_settings",
+  "info": {
+    "singularName": "business-ad-setting",
+    "pluralName": "business-ad-settings",
+    "displayName": "Business Ad Setting"
+  },
+  "attributes": {
+    "ad_mode": {
+      "type": "enumeration",
+      "enum": [
+        "platform_ads",
+        "business_ads_only",
+        "mixed_ads",
+        "google_adsense",
+        "no_ads"
+      ],
+      "default": "platform_ads"
+    },
+    "platform_admin_override": {
+      "type": "boolean",
+      "default": false
+    },
+    "force_platform_ads": {
+      "type": "boolean",
+      "default": false
+    },
+    "allow_google_adsense": {
+      "type": "boolean",
+      "default": false
+    },
+    "business": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::business.business"
+    }
+  }
+}

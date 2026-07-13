@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "platform_admins",
+  "info": {
+    "singularName": "platform-admin",
+    "pluralName": "platform-admins",
+    "displayName": "Platform Admin"
+  },
+  "attributes": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "role": {
+      "type": "string",
+      "default": "platform_master"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

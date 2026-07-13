@@ -1,0 +1,35 @@
+{
+  "collectionName": "components_order_items",
+  "info": {
+    "displayName": "OrderItem",
+    "icon": "shopping-cart"
+  },
+  "attributes": {
+    "menu_item": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::menu-item.menu-item"
+    },
+    "name": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "integer",
+      "default": 1
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "preparing",
+        "served"
+      ]
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "employees",
+  "info": {
+    "singularName": "employee",
+    "pluralName": "employees",
+    "displayName": "Employee"
+  },
+  "attributes": {
+    "full_name": {
+      "type": "string",
+      "required": true
+    },
+    "phone": {
+      "type": "string"
+    },
+    "role": {
+      "type": "enumeration",
+      "enum": [
+        "owner",
+        "manager",
+        "waiter"
+      ],
+      "required": true
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "permissions": {
+      "type": "json"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "branch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::branch.branch"
+    },
+    "assigned_tables": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::table.table"
+    }
+  }
+}

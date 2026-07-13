@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "branches",
+  "info": {
+    "singularName": "branch",
+    "pluralName": "branches",
+    "displayName": "Branch"
+  },
+  "attributes": {
+    "branch_name": { "type": "string", "required": true },
+    "location": { "type": "string" },
+    "address": { "type": "string" },
+    "city": { "type": "string" },
+    "phone": { "type": "string" },
+    "is_active": { "type": "boolean", "default": true },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business",
+      "inversedBy": "branches"
+    },
+    "manager": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::employee.employee"
+    },
+    "tables": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::table.table",
+      "mappedBy": "branch"
+    }
+  }
+}

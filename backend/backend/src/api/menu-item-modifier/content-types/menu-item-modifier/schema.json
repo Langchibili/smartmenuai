@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "menu_item_modifiers",
+  "info": {
+    "singularName": "menu-item-modifier",
+    "pluralName": "menu-item-modifiers",
+    "displayName": "MenuItemModifier"
+  },
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "price": { "type": "decimal", "default": 0 },
+    "is_required": { "type": "boolean", "default": false },
+    "is_active": { "type": "boolean", "default": true },
+    "menu_item": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::menu-item.menu-item",
+      "inversedBy": "modifiers"
+    }
+  }
+}

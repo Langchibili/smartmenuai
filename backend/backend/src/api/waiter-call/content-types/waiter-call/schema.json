@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "waiter_calls",
+  "info": {
+    "singularName": "waiter-call",
+    "pluralName": "waiter-calls",
+    "displayName": "Waiter Call"
+  },
+  "attributes": {
+    "message": {
+      "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "acknowledged",
+        "completed"
+      ],
+      "default": "pending"
+    },
+    "table": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::table.table"
+    },
+    "business": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::business.business"
+    },
+    "waiter": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::employee.employee"
+    }
+  }
+}

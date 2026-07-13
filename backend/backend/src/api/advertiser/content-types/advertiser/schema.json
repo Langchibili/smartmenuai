@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "advertisers",
+  "info": {
+    "singularName": "advertiser",
+    "pluralName": "advertisers",
+    "displayName": "Advertiser"
+  },
+  "attributes": {
+    "advertiser_name": {
+      "type": "string",
+      "required": true
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

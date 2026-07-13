@@ -145,3 +145,47 @@ frontend/.vercel
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
 
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+smaiapp/node_modules/
+
+# Expo
+smaiapp/.expo/
+smaiapp/dist/
+smaiapp/web-build/
+smaiapp/expo-env.d.ts
+
+# Native
+smaiapp/.kotlin/
+smaiapp/*.orig.*
+smaiapp/*.jks
+smaiapp/*.p8
+smaiapp/*.p12
+smaiapp/*.key
+smaiapp/*.mobileprovision
+
+# Metro
+smaiapp/.metro-health-check*
+
+# debug
+smaiapp/npm-debug.*
+smaiapp/yarn-debug.*
+smaiapp/yarn-error.*
+
+# macOS
+smaiapp/.DS_Store
+smaiapp/*.pem
+
+# local env files
+smaiapp/.env*.local
+
+# typescript
+smaiapp/*.tsbuildinfo
+smaiapp/AppleApptsx.txt
+smaiapp/dev-eas.txt
+
+# generated native folders
+smaiapp/ios
+smaiapp/android
+smaiapp/.env

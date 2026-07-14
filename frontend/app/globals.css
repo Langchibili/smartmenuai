@@ -1,0 +1,157 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   FILE: smartmenuai/frontend/app/globals.css
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Google Fonts ──────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ── CSS Custom Properties (mirrors the dark theme tokens) ────────────────── */
+:root {
+    /* Backgrounds */
+    --color-bg: #0D0400;
+    --color-bg-raised: #1C0A00;
+    --color-surface: #2D1200;
+    --color-surface-raised: #3B1A06;
+
+    /* Brand */
+    --color-brand: #D4850A;
+    --color-brand-dark: #A0622A;
+    --color-gold: #F5C842;
+    --color-gold-muted: #D4A017;
+
+    /* Text */
+    --color-text-primary: #F9EDD8;
+    --color-text-secondary: #D4A872;
+    --color-text-muted: #8B6038;
+    --color-text-disabled: #5F3E22;
+
+    /* Borders */
+    --color-border-base: rgba(212, 133, 10, 0.15);
+    --color-border-strong: rgba(212, 133, 10, 0.3);
+
+    /* Semantic */
+    --color-success: #22c55e;
+    --color-error: #ef4444;
+    --color-warning: #f59e0b;
+
+    /* Fonts */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ── Global reset / box‑sizing ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+}
+
+/* ── Custom scrollbar (fallback – MUI already handles it) ───────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(212, 133, 10, 0.3);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(212, 133, 10, 0.5);
+}
+
+/* ── Animations used throughout the app ───────────────────────────────────── */
+@keyframes spinArc {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ── Utility classes (if still needed by some older components) ──────────── */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* ── Glass card (optional shared class) ──────────────────────────────────── */
+.glass-card {
+    background: linear-gradient(145deg, rgba(45, 18, 0, 0.6) 0%, rgba(28, 10, 0, 0.7) 100%);
+    border: 1px solid rgba(212, 133, 10, 0.15);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+}
+
+/* ── Hide scrollbar for specific containers (used via className) ─────────── */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}

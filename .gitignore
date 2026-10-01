@@ -136,7 +136,7 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 bugslog.txt
 # local env files
-frontend/.env*.local
+frontend/.env
 
 # vercel
 frontend/.vercel

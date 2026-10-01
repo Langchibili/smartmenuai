@@ -54,13 +54,13 @@ export const NATIVE_EVENTS = {
 export const CONSTANTS = {
   APP_NAME: 'SmartMenuStaff',
   APP_VERSION: '1.0.0',
-  DEVICE_SOCKET_URL: environment === "local" ? "http://10.197.174.23:3008" : "https://devicesocket.yourapp.com",
-  MAIN_SOCKET_URL: environment === "local" ? "http://10.197.174.23:4000" : "https://socket.yourapp.com",
-  BACKEND_URL: environment === "local" ? "http://10.197.174.23:1357/api" : "https://backend.yourapp.com/api",
+  DEVICE_SOCKET_URL: environment === "local" ? "http://192.168.43.207:3008" : "https://devicesocket.yourapp.com",
+  MAIN_SOCKET_URL: environment === "local" ? "http://192.168.43.207:4000" : "https://socket.yourapp.com",
+  BACKEND_URL: environment === "local" ? "http://192.168.43.207:1357/api" : "https://backend.yourapp.com/api",
 
   FRONTEND_URLS: {
-    owner: environment === "local" ? "http://10.197.174.23:3007" : "https://owner.yourapp.com",
-    employee: environment === "local" ? "http://10.197.174.23:3007" : "https://employee.yourapp.com",
+    owner: environment === "local" ? "http://192.168.43.207:3007" : "https://owner.yourapp.com",
+    employee: environment === "local" ? "http://192.168.43.207:3007" : "https://employee.yourapp.com",
   },
 
   NOTIFICATION: { HEARTBEAT_INTERVAL: 30000 },

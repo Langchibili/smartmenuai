@@ -117,7 +117,7 @@ export default function DashboardPage() {
         <MuiSkeleton variant="text" width="12rem" height={32} sx={{ mb: 4 }} />
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {[...Array(4)].map((_, i) => (
-            <Grid item xs={6} lg={3} key={i}>
+            <Grid size={{ xs: 6, lg: 3 }} key={i}>
               <MuiSkeleton variant="rounded" height={112} />
             </Grid>
           ))}
@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
       {/* KPI row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
         <StatCard
           label="Active orders"
           value={activeOrders.length}
@@ -176,7 +176,7 @@ export default function DashboardPage() {
           sub="right now"
         />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
         <StatCard
           label="Waiter alerts"
           value={needsWaiter}
@@ -185,7 +185,7 @@ export default function DashboardPage() {
           sub="tables calling"
         />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
         <StatCard
           label="Revenue today"
           value={formatCurrency(todayRevenue, currency)}
@@ -194,7 +194,7 @@ export default function DashboardPage() {
           sub={`${todayComplete.length} completed`}
         />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
         <StatCard
           label="Tables"
           value={`${tables.filter(t => t.status !== "available").length}/${tables.length}`}
@@ -208,7 +208,7 @@ export default function DashboardPage() {
       {/* Main content */}
       <Grid container spacing={3}>
         {/* Live orders feed */}
-        <Grid item xs={12} xl={7}>
+        <Grid size={{ xs: 12, xl: 7 }} >
           <Paper
             elevation={0}
             sx={{
@@ -343,7 +343,7 @@ export default function DashboardPage() {
         </Grid>
 
         {/* Table grid */}
-        <Grid item xs={12} xl={5}>
+        <Grid size={{ xs: 12, xl: 5 }} >
           <Paper
             elevation={0}
             sx={{
@@ -378,7 +378,7 @@ export default function DashboardPage() {
                   {tables.map((table) => {
                     const style = TABLE_STATUS_STYLE[table.status] || TABLE_STATUS_STYLE.available;
                     return (
-                      <Grid item xs={4} key={table.id}>
+                      <Grid size={{ xs: 4 }} key={table.id}>
                       <Box
                         component="button"
                         type="button"
@@ -432,7 +432,7 @@ export default function DashboardPage() {
                 <Divider sx={{ borderColor: "rgba(107,51,24,0.2)", mb: 2 }} />
                 <Grid container spacing={1.5}>
                   {Object.entries(TABLE_STATUS_STYLE).map(([status, s]) => (
-                    <Grid item xs={6} key={status}>
+                    <Grid size={{ xs: 6 }} key={status}>
                     <Stack direction="row" alignItems="center" spacing={0.8}>
                       <CircleIcon sx={{ fontSize: 8, color: s.dot }} />
                       <Typography

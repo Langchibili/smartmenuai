@@ -407,7 +407,7 @@ export default function EmployeesPage() {
           </Box>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <TextField
                 label="Full name *"
                 placeholder="Jane Smith"
@@ -419,7 +419,7 @@ export default function EmployeesPage() {
                 InputLabelProps={{ shrink: !!form.invited_name || undefined }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <TextField
                 label="Phone"
                 placeholder="+260 97…"
@@ -444,7 +444,7 @@ export default function EmployeesPage() {
           />
 
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <FormControl fullWidth sx={inputSx}>
                 <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>Role *</InputLabel>
                 <Select
@@ -457,7 +457,7 @@ export default function EmployeesPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <FormControl fullWidth sx={inputSx}>
                 <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>Branch</InputLabel>
                 <Select

@@ -1179,6 +1179,10 @@ export interface ApiEmployeeEmployee extends Struct.CollectionTypeSchema {
       'api::employee.employee'
     > &
       Schema.Attribute.Private;
+    owner_profile: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::user-profile.user-profile'
+    >;
     permissions: Schema.Attribute.JSON;
     phone: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
@@ -1567,6 +1571,7 @@ export interface ApiUserProfileUserProfile extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    employees: Schema.Attribute.Relation<'oneToMany', 'api::employee.employee'>;
     full_name: Schema.Attribute.String;
     is_platform_admin: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;

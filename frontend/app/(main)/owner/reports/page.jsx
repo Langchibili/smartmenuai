@@ -120,7 +120,7 @@ export default function ReportsPage() {
         <Skeleton variant="text" width="12rem" height={32} sx={{ mb: 3 }} />
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {[...Array(4)].map((_, i) => (
-            <Grid item xs={6} lg={3} key={i}>
+            <Grid size={{ xs: 6, lg: 3 }} key={i}>
               <Skeleton variant="rounded" height={112} />
             </Grid>
           ))}
@@ -171,7 +171,7 @@ export default function ReportsPage() {
 
       {/* KPI cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
           <StatCard
             label="Total orders"
             value={data.summary.totalOrders}
@@ -180,10 +180,10 @@ export default function ReportsPage() {
             sub={`${data.summary.pendingOrders} still active`}
           />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
           <StatCard label="Completed" value={data.summary.completedOrders} icon="✓" color="green" />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
           <StatCard
             label="Revenue"
             value={formatCurrency(data.summary.totalRevenue, currency)}
@@ -191,7 +191,7 @@ export default function ReportsPage() {
             color="green"
           />
         </Grid>
-        <Grid item xs={6} lg={3}>
+        <Grid size={{ xs: 6, lg: 3 }} >
           <StatCard
             label="Avg. order"
             value={formatCurrency(data.summary.avgOrderValue, currency)}
@@ -203,7 +203,7 @@ export default function ReportsPage() {
 
       {/* Charts */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }} >
           <Paper
             elevation={0}
             sx={{
@@ -226,7 +226,7 @@ export default function ReportsPage() {
             )}
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }} >
           <Paper
             elevation={0}
             sx={{

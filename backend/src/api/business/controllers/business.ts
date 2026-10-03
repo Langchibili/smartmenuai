@@ -81,7 +81,32 @@ export default factories.createCoreController('api::business.business', ({ strap
         });
       }
 
-      // 4. Create owner employee record
+      // Create and attach the owner profile before its employee record.
+      const profiles = strapi.db.query('api::user-profile.user-profile');
+      const linkedUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+        where: { id: user.id },
+        populate: ['user_profile'],
+      });
+      let profile = linkedUser?.user_profile ||
+        await profiles.findOne({ where: { user: user.id } });
+      if (!profile) {
+        profile = await profiles.create({
+          data: {
+            full_name: user.username || user.email || '',
+            account_type: 'business_owner',
+            onboarding_step: 0,
+            onboarding_complete: false,
+            must_change_password: false,
+            is_platform_admin: false,
+          },
+        });
+      }
+      await strapi.db.query('plugin::users-permissions.user').update({
+        where: { id: user.id },
+        data: { user_profile: profile.id },
+      });
+
+      // 4. Create owner employee record.
       if (user.id) {
         await strapi.db.query('api::employee.employee').create({
           data: {
@@ -97,35 +122,23 @@ export default factories.createCoreController('api::business.business', ({ strap
               manage_billing: true,
             },
             user: user.id,
+            owner_profile: profile.id,
             business: business.id,
             branch: branch.id,
             publishedAt: new Date(),
           },
         });
 
-        // 5. Advance onboarding step to 2 (business created)
-        const profile = await strapi.db.query('api::user-profile.user-profile').findOne({
-          where: { user: user.id },
+        // 5. Advance onboarding step to 2 (business created).
+        await profiles.update({
+          where: { id: profile.id },
+          data: {
+            account_type: 'business_owner',
+            onboarding_step: 2,
+            onboarding_complete: false,
+            business: business.id,
+          },
         });
-        if (profile) {
-          await strapi.db.query('api::user-profile.user-profile').update({
-            where: { id: profile.id },
-            data: { onboarding_step: 2, business: business.id },
-          });
-        } else {
-          await strapi.db.query('api::user-profile.user-profile').create({
-            data: {
-              full_name: user.username || user.email || '',
-              account_type: 'business_owner',
-              onboarding_step: 2,
-              onboarding_complete: false,
-              must_change_password: false,
-              is_platform_admin: false,
-              user: user.id,
-              business: business.id,
-            },
-          });
-        }
       }
 
       ctx.send({
@@ -148,6 +161,8 @@ export default factories.createCoreController('api::business.business', ({ strap
     try {
       const user = ctx.state.user;
       if (!user) return ctx.unauthorized('Not authenticated');
+      const { fullName, accountType } = ctx.request.body || {};
+      const validAccountTypes = ['business_owner', 'employee'];
 
       const employee = await strapi.db.query('api::employee.employee').findOne({
         where: { user: user.id },
@@ -155,17 +170,45 @@ export default factories.createCoreController('api::business.business', ({ strap
       });
 
       const profiles = strapi.db.query('api::user-profile.user-profile');
-      const existingProfile = await profiles.findOne({ where: { user: user.id } });
-      const profile = existingProfile || await profiles.create({
-        data: {
-          full_name: user.username || user.email || '',
-          onboarding_step: 0,
-          onboarding_complete: false,
-          must_change_password: false,
-          is_platform_admin: false,
-          user: user.id,
-        },
+      const linkedUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+        where: { id: user.id },
+        populate: ['user_profile'],
       });
+      let profile = linkedUser?.user_profile ||
+        await profiles.findOne({ where: { user: user.id } });
+      if (!profile) {
+        profile = await profiles.create({
+          data: {
+            full_name: fullName || user.username || user.email || '',
+            account_type: validAccountTypes.includes(accountType)
+              ? accountType
+              : employee ? 'employee' : 'business_owner',
+            onboarding_step: 0,
+            onboarding_complete: false,
+            must_change_password: false,
+            is_platform_admin: false,
+          },
+        });
+      } else {
+        const updates: Record<string, unknown> = {};
+        if (fullName && !profile.full_name) updates.full_name = fullName;
+        if (validAccountTypes.includes(accountType) && !profile.account_type) {
+          updates.account_type = accountType;
+        }
+        if (Object.keys(updates).length) {
+          profile = await profiles.update({
+            where: { id: profile.id },
+            data: updates,
+          });
+        }
+      }
+
+      if (String(linkedUser?.user_profile?.id || '') !== String(profile.id)) {
+        await strapi.db.query('plugin::users-permissions.user').update({
+          where: { id: user.id },
+          data: { user_profile: profile.id },
+        });
+      }
 
       if (!employee) {
         return ctx.send({
@@ -185,6 +228,23 @@ export default factories.createCoreController('api::business.business', ({ strap
         where: { id: employee.business?.id },
         populate: ['logo', 'branches'],
       });
+
+      if (employee.role === 'owner' && business?.id) {
+        const businessEmployees = await strapi.db.query('api::employee.employee').findMany({
+          where: { business: business.id },
+          populate: ['owner_profile'],
+        });
+        await Promise.all(
+          businessEmployees
+            .filter((businessEmployee) => !businessEmployee.owner_profile)
+            .map((businessEmployee) =>
+              strapi.db.query('api::employee.employee').update({
+                where: { id: businessEmployee.id },
+                data: { owner_profile: profile.id },
+              })
+            )
+        );
+      }
 
       ctx.send({
         business: business

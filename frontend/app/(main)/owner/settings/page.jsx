@@ -126,7 +126,7 @@ export default function SettingsPage() {
             Business profile
           </Typography>
           <Grid container spacing={2.5}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <TextField
                 label="Business name"
                 value={business?.business_name ?? ""}
@@ -137,7 +137,7 @@ export default function SettingsPage() {
                 helperText="To change your business name, contact support."
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Business type"
                 value={business?.business_type ?? ""}
@@ -148,7 +148,7 @@ export default function SettingsPage() {
                 inputProps={{ style: { textTransform: "capitalize" } }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Currency"
                 value={business?.currency ?? ""}
@@ -158,7 +158,7 @@ export default function SettingsPage() {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="City"
                 value={business?.city ?? ""}
@@ -168,7 +168,7 @@ export default function SettingsPage() {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Country"
                 value={business?.country ?? ""}
@@ -378,7 +378,7 @@ export default function SettingsPage() {
             InputLabelProps={{ shrink: !!branchForm.branch_name || undefined }}
           />
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="City"
                 placeholder="Lusaka"
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                 sx={inputSx}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Phone"
                 placeholder="+260…"

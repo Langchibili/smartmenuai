@@ -305,9 +305,10 @@ export default function RegisterPage() {
         }
 
         try {
+            const email = form.email.trim().toLowerCase();
             await register({
-                username: form.email.split("@")[0],
-                email: form.email,
+                username: email,
+                email,
                 password: form.password,
                 fullName: form.fullName,
                 accountType: "business_owner",

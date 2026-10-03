@@ -35,6 +35,12 @@
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user"
     },
+    "owner_profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::user-profile.user-profile",
+      "inversedBy": "employees"
+    },
     "business": {
       "type": "relation",
       "relation": "manyToOne",

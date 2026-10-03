@@ -57,6 +57,12 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::business.business"
+    },
+    "employees": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::employee.employee",
+      "mappedBy": "owner_profile"
     }
   }
 }

@@ -30,17 +30,9 @@ export function AuthProvider({ children }) {
       setState((s) => ({ ...s, loading: false }));
       return;
     }
+    let strapiUser;
     try {
-      const strapiUser = await authApi.me();
-      const ctx = await businessApi.getMyBusiness();
-      setState({
-        user: strapiUser,
-        profile: ctx.profile,
-        employee: ctx.employee,
-        business: ctx.business,
-        loading: false,
-        error: null,
-      });
+      strapiUser = await authApi.me();
     } catch {
       clearToken();
       setState({
@@ -50,6 +42,27 @@ export function AuthProvider({ children }) {
         business: null,
         loading: false,
         error: null,
+      });
+      return;
+    }
+    try {
+      const ctx = await businessApi.getMyBusiness();
+      setState({
+        user: strapiUser,
+        profile: ctx.profile,
+        employee: ctx.employee,
+        business: ctx.business,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      setState({
+        user: strapiUser,
+        profile: null,
+        employee: null,
+        business: null,
+        loading: false,
+        error: `Your account is signed in, but its profile could not be loaded: ${error.message}`,
       });
     }
   }, []);
@@ -79,16 +92,38 @@ export function AuthProvider({ children }) {
         error: null,
       });
     } catch (err) {
-      setState((s) => ({ ...s, loading: false, error: err.message }));
+      const token = getToken();
+      if (token) {
+        try {
+          const user = await authApi.me();
+          setState({
+            user,
+            profile: null,
+            employee: null,
+            business: null,
+            loading: false,
+            error: `Signed in, but profile setup did not finish: ${err.message}`,
+          });
+        } catch {
+          setState((s) => ({ ...s, loading: false, error: err.message }));
+        }
+      } else {
+        setState((s) => ({ ...s, loading: false, error: err.message }));
+      }
       throw err;
     }
   };
 
   const register = async (payload) => {
     setState((s) => ({ ...s, loading: true, error: null }));
+    let user = null;
     try {
-      const { user } = await authApi.register(payload);
-      const ctx = await businessApi.getMyBusiness();
+      ({ user } = await authApi.register(payload));
+      setState((s) => ({ ...s, user, loading: true }));
+      const ctx = await businessApi.getMyBusiness({
+        fullName: payload.fullName,
+        accountType: payload.accountType,
+      });
       setState({
         user,
         profile: ctx.profile,
@@ -98,7 +133,14 @@ export function AuthProvider({ children }) {
         error: null,
       });
     } catch (err) {
-      setState((s) => ({ ...s, loading: false, error: err.message }));
+      setState((s) => ({
+        ...s,
+        user: user ?? s.user,
+        loading: false,
+        error: user
+          ? `Your account was created, but profile setup failed: ${err.message}`
+          : err.message,
+      }));
       throw err;
     }
   };
@@ -120,7 +162,11 @@ export function AuthProvider({ children }) {
     try {
       const ctx = await businessApi.getMyBusiness();
       setState((s) => ({ ...s, profile: ctx.profile, employee: ctx.employee, business: ctx.business }));
-    } catch { /* silent */ }
+      return ctx;
+    } catch (error) {
+      setState((s) => ({ ...s, error: error.message }));
+      throw error;
+    }
   };
 
   const setError = (error) => setState((s) => ({ ...s, error }));

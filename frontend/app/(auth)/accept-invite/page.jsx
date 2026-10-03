@@ -82,9 +82,9 @@ export default function AcceptInvitePage() {
         }
         setInviteData(res);
         setStage(user ? "ready" : "register");
-      } catch {
+      } catch (err) {
         setStage("invalid");
-        setError("Failed to validate invite link. Please try again.");
+        setError(err.message || "Failed to validate invite link. Please try again.");
       }
     })();
   }, [token, user]);
@@ -97,7 +97,7 @@ export default function AcceptInvitePage() {
       setStage("done");
     } catch (err) {
       setError(err.message);
-      setStage("error");
+      setStage("register");
     }
   };
 
@@ -115,10 +115,11 @@ export default function AcceptInvitePage() {
     setStage("accepting");
     try {
       await register({
-        username: inviteData.invitation.invited_email.split("@")[0],
+        username: inviteData.invitation.invited_email.toLowerCase(),
         email: inviteData.invitation.invited_email,
         password: form.password,
         fullName: inviteData.invitation.invited_name,
+        accountType: "employee",
       });
       await employeeApi.acceptInvite(token);
       await refreshBusiness();
@@ -372,7 +373,7 @@ export default function AcceptInvitePage() {
             variant="contained"
             onClick={() =>
               router.replace(
-                inviteData?.invitation?.role === "waiter" ? "/waiter" : "/dashboard"
+                inviteData?.invitation?.role === "waiter" ? "/waiter" : "/owner/dashboard"
               )
             }
             sx={{

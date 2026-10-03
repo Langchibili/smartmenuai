@@ -74,9 +74,16 @@ export const authApi = {
   register: async (payload) => {
     const data = await callStrapi(
       "auth/local/register",
-      payload,
+      {
+        username: payload.username,
+        email: payload.email,
+        password: payload.password,
+      },
       { auth: false }
     );
+    if (!data.jwt || !data.user?.id) {
+      throw new Error("Registration succeeded without returning an account token.");
+    }
     setToken(data.jwt);
     return data;
   },
@@ -101,8 +108,8 @@ export const authApi = {
 
 // ─── Business ────────────────────────────────────────────────────────────────
 export const businessApi = {
-  getMyBusiness: () =>
-    callStrapi("custom-functions/getMyBusiness", {}),
+  getMyBusiness: (profile = {}) =>
+    callStrapi("custom-functions/getMyBusiness", profile),
 
   createBusinessWithBranchAndTables: (payload) =>
     callStrapi("custom-functions/createBusinessWithBranchAndTables", payload),

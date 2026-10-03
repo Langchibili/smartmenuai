@@ -295,7 +295,7 @@ export default function OnboardingPage() {
               {BUSINESS_TYPES.map((t) => {
                 const selected = form.businessType === t.value;
                 return (
-                  <Grid item xs={6} key={t.value}>
+                  <Grid size={{ xs: 6 }} key={t.value}>
                     <Box
                       component="button"
                       type="button"
@@ -410,7 +410,7 @@ export default function OnboardingPage() {
               />
 
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }} >
                 <TextField
                   label="City"
                   placeholder="Lusaka"
@@ -420,7 +420,7 @@ export default function OnboardingPage() {
                   sx={inputSx}
                 />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }} >
                 <TextField
                   label="Country"
                   placeholder="Zambia"

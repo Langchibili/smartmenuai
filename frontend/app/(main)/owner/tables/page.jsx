@@ -138,7 +138,7 @@ export default function TablesPage() {
         <Box sx={{ height: 32, width: "12rem", borderRadius: "8px", bgcolor: "rgba(45,18,0,0.6)", mb: 3 }} />
         <Grid container spacing={2}>
           {[...Array(8)].map((_, i) => (
-            <Grid item xs={6} md={4} lg={3} key={i}>
+            <Grid size={{ xs: 6, md: 4, lg: 3 }} key={i}>
               <Box sx={{ height: 160, borderRadius: "14px", bgcolor: "rgba(45,18,0,0.6)" }} />
             </Grid>
           ))}
@@ -233,7 +233,7 @@ export default function TablesPage() {
           {tables.map(table => {
             const sc = STATUS_COLORS[table.status] ?? STATUS_COLORS.available;
             return (
-              <Grid item xs={6} sm={4} md={3} xl={2} key={table.id}>
+              <Grid size={{ xs: 6, sm: 4, md: 3, xl: 2 }} key={table.id}>
               <Paper
                 elevation={0}
                 sx={{
@@ -415,7 +415,7 @@ export default function TablesPage() {
         <Stack spacing={2.5}>
           {/* Grid inside modal – kept as MUI Grid since it works fine here */}
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Table number *"
                 type="number"
@@ -428,7 +428,7 @@ export default function TablesPage() {
                 InputLabelProps={{ shrink: !!form.tableNumber || undefined }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 label="Capacity"
                 type="number"

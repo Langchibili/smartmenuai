@@ -114,7 +114,7 @@ export default function OwnerTableDetailsPage() {
               ["Assigned waiter", table.assigned_waiter?.full_name ?? "Unassigned"],
               ["QR menu", table.qr_code_url ?? "Not available"],
             ].map(([label, value]) => (
-              <Grid item xs={12} sm={6} key={label}>
+              <Grid size={{ xs: 12, sm: 6 }} key={label}>
                 <Typography variant="caption" sx={{ color: "#8B6038" }}>{label}</Typography>
                 <Typography sx={{ color: "#F9EDD8", overflowWrap: "anywhere" }}>{value}</Typography>
               </Grid>

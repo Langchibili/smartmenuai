@@ -383,7 +383,7 @@ export default function WaiterDashboard() {
               {tables.map((table) => {
                 const sc = TABLE_STATUS_STYLE[table.status] ?? TABLE_STATUS_STYLE.available;
                 return (
-                  <Grid item xs={4} key={table.id}>
+                  <Grid size={{ xs: 4 }} key={table.id}>
                     <Box
                       component="button"
                       type="button"

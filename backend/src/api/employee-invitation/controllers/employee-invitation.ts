@@ -138,25 +138,41 @@ export default factories.createCoreController('api::employee-invitation.employee
     try {
       const { token } = ctx.request.body;
       const user = ctx.state.user;
-      if (!user) return ctx.send({ success: false, error: 'Not authenticated' }, 401);
-      if (!token) return ctx.send({ success: false, error: 'Token is required' }, 400);
+      if (!user) return ctx.unauthorized('Not authenticated');
+      if (!token) return ctx.badRequest('Token is required');
 
       const invitation = await strapi.db.query('api::employee-invitation.employee-invitation').findOne({
         where: { invite_token: token },
         populate: ['business', 'branch'],
       });
 
-      if (!invitation) return ctx.send({ success: false, error: 'Invalid invite link' });
-      if (invitation.status !== 'pending') return ctx.send({ success: false, error: 'Invitation already used or expired' });
+      if (!invitation) return ctx.notFound('Invalid invite link');
+      if (invitation.invited_email.toLowerCase() !== user.email.toLowerCase()) {
+        return ctx.forbidden('This invite was sent to a different email address');
+      }
+      if (invitation.status === 'accepted') {
+        const acceptedEmployee = await strapi.db.query('api::employee.employee').findOne({
+          where: { user: user.id, business: invitation.business.id },
+        });
+        if (acceptedEmployee) {
+          return ctx.send({
+            success: true,
+            employeeId: acceptedEmployee.id,
+            business_id: invitation.business.id,
+            role: invitation.role,
+          });
+        }
+        return ctx.badRequest('Invitation has already been accepted');
+      }
+      if (invitation.status !== 'pending') {
+        return ctx.badRequest('Invitation is no longer pending');
+      }
       if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
         await strapi.db.query('api::employee-invitation.employee-invitation').update({
           where: { id: invitation.id },
           data: { status: 'expired' },
         });
-        return ctx.send({ success: false, error: 'Invitation has expired' });
-      }
-      if (invitation.invited_email.toLowerCase() !== user.email.toLowerCase()) {
-        return ctx.send({ success: false, error: 'This invite was sent to a different email address' });
+        return ctx.badRequest('Invitation has expired');
       }
 
       const DEFAULT_PERMISSIONS = {
@@ -164,19 +180,56 @@ export default factories.createCoreController('api::employee-invitation.employee
         waiter: { view_assigned_tables: true, receive_orders: true, update_order_status: true, receive_waiter_calls: true },
       };
 
-      const employee = await strapi.db.query('api::employee.employee').create({
-        data: {
-          full_name: invitation.invited_name,
-          phone: invitation.phone || '',
-          role: invitation.role,
-          is_active: true,
-          permissions: DEFAULT_PERMISSIONS[invitation.role] || {},
-          user: user.id,
-          business: invitation.business.id,
-          branch: invitation.branch?.id || null,
-          publishedAt: new Date(),
-        },
+      const ownerEmployee = await strapi.db.query('api::employee.employee').findOne({
+        where: { business: invitation.business.id, role: 'owner' },
+        populate: ['user'],
       });
+      const profiles = strapi.db.query('api::user-profile.user-profile');
+      const ownerProfile = ownerEmployee?.user
+        ? await profiles.findOne({ where: { user: ownerEmployee.user.id } })
+        : null;
+      let profile = await profiles.findOne({ where: { user: user.id } });
+      if (!profile) {
+        profile = await profiles.create({
+          data: {
+            full_name: invitation.invited_name,
+            account_type: 'employee',
+            onboarding_step: 0,
+            onboarding_complete: false,
+            must_change_password: false,
+            is_platform_admin: false,
+          },
+        });
+        await strapi.db.query('plugin::users-permissions.user').update({
+          where: { id: user.id },
+          data: { user_profile: profile.id },
+        });
+      }
+
+      let employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: invitation.business.id },
+      });
+      if (!employee) {
+        employee = await strapi.db.query('api::employee.employee').create({
+          data: {
+            full_name: invitation.invited_name,
+            phone: invitation.phone || '',
+            role: invitation.role,
+            is_active: true,
+            permissions: DEFAULT_PERMISSIONS[invitation.role] || {},
+            user: user.id,
+            owner_profile: ownerProfile?.id || null,
+            business: invitation.business.id,
+            branch: invitation.branch?.id || null,
+            publishedAt: new Date(),
+          },
+        });
+      } else if (ownerProfile && !employee.owner_profile) {
+        employee = await strapi.db.query('api::employee.employee').update({
+          where: { id: employee.id },
+          data: { owner_profile: ownerProfile.id },
+        });
+      }
 
       await strapi.db.query('api::employee-invitation.employee-invitation').update({
         where: { id: invitation.id },

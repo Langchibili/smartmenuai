@@ -236,7 +236,7 @@ export default function MenuPage() {
       {/* Content */}
       <Grid container spacing={3}>
         {/* Categories sidebar */}
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }} >
           <Paper
             elevation={0}
             sx={{
@@ -341,7 +341,7 @@ export default function MenuPage() {
         </Grid>
 
         {/* Items grid */}
-        <Grid item xs={12} md={9}>
+        <Grid size={{ xs: 12, md: 9 }} >
           {visibleItems.length === 0 ? (
             <EmptyState
               icon="🍕"
@@ -366,7 +366,7 @@ export default function MenuPage() {
           ) : (
             <Grid container spacing={2}>
               {visibleItems.map(item => (
-                <Grid item xs={12} sm={6} xl={4} key={item.id}>
+                <Grid size={{ xs: 12, sm: 6, xl: 4 }} key={item.id}>
                   <Card
                     elevation={0}
                     sx={{
@@ -568,7 +568,7 @@ export default function MenuPage() {
       >
         <Stack spacing={2.5}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <TextField
                 label="Item name *"
                 placeholder="Grilled Chicken"
@@ -580,7 +580,7 @@ export default function MenuPage() {
                 InputLabelProps={{ shrink: !!itemForm.name || undefined }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <TextField
                 label="Price *"
                 type="number"
@@ -594,7 +594,7 @@ export default function MenuPage() {
                 InputLabelProps={{ shrink: !!itemForm.price || undefined }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <TextField
                 label="Prep time"
                 placeholder="15 mins"
@@ -604,7 +604,7 @@ export default function MenuPage() {
                 sx={inputSx}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <TextField
                 label="Description"
                 multiline
@@ -616,7 +616,7 @@ export default function MenuPage() {
                 sx={inputSx}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <TextField
                 label="Tags (comma-separated)"
                 placeholder="spicy, gluten-free"
@@ -637,7 +637,7 @@ export default function MenuPage() {
                 ["is_featured", "Featured ⭐"],
                 ["is_special_offer", "Special offer 🎁"],
               ].map(([field, label]) => (
-                <Grid item xs={6} key={field}>
+                <Grid size={{ xs: 6 }} key={field}>
                   <FormControlLabel
                     control={
                       <Switch

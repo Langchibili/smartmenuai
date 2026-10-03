@@ -79,16 +79,16 @@ export default function WaiterTableDetailsPage() {
           }}
         >
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <Typography variant="caption" sx={{ color: "#8B6038" }}>Capacity</Typography>
               <Typography sx={{ color: "#F9EDD8" }}>{table.capacity ?? "—"} seats</Typography>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }} >
               <Typography variant="caption" sx={{ color: "#8B6038" }}>Table number</Typography>
               <Typography sx={{ color: "#F9EDD8" }}>{table.table_number}</Typography>
             </Grid>
             {table.qr_code_url && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }} >
                 <Typography variant="caption" sx={{ color: "#8B6038" }}>Guest menu QR URL</Typography>
                 <Typography sx={{ color: "#D4A872", overflowWrap: "anywhere" }}>{table.qr_code_url}</Typography>
               </Grid>

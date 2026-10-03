@@ -123,7 +123,7 @@ export default function LandingPage() {
 
       <Grid container spacing={2}>
         {FEATURES.map(({ icon: Icon, title, description }) => (
-          <Grid item xs={12} md={4} key={title}>
+          <Grid size={{ xs: 12, md: 4 }} key={title}>
             <Paper
               elevation={0}
               sx={{

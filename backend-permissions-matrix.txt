@@ -1,1 +1,341 @@
-Content TypePlatform MasterOwnerManagerWaiterPublicBusiness✅✅*❌❌❌Branch✅✅❌❌❌Table✅✅✅*❌❌Employee✅✅❌❌❌Employee Invitation✅✅❌❌❌Menu Category✅✅✅*❌❌Menu Item✅✅✅*❌❌Order✅✅✅✅*❌Waiter Call✅✅✅✅*❌Ad Campaign✅✅*❌❌❌Advertiser✅❌❌❌❌Ad Event✅✅*❌❌❌Business Ad Setting✅✅*❌❌❌Business Menu Setting✅✅❌❌❌Global Ad Setting✅❌❌❌❌Platform Admin✅❌❌❌❌
+SMARTMENU AI — BACKEND PERMISSIONS MATRIX
+=========================================
+
+Last verified: 2026-10-03
+
+SYMBOLS
+-------
+✓  Allowed by the route/controller rule shown.
+x  Denied by that route/controller rule.
+—  Not applicable.
+!  Not verified by the test scope described below.
+
+IMPORTANT: This file separates source-code checks from Strapi role grants.
+The source controls the role and record checks listed below. Strapi Users &
+Permissions action grants are stored in the MySQL database, not in this source
+tree. A role must have the action enabled before its authenticated request can
+reach a protected custom route. A valid JWT without an action grant can be
+rejected by Strapi. Missing/invalid user identity or a denied role action may
+produce 401 or 403 depending on which Strapi layer rejects the request.
+
+AUTHENTICATION TYPES
+--------------------
+Browser/staff sessions use a Strapi user JWT. Controllers that read
+ctx.state.user require this user identity.
+
+APIACCESSTOKEN is a Strapi API token, not a user JWT. It can authorize
+machine-to-machine API requests, but it does not create ctx.state.user or
+represent an owner, manager, waiter, or platform master. Do not put it in the
+frontend or use it to test a user-only custom controller.
+
+
+CURRENT DATABASE GRANTS — USERS & PERMISSIONS
+---------------------------------------------
+Checked from up_roles and up_permissions in the configured MySQL database.
+
+PUBLIC ROLE
+  ✓ plugin::users-permissions.auth.callback
+  ✓ plugin::users-permissions.auth.connect
+  ✓ plugin::users-permissions.auth.emailConfirmation
+  ✓ plugin::users-permissions.auth.forgotPassword
+  ✓ plugin::users-permissions.auth.refresh
+  ✓ plugin::users-permissions.auth.register
+  ✓ plugin::users-permissions.auth.resetPassword
+  ✓ plugin::users-permissions.auth.sendEmailConfirmation
+  x Business, staff, order-management, waiter, and device actions
+  x Generic content-type create/update/delete actions
+
+AUTHENTICATED ROLE
+  ✓ plugin::users-permissions.auth.changePassword
+  ✓ plugin::users-permissions.auth.logout
+  ✓ plugin::users-permissions.user.me
+  ✓ 37 guarded business, table, order, invitation, waiter-call, platform-admin,
+    and device route actions listed below
+  x Generic business/menu/order/content-type CRUD actions
+
+PLATFORM MASTER
+  — No separate Users & Permissions role exists in the database.
+  ✓ Platform custom routes check for an active platform-admin record linked
+    to the current JWT user.
+  x A regular API token does not satisfy the platform-admin controller check.
+
+API TOKEN
+  ✓ The configured full-access API token read the businesses, branches, and
+    tables collection endpoints (HTTP 200; each returned zero records).
+  x It did not authenticate the user-only getMyBusiness controller
+    (HTTP 401: Not authenticated). This is expected, not a broken JWT session.
+
+USER JWT SMOKE TEST
+  ✓ A temporary account registered through the public Strapi registration
+    route and received a user JWT.
+  ✓ POST /api/custom-functions/getMyBusiness with that JWT returned HTTP 200.
+  ✓ GET /api/devices with that JWT returned HTTP 200 and an empty owned-device
+    list.
+  x POST /api/custom-functions/getBusinessReports with that JWT but no
+    employee membership returned HTTP 403 (authorization denial, not 401).
+  ✓ The temporary account and its user-linked test data were removed.
+  ✓ The database returned to zero application user accounts after cleanup.
+
+REALTIME OWNER / DEVICE SMOKE TEST
+  ✓ A temporary JWT-authenticated owner created a business and table.
+  ✓ The owner socket joined only its authorized business room on port 4000.
+  ✓ A public waiter call produced the matching event in the owner's browser
+    business room.
+  ✓ A native device authenticated with the same user's JWT and registered
+    through the device socket on port 3008.
+  ✓ The same waiter-call ID reached the registered owner device.
+  ✓ An unauthenticated socket could not impersonate the internal relay; its
+    forged notification event was rejected.
+  ✓ Order creation, order status, and table status reached the owner browser
+    and registered device exactly once per event.
+  ✓ Order creation wrote one related business activity log.
+  ✓ A trusted generic notification reached the owner browser and device.
+  ✓ A pending invitation token validated; its matching JWT user accepted it,
+    received the waiter role, and hydrated the invited business context.
+  ✓ A JWT-authenticated user received employee_room_joined only after backend
+    identity verification, then received a targeted trusted notification.
+  ✓ Successful business-room joins now return business_room_joined; invalid
+    membership continues to return business_room_error.
+  ✓ Temporary account, profile, device, business, table, and waiter-call
+    records were removed after the test.
+  ✓ The disposable employee-room smoke-test account and its direct user
+    relation rows were removed.
+  ✓ The active services remained available on ports 3007, 1357, 4000, 3008,
+    and 3306; each port had one listener at verification time.
+  ! Invitation email delivery was not attempted to avoid sending real email.
+  ! Native notification display through the Expo OS notification API was not
+    exercised on a physical device; this test verifies socket delivery only.
+
+LINKED DEMO DATA SMOKE TEST
+  ✓ 10 local test accounts authenticate: 2 owners, 2 managers, 5 waiters,
+    and 1 customer (`test1@example.test` through `test10@example.test`).
+  ✓ 2 businesses each have 2 branches; 16 tables, 4 menu categories, and
+    8 menu items are linked to the correct business/branch.
+  ✓ 9 owner/employee records are linked to their users and businesses;
+    2 managers are linked to their primary branch.
+  ✓ 4 sample orders and 4 waiter calls were created through the public
+    customer-order and waiter-call flows; 4 order activity logs were written.
+  ✓ All 4 branches return the seeded menu from the public QR-menu endpoint.
+  ✓ Owner, manager, waiter, and customer session contexts were verified.
+  ! Invitation emails were not sent. Test accounts use the reserved
+    `example.test` domain and share a generated local-only password.
+  ! Owner Employees UI now uses owner-scoped custom actions. It will remain
+    unavailable until the two actions below are manually granted to
+    Authenticated; the current UI correctly reports Forbidden rather than
+    presenting the business as empty.
+
+
+SOURCE-ENFORCED CUSTOM ROUTE MATRIX
+----------------------------------
+The matrix below describes controller rules. For protected routes, Strapi
+must also grant the route action to the caller's Users & Permissions role.
+Business scope means the caller's active employee record must belong to the
+requested business. Branch scope means the manager is limited to their branch.
+
+PUBLIC CUSTOMER ROUTES
+  ✓ POST /api/custom-functions/getPublicMenu
+    Public; controller verifies the business, branch, and table relationship.
+  ✓ POST /api/custom-functions/getClientOrders
+    Public; order results are limited to the supplied customer session.
+  ✓ POST /api/custom-functions/placeOrder
+    Public; controller verifies the table and live menu item availability/prices.
+  ✓ POST /api/custom-functions/callWaiter
+    Public; controller verifies the table/business relationship.
+  ✓ POST /api/custom-functions/validateInviteToken
+    Public; only invitation validity and limited invite details are returned.
+  ✓ POST /api/custom-functions/getAdCampaigns
+    Public; controller returns eligible active campaigns only.
+  ✓ POST /api/custom-functions/setupPlatformMaster
+    Public bootstrap route; controller prevents arbitrary repeat setup.
+  x All other business/staff/device actions without a valid user JWT.
+
+AUTHENTICATED ONBOARDING AND BUSINESS ROUTES
+  ✓ POST /api/custom-functions/createBusinessWithBranchAndTables
+    Any authenticated user; creates the onboarding business for that user.
+  ✓ POST /api/custom-functions/getMyBusiness
+    Authenticated user; reads the caller's own employee/business/profile.
+  ✓ POST /api/custom-functions/updateOnboardingStep
+    Authenticated user; updates only the caller's profile.
+  ✓ POST /api/custom-functions/getBusinessReports
+    Owner or manager in the requested business; managers are branch-scoped.
+  x POST /api/custom-functions/getBusinessReports
+    Waiter, public customer, non-member, or manager without an assigned branch.
+
+TABLE ROUTES
+  ✓ POST /api/custom-functions/createBusinessTable
+    Business owner or manager; manager is limited to their branch.
+  ✓ POST /api/custom-functions/getBusinessTables
+    Business owner or manager; manager is limited to their branch.
+  ✓ POST /api/custom-functions/updateTableStatus
+    Business owner or manager; manager is limited to their branch.
+  ✓ POST /api/custom-functions/assignWaiterToTable
+    Business owner or manager; assigned waiter must be active and in scope.
+  x Table management routes for waiters, customers, or another business.
+
+EMPLOYEE MANAGEMENT ROUTES
+  ! POST /api/custom-functions/getBusinessEmployees
+    Authenticated active owner of the requested business; returns that
+    business's employee records with safe user and branch fields only.
+  ! POST /api/custom-functions/updateBusinessEmployee
+    Authenticated active owner of the requested business; updates only the
+    target employee's active flag and cannot deactivate an owner record.
+  x Employee list/status actions for managers, waiters, customers, or a
+    different business owner.
+
+EMPLOYEE INVITATION ROUTES
+  ✓ POST /api/custom-functions/sendEmployeeInvite
+    Active owner of that business; optional branch must belong to it.
+  ✓ POST /api/custom-functions/acceptInvite
+    Authenticated invitee; JWT user's email must match the invitation email.
+  x Send invitation as manager, waiter, public customer, or another business.
+  ✓ POST /api/custom-functions/validateInviteToken
+    Public, token-scoped lookup (listed above).
+
+ORDER ROUTES
+  ✓ POST /api/custom-functions/updateOrderStatus
+    Owner or manager in the order's business; manager is branch-scoped.
+  ✓ POST /api/custom-functions/updateOrderStatus
+    Waiter may update only an order assigned to that waiter.
+  ✓ POST /api/custom-functions/getBusinessOrders
+    Owner or manager in the requested business; manager is branch-scoped.
+  ✓ POST /api/custom-functions/getBusinessOrders
+    Waiter sees only orders assigned to that waiter.
+  x Protected order-management routes for customers and non-members.
+  ✓ Public menu, order placement, and customer-session order lookup are listed
+    under Public Customer Routes.
+
+WAITER-CALL ROUTES
+  ✓ POST /api/custom-functions/acknowledgeWaiterCall
+    Active owner, manager, or waiter in the call's business/branch.
+  ✓ POST /api/custom-functions/resolveWaiterCall
+    Active owner, manager, or assigned waiter in the call's business/branch.
+  ✓ POST /api/custom-functions/getActiveWaiterCalls
+    Active owner, manager, or waiter; manager/waiter results are scoped.
+  ✓ POST /api/custom-functions/getWaiterDashboard
+    Authenticated active waiter; employee ID and business must match the JWT.
+  ✓ POST /api/custom-functions/toggleWaiterAvailability
+    Authenticated waiter; may toggle only their own employee record.
+  x Waiter-call management as public customer or unrelated business employee.
+  ✓ POST /api/custom-functions/callWaiter
+    Public table-specific request (listed under Public Customer Routes).
+
+PLATFORM ADMIN ROUTES
+  ✓ POST /api/custom-functions/platformCreateBusiness
+  ✓ POST /api/custom-functions/platformGetDashboard
+  ✓ POST /api/custom-functions/platformGetAllBusinesses
+  ✓ POST /api/custom-functions/platformToggleBusiness
+  ✓ POST /api/custom-functions/platformUpdateBusinessPlan
+    Each route requires a valid JWT linked to an active platform-admin record.
+  x These routes for owner, manager, waiter, public customer, or API token
+    without a platform-admin user identity.
+
+DEVICE ROUTES
+  ✓ POST /api/devices/register
+    Authenticated user; userId must match JWT and device cannot belong to
+    another user.
+  ✓ POST /api/devices/updatecurrentloc
+    Authenticated registered device owner; updates only their own location.
+  ✓ GET /api/devices/user/:userId
+    Authenticated user; userId must match JWT.
+  ✓ GET /api/devices/pending-orders/:deviceId
+    Authenticated device owner; waiter sees assigned pending orders.
+  ✓ GET /api/devices/pending-waiter-calls/:deviceId
+    Authenticated device owner; results are employee/branch scoped.
+  ✓ POST /api/devices/acceptorder/:deviceId
+    Authenticated device owner with an active employee record; waiter is
+    restricted to assigned orders.
+  ✓ POST /api/devices/acknowledgecall/:deviceId
+    Authenticated waiter device owner; call must be unassigned or assigned
+    to that waiter.
+  ✓ GET /api/device/:deviceId/permissions
+    Authenticated device owner.
+  ✓ PUT /api/devices/:userId/:deviceId
+    Authenticated owner of both the URL userId and device record.
+  ✓ DELETE /api/devices/:userId/:deviceId
+    Authenticated owner of both the URL userId and device record.
+  ✓ GET /api/devices, GET /api/devices/:id
+    Authenticated user; generic reads are now limited to the caller's devices.
+  ✓ POST /api/devices
+    Authenticated user; device is assigned to the caller and cannot be
+    claimed from another user.
+  ✓ PUT /api/devices/:id, DELETE /api/devices/:id
+    Authenticated owner only; another user's device is not exposed.
+  x Device actions without a user JWT or on another user's device.
+
+
+STANDARD CONTENT-TYPE REST ROUTES — IMPORTANT LIMITATION
+--------------------------------------------------------
+Content-type routes are subject to Strapi Users & Permissions action grants.
+Those action grants are not row-level business/branch filters.
+
+CURRENT GENERIC CRUD GRANTS IN MYSQL
+Content Type                         Public   Authenticated
+Business                             x        x
+Branch                               x        x
+Table                                x        x
+Employee                             x        x
+Employee Invitation                  x        x
+Menu Category                        x        x
+Menu Item                            x        x
+Menu Item Variant                    x        x
+Menu Item Modifier                   x        x
+Order                                x        x
+Waiter Call                          x        x
+Promotion                            x        x
+Business Menu Setting                x        x
+Business Ad Setting                  x        x
+Ad Campaign                          x        x
+Advertiser                           x        x
+Ad Event                             x        x
+Global Ad Setting                    x        x
+Platform Admin                       x        x
+Activity Log                         x        x
+Device                               x        ✓ owner-scoped
+Country                              x        x
+Currency                             x        x
+
+The rows above describe current generic content-type CRUD grants, not the
+protected custom routes listed earlier. Owners, managers, and waiters all use
+the Authenticated Users & Permissions role; their finer access comes from
+custom controller checks, not separate roles in the current database.
+
+SOURCE/DB LIMITATIONS
+  x Do not infer "read own" or "CRUD own" from a role name alone; generic
+    content-type routes require explicit, reviewed ownership policies.
+  ✓ Device generic REST methods enforce per-user ownership in the controller
+    as well as requiring authentication.
+  x Advertiser, global-ad-setting, and platform-admin records must not be
+    exposed through general business-owner, manager, waiter, or public CRUD.
+  x Country/currency reads are not currently granted. Grant public reads only
+    if those records contain no private or operational data.
+  x Ad-event tracking is not currently granted to Public. Add a dedicated
+    create-only permission and payload validation before enabling it; do not
+    enable general Ad Event CRUD.
+
+SAFE GRANT BOUNDARIES
+---------------------
+1. The 37 reviewed authenticated actions in the matrix are granted to the
+   Authenticated role in the inspected database. Their controller checks
+   remain mandatory.
+2. Keep only the explicitly listed public workflows public.
+3. Keep public content-type create/update/delete disabled.
+4. Do not grant generic collection CRUD for business-owned records until
+   collection-level business/branch ownership policies are implemented.
+5. Review and set role actions manually in Strapi Admin under Settings >
+   Users & Permissions plugin > Roles. This matrix documents the intended
+   grants only; no permissions-sync script is provided.
+6. The two employee-management actions marked `!` above are new and are not
+   included in the current 37 Authenticated grants. Add them manually before
+   using the owner Employees screen.
+
+VERIFICATION LIMITS
+-------------------
+The configured API access token passed read-only protected collection checks.
+The earlier temporary JWT smoke test cleaned up its test account. The current
+database now contains the 10 linked demo accounts and records listed above.
+The smoke test proves that a valid JWT can reach getMyBusiness and the
+user-scoped device route without a 401, and that the reports controller denies
+a user without employee membership with 403. Not every route or every business
+role has been end-to-end exercised. The observed 401 from getMyBusiness with
+APIACCESSTOKEN is expected because that controller requires ctx.state.user; the
+API token is not a user JWT.

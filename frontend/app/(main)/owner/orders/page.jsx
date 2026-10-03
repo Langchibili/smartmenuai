@@ -11,6 +11,7 @@ import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
+import { subscribeBusinessActivity } from "@/lib/socket";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -67,6 +68,7 @@ export default function OrdersPage() {
   }, [business?.id, filter, toast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
   useEffect(() => { const t = setInterval(load, 20_000); return () => clearInterval(t); }, [load]);
 
   const updateStatus = async (orderId, status) => {

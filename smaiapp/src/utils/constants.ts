@@ -2,7 +2,7 @@ const environment = "local"
 //const environment = "production" as string
 
 
-export const EXPO_PUBLIC_PROJECT_ID = "YOUR_PROJECT_ID";
+export const EXPO_PUBLIC_PROJECT_ID = "9dbb3dbf-f0c1-44fb-86df-e4681a1771cf";
 
 export const SOCKET_EVENTS = {
   CONNECT: 'connect', DISCONNECT: 'disconnect', CONNECTED: 'connected', DISCONNECTED: 'disconnected',
@@ -13,6 +13,7 @@ export const SOCKET_EVENTS = {
   WAITER_CALL: {
     NEW: 'waiter_call:new',
     ACKNOWLEDGED: 'waiter_call:acknowledged',
+    RESOLVED: 'waiter_call:resolved',
   },
   TABLE: {
     STATUS_UPDATED: 'table:status:updated',
@@ -30,6 +31,7 @@ export const WEBVIEW_EVENTS = {
   ORDER_STATUS_UPDATED: 'ORDER_STATUS_UPDATED',
   WAITER_CALL_NEW: 'WAITER_CALL_NEW',
   WAITER_CALL_ACKNOWLEDGED: 'WAITER_CALL_ACKNOWLEDGED',
+  WAITER_CALL_RESOLVED: 'WAITER_CALL_RESOLVED',
   TABLE_STATUS_UPDATED: 'TABLE_STATUS_UPDATED',
   NOTIFICATION_NEW: 'NOTIFICATION_NEW',
   NOTIFICATION_BROADCAST: 'NOTIFICATION_BROADCAST',
@@ -54,9 +56,9 @@ export const NATIVE_EVENTS = {
 export const CONSTANTS = {
   APP_NAME: 'SmartMenuStaff',
   APP_VERSION: '1.0.0',
-  DEVICE_SOCKET_URL: environment === "local" ? "http://192.168.43.207:3008" : "https://devicesocket.yourapp.com",
-  MAIN_SOCKET_URL: environment === "local" ? "http://192.168.43.207:4000" : "https://socket.yourapp.com",
-  BACKEND_URL: environment === "local" ? "http://192.168.43.207:1357/api" : "https://backend.yourapp.com/api",
+  DEVICE_SOCKET_URL: process.env.EXPO_PUBLIC_DEVICE_SOCKET_URL || (environment === "local" ? "http://192.168.43.207:3008" : "https://devicesocket.yourapp.com"),
+  MAIN_SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL || (environment === "local" ? "http://192.168.43.207:4000" : "https://socket.yourapp.com"),
+  BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL || (environment === "local" ? "http://192.168.43.207:1357/api" : "https://backend.yourapp.com/api"),
 
   FRONTEND_URLS: {
     owner: environment === "local" ? "http://192.168.43.207:3007" : "https://owner.yourapp.com",

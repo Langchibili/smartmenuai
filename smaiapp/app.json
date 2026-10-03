@@ -28,10 +28,11 @@
           "icon": "./assets/notification-icon.png",
           "color": "#FF6B00",
           "sounds": [
-            "./assets/sounds/okra_ride_request_1.wav"
+            "./assets/sounds/order_alert.wav",
+            "./assets/sounds/waiter_call.wav"
           ],
           "androidMode": "default",
-          "androidCollapsedTitle": "Okra Rides"
+          "androidCollapsedTitle": "Smart Menu AI"
         }
       ],
       "./plugins/withAndroidForegroundService.js",

@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
-import { employeeApi, branchApi, flattenStrapiResponse } from "@/lib/api";
+import { employeeApi, flattenStrapiResponse } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
@@ -58,10 +58,12 @@ const inputSx = {
 export default function EmployeesPage() {
   const { business, employee: me } = useAuth();
   const { toast } = useToast();
+  const businessBranches = business?.branches;
 
   const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [inviteModal, setInviteModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -73,20 +75,18 @@ export default function EmployeesPage() {
   const load = useCallback(async () => {
     if (!business?.id) return;
     try {
-      const [empRes, branchRes] = await Promise.all([
-        employeeApi.getEmployees(business.id),
-        branchApi.getBranches(business.id),
-      ]);
+      const empRes = await employeeApi.getEmployees(business.id);
       const emps = flattenStrapiResponse(empRes);
-      const brs = flattenStrapiResponse(branchRes);
       setEmployees(Array.isArray(emps) ? emps : emps ? [emps] : []);
-      setBranches(Array.isArray(brs) ? brs : brs ? [brs] : []);
-    } catch {
-      toast("Failed to load employees", "error");
+      setBranches(Array.isArray(businessBranches) ? businessBranches : []);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message || "Failed to load employees");
+      toast(error.message || "Failed to load employees", "error");
     } finally {
       setLoading(false);
     }
-  }, [business?.id, toast]);
+  }, [business?.id, businessBranches, toast]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -117,7 +117,7 @@ export default function EmployeesPage() {
 
   const toggleActive = async (emp) => {
     try {
-      await employeeApi.updateEmployee(emp.id, { is_active: !emp.is_active });
+      await employeeApi.updateEmployee(business.id, emp.id, !emp.is_active);
       setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, is_active: !e.is_active } : e));
       toast(`${emp.full_name} ${!emp.is_active ? "activated" : "deactivated"}`, "success");
     } catch (e) {
@@ -192,7 +192,26 @@ export default function EmployeesPage() {
         })}
       </Stack>
 
-      {employees.length === 0 ? (
+      {loadError ? (
+        <Paper
+          role="alert"
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: "14px",
+            background: "rgba(45,18,0,0.6)",
+            border: "1px solid rgba(239,68,68,0.35)",
+          }}
+        >
+          <Typography sx={{ color: TEXT_P, mb: 2 }}>
+            Could not load employees: {loadError}. Check the Authenticated role grants
+            for the employee actions in the backend permissions matrix, then retry.
+          </Typography>
+          <Button onClick={load} variant="outlined" sx={{ color: TEXT_P }}>
+            Retry
+          </Button>
+        </Paper>
+      ) : employees.length === 0 ? (
         <EmptyState
           icon="👥"
           title="No employees yet"

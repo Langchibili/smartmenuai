@@ -356,10 +356,10 @@ export default function AcceptInvitePage() {
               mb: 1,
             }}
           >
-            You're in!
+            You&apos;re in!
           </Typography>
           <Typography variant="body2" sx={{ color: TEXT_S, mb: 0.5 }}>
-            You've joined{" "}
+            You&apos;ve joined{" "}
             <strong style={{ color: TEXT_P }}>
               {inviteData?.business?.business_name}
             </strong>

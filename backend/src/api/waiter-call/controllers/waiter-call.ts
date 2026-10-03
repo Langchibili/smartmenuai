@@ -13,22 +13,66 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
     const { businessId, tableId, tableNumber, waiterId, message = '' } = ctx.request.body;
     if (!businessId || !tableId) return ctx.badRequest('businessId and tableId are required');
 
+    const table = await strapi.db.query('api::table.table').findOne({
+      where: { id: tableId, business: businessId },
+      populate: { assigned_waiter: { populate: ['user'] }, branch: true },
+    });
+    if (!table) return ctx.badRequest('Table does not belong to this business');
+    const business = await strapi.db.query('api::business.business').findOne({
+      where: { id: businessId },
+      populate: ['owner'],
+    });
+    if (!business) return ctx.notFound('Business not found');
+    const activeWaiters = await strapi.db.query('api::employee.employee').findMany({
+      where: {
+        business: businessId,
+        role: 'waiter',
+        is_active: true,
+        ...(table.branch?.id ? { branch: table.branch.id } : {}),
+      },
+      populate: ['user'],
+    });
+    const selectedWaiter = waiterId
+      ? activeWaiters.find((employee) => String(employee.id) === String(waiterId))
+      : null;
+    if (waiterId && !selectedWaiter) return ctx.badRequest('Waiter does not belong to this business');
+    const assignedWaiter = selectedWaiter || table.assigned_waiter;
+    const cleanMessage = typeof message === 'string' ? message.slice(0, 500) : '';
+
     const call = await strapi.db.query('api::waiter-call.waiter-call').create({
-      data: { message, status: 'pending', table: tableId, business: businessId, waiter: waiterId || null, publishedAt: new Date() },
+      data: {
+        message: cleanMessage,
+        status: 'pending',
+        table: tableId,
+        business: businessId,
+        waiter: assignedWaiter?.id || null,
+        publishedAt: new Date(),
+      },
     });
     await strapi.db.query('api::table.table').update({ where: { id: tableId }, data: { status: 'needs_waiter' } });
-
-    const table = await strapi.db.query('api::table.table').findOne({ where: { id: tableId }, populate: ['assigned_waiter'] });
-    const business = await strapi.db.query('api::business.business').findOne({ where: { id: businessId }, populate: ['owner'] });
 
     socket.emit('waiter_calls_event', {
       type: 'create',
       data: {
-        id: call.id, business_id: businessId, table_id: tableId, table_number: tableNumber,
-        message, status: 'pending',
+        id: call.id,
+        callId: call.id,
+        business_id: businessId,
+        table_id: tableId,
+        table_number: table.table_number || tableNumber,
+        message: cleanMessage,
+        status: 'pending',
         owner_id: business?.owner?.id || null,
-        assigned_waiter_id: table?.assigned_waiter?.id || waiterId || null,
+        assigned_waiter_id: assignedWaiter?.user?.id || null,
+        available_waiter_ids: activeWaiters.map((employee) => employee.user?.id).filter(Boolean),
       },
+    });
+    socket.emit('table_status_updated', {
+      business_id: businessId,
+      owner_id: business.owner?.id || null,
+      waiter_id: assignedWaiter?.user?.id || null,
+      table_id: tableId,
+      table_number: table.table_number,
+      status: 'needs_waiter',
     });
 
     ctx.send({ success: true, callId: call.id });
@@ -45,14 +89,65 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       const { callId, waiterId } = ctx.request.body;
       if (!callId) return ctx.badRequest('callId is required');
 
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const details = await strapi.db.query('api::waiter-call.waiter-call').findOne({
+        where: { id: callId },
+        populate: {
+          business: { populate: ['owner'] },
+          waiter: { populate: ['user'] },
+          table: { populate: ['branch'] },
+        },
+      });
+      if (!details) return ctx.notFound('Waiter call not found');
+      if (details.status !== 'pending' && details.status !== 'acknowledged') {
+        return ctx.badRequest('Waiter call is no longer active');
+      }
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: details.business?.id, is_active: true },
+        populate: ['user', 'branch'],
+      });
+      if (!employee || !['owner', 'manager', 'waiter'].includes(employee.role)) return ctx.forbidden();
+      if (employee.role !== 'owner' && String(employee.branch?.id) !== String(details.table?.branch?.id)) {
+        return ctx.forbidden();
+      }
+      if (employee.role === 'waiter' && waiterId && String(waiterId) !== String(employee.id)) return ctx.forbidden();
+
+      let assignedWaiter = employee.role === 'waiter' ? employee : null;
+      if (waiterId && employee.role !== 'waiter') {
+        assignedWaiter = await strapi.db.query('api::employee.employee').findOne({
+          where: {
+            id: waiterId,
+            business: details.business?.id,
+            role: 'waiter',
+            is_active: true,
+            ...(employee.role === 'manager' && employee.branch?.id ? { branch: employee.branch.id } : {}),
+          },
+          populate: ['user'],
+        });
+        if (!assignedWaiter) return ctx.badRequest('Waiter does not belong to this business');
+      }
+      if (employee.role === 'waiter' && details.waiter?.id && String(details.waiter.id) !== String(employee.id)) {
+        return ctx.forbidden('This call has been assigned to another waiter');
+      }
+
       const call = await strapi.db.query('api::waiter-call.waiter-call').update({
         where: { id: callId },
-        data: { status: 'acknowledged', waiter: waiterId || null },
+        data: { status: 'acknowledged', waiter: assignedWaiter?.id || details.waiter?.id || null },
       });
 
       socket.emit('waiter_calls_event', {
         type: 'acknowledged',
-        data: { id: call.id, status: 'acknowledged', waiter_id: waiterId },
+        data: {
+          id: call.id,
+          callId: call.id,
+          business_id: details?.business?.id,
+          owner_id: details?.business?.owner?.id || null,
+          assigned_waiter_id: assignedWaiter?.user?.id || details?.waiter?.user?.id || null,
+          waiter_id: assignedWaiter?.user?.id || details?.waiter?.user?.id || null,
+          table_id: details?.table?.id,
+          status: 'acknowledged',
+        },
       });
 
       ctx.send({ success: true });
@@ -69,30 +164,71 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
   // ─────────────────────────────────────────────────────────────────────────────
   async resolveWaiterCall(ctx) {
     try {
-      const { callId, tableId } = ctx.request.body;
+      const { callId } = ctx.request.body;
       if (!callId) return ctx.badRequest('callId is required');
 
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const call = await strapi.db.query('api::waiter-call.waiter-call').findOne({
+        where: { id: callId },
+        populate: {
+          business: { populate: ['owner'] },
+          waiter: { populate: ['user'] },
+          table: { populate: ['branch'] },
+        },
+      });
+      if (!call) return ctx.notFound('Waiter call not found');
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: call.business?.id, is_active: true },
+        populate: ['user', 'branch'],
+      });
+      if (!employee || !['owner', 'manager', 'waiter'].includes(employee.role)) return ctx.forbidden();
+      if (employee.role !== 'owner' && String(employee.branch?.id) !== String(call.table?.branch?.id)) {
+        return ctx.forbidden();
+      }
+      if (employee.role === 'waiter' && call.waiter?.id && String(call.waiter.id) !== String(employee.id)) return ctx.forbidden();
+      if (call.status !== 'pending' && call.status !== 'acknowledged') {
+        return ctx.badRequest('Waiter call is no longer active');
+      }
       await strapi.db.query('api::waiter-call.waiter-call').update({
         where: { id: callId },
         data: { status: 'completed' },
       });
 
-      if (tableId) {
+      if (call.table?.id) {
         const activeOrders = await strapi.db.query('api::order.order').count({
           where: {
-            table: tableId,
-            status: { $notIn: ['completed', 'cancelled'] },
+            table: call.table.id,
+            orderStatus: { $notIn: ['completed', 'cancelled'] },
           },
         });
+        const nextTableStatus = activeOrders > 0 ? 'occupied' : 'available';
         await strapi.db.query('api::table.table').update({
-          where: { id: tableId },
-          data: { status: activeOrders > 0 ? 'occupied' : 'available' },
+          where: { id: call.table.id },
+          data: { status: nextTableStatus },
+        });
+        socket.emit('table_status_updated', {
+          business_id: call.business?.id,
+          owner_id: call.business?.owner?.id || null,
+          waiter_id: call.waiter?.user?.id || null,
+          table_id: call.table.id,
+          table_number: call.table.table_number,
+          status: nextTableStatus,
         });
       }
 
       socket.emit('waiter_calls_event', {
         type: 'resolved',
-        data: { id: callId, status: 'completed' },
+        data: {
+          id: callId,
+          callId,
+          business_id: call.business?.id,
+          owner_id: call.business?.owner?.id || null,
+          waiter_id: call.waiter?.user?.id || null,
+          table_id: call.table?.id,
+          table_number: call.table?.table_number,
+          status: 'completed',
+        },
       });
 
       ctx.send({ success: true });
@@ -112,11 +248,25 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       const { businessId } = ctx.request.body;
       if (!businessId) return ctx.badRequest('businessId is required');
 
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: businessId, is_active: true },
+        populate: ['branch'],
+      });
+      if (!employee || !['owner', 'manager', 'waiter'].includes(employee.role)) return ctx.forbidden();
+      const where: any = {
+        business: businessId,
+        status: { $in: ['pending', 'acknowledged'] },
+      };
+      if (employee.role === 'waiter') {
+        where.$or = [{ waiter: employee.id }, { waiter: { id: { $null: true } } }];
+      }
+      if (employee.role !== 'owner') {
+        where.table = { branch: employee.branch?.id };
+      }
       const calls = await strapi.db.query('api::waiter-call.waiter-call').findMany({
-        where: {
-          business: businessId,
-          status: { $in: ['pending', 'acknowledged'] },
-        },
+        where,
         populate: ['table', 'waiter'],
         orderBy: { createdAt: 'asc' },
       });
@@ -153,9 +303,16 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
     try {
       const { employeeId, is_active } = ctx.request.body;
       if (!employeeId) return ctx.badRequest('employeeId is required');
+      if (typeof is_active !== 'boolean') return ctx.badRequest('is_active must be a boolean');
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { id: employeeId, user: user.id, role: 'waiter' },
+      });
+      if (!employee) return ctx.forbidden();
 
       await strapi.db.query('api::employee.employee').update({
-        where: { id: employeeId },
+        where: { id: employee.id },
         data: { is_active },
       });
 
@@ -177,16 +334,25 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       if (!employeeId || !businessId) {
         return ctx.badRequest('employeeId and businessId are required');
       }
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { id: employeeId, user: user.id, business: businessId, is_active: true, role: 'waiter' },
+        populate: ['branch'],
+      });
+      if (!employee) return ctx.forbidden();
 
       const [assignedTables, activeCalls, activeOrders] = await Promise.all([
         strapi.db.query('api::table.table').findMany({
-          where: { assigned_waiter: employeeId },
+          where: { assigned_waiter: employee.id, business: businessId },
           orderBy: { table_number: 'asc' },
         }),
         strapi.db.query('api::waiter-call.waiter-call').findMany({
           where: {
             business: businessId,
             status: { $in: ['pending', 'acknowledged'] },
+            $or: [{ waiter: employee.id }, { waiter: { id: { $null: true } } }],
+            table: { branch: employee.branch?.id },
           },
           populate: ['table'],
           orderBy: { createdAt: 'asc' },
@@ -194,8 +360,9 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
         strapi.db.query('api::order.order').findMany({
           where: {
             business: businessId,
-            waiter: employeeId,
-            status: { $notIn: ['completed', 'cancelled'] },
+            waiter: employee.id,
+            orderStatus: { $notIn: ['completed', 'cancelled'] },
+            ...(employee.branch?.id ? { table: { branch: employee.branch.id } } : {}),
           },
           populate: ['table'],
           orderBy: { createdAt: 'desc' },
@@ -223,7 +390,7 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
         activeOrders: activeOrders.map((o) => ({
           id: o.id,
           order_number: o.order_number,
-          status: o.status,
+          status: o.orderStatus,
           total: o.total,
           items: o.items,
           table: o.table

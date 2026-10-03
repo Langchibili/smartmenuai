@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
 import { EXPO_PUBLIC_PROJECT_ID } from '../utils/constants';
@@ -31,7 +32,11 @@ class NotificationService {
     this.sendToWebView = sendToWebView;
     const { status } = await this.requestPermissions();
     if (status !== 'granted') { logger.warn('Notification permission not granted'); return; }
-    await this.registerForPushNotifications();
+    try {
+      await this.registerForPushNotifications();
+    } catch (error) {
+      logger.warn('Push token registration unavailable; local notifications remain enabled', error);
+    }
     this.setupListeners();
     await this.registerCategories();
   }
@@ -46,7 +51,9 @@ class NotificationService {
 
   async registerForPushNotifications(): Promise<string | null> {
     if (!Device.isDevice) return null;
-    const token = await Notifications.getExpoPushTokenAsync({ projectId: EXPO_PUBLIC_PROJECT_ID });
+    const projectId = Constants.easConfig?.projectId || Constants.expoConfig?.extra?.eas?.projectId || EXPO_PUBLIC_PROJECT_ID;
+    if (!projectId || projectId === 'YOUR_PROJECT_ID') throw new Error('Expo EAS project ID is not configured');
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
     this.notificationToken = token.data;
     if (Platform.OS === 'android') await this.setupAndroidChannels();
     return this.notificationToken;

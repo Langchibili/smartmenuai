@@ -1,19 +1,49 @@
 
 "use client";
 import { Box } from "@mui/material";
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { subscribeBusinessActivity } from "@/lib/socket";
 
 const ToastContext = createContext({ toast: () => { } });
 export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const { business } = useAuth();
 
   const toast = useCallback((message, type = "info") => {
     const id = Math.random().toString(36).slice(2);
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   }, []);
+
+  useEffect(() => subscribeBusinessActivity((event, payload) => {
+    if (event === "orders_event") {
+      toast(
+        payload?.type === "create"
+          ? `New order received${payload.data?.table_number ? ` for Table ${payload.data.table_number}` : ""}`
+          : `Order ${payload.data?.order_number || ""} ${payload.data?.status || "updated"}`.trim(),
+        "info"
+      );
+    } else if (event === "waiter_calls_event") {
+      if (payload?.type === "create") {
+        toast(
+          `Waiter requested${payload.data?.table_number ? ` at Table ${payload.data.table_number}` : ""}${payload.data?.message ? `: ${payload.data.message}` : ""}`,
+          "info"
+        );
+      } else if (payload?.type === "acknowledged") {
+        toast("A waiter call is being handled", "info");
+      }
+    } else if (event === "table_status_updated" && payload?.status) {
+      toast(
+        `Table ${payload.table_number || ""} is now ${payload.status}`.trim(),
+        "info"
+      );
+    } else if (event === "notification:new") {
+      toast(payload?.title || payload?.message || "You have a new notification", "info");
+    }
+  }, business?.id), [business?.id, toast]);
 
   const typeStyles = {
     success: { bg: "rgba(34,197,94,0.12)", color: "#22c55e", border: "rgba(34,197,94,0.3)" },
@@ -43,5 +73,3 @@ export function ToastProvider({ children }) {
     </ToastContext.Provider>
   );
 }
-
-

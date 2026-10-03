@@ -323,6 +323,7 @@ export default function RegisterPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+            style={{ width: "100%", maxWidth: 460 }}
         >
             {/* Heading */}
             <Box sx={{ mb: 4 }}>
@@ -467,7 +468,7 @@ export default function RegisterPage() {
                     />
                     {form.confirmPassword && form.password !== form.confirmPassword && (
                         <Typography sx={{ fontSize: 12, color: "#ef4444", mt: 0.5 }}>
-                            Passwords don't match
+                            Passwords don&apos;t match
                         </Typography>
                     )}
                 </Box>

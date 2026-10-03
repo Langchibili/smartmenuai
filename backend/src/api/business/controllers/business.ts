@@ -27,6 +27,7 @@ export default factories.createCoreController('api::business.business', ({ strap
       if (!businessName) return ctx.badRequest('businessName is required');
 
       const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
 
       // 1. Create business
       const business = await strapi.db.query('api::business.business').create({
@@ -59,7 +60,7 @@ export default factories.createCoreController('api::business.business', ({ strap
 
       // 3. Create tables and generate QR URLs
       const tableCount = Math.min(Math.max(parseInt(numberOfTables) || 1, 1), 100);
-      const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const appUrl = (process.env.FRONTEND_URL || 'http://localhost:3007').replace(/\/$/, '');
 
       for (let i = 1; i <= tableCount; i++) {
         const table = await strapi.db.query('api::table.table').create({
@@ -81,7 +82,7 @@ export default factories.createCoreController('api::business.business', ({ strap
       }
 
       // 4. Create owner employee record
-      if (user?.id) {
+      if (user.id) {
         await strapi.db.query('api::employee.employee').create({
           data: {
             full_name: user.username || user.email || '',
@@ -110,6 +111,19 @@ export default factories.createCoreController('api::business.business', ({ strap
           await strapi.db.query('api::user-profile.user-profile').update({
             where: { id: profile.id },
             data: { onboarding_step: 2, business: business.id },
+          });
+        } else {
+          await strapi.db.query('api::user-profile.user-profile').create({
+            data: {
+              full_name: user.username || user.email || '',
+              account_type: 'business_owner',
+              onboarding_step: 2,
+              onboarding_complete: false,
+              must_change_password: false,
+              is_platform_admin: false,
+              user: user.id,
+              business: business.id,
+            },
           });
         }
       }
@@ -140,17 +154,36 @@ export default factories.createCoreController('api::business.business', ({ strap
         populate: ['business', 'branch'],
       });
 
+      const profiles = strapi.db.query('api::user-profile.user-profile');
+      const existingProfile = await profiles.findOne({ where: { user: user.id } });
+      const profile = existingProfile || await profiles.create({
+        data: {
+          full_name: user.username || user.email || '',
+          onboarding_step: 0,
+          onboarding_complete: false,
+          must_change_password: false,
+          is_platform_admin: false,
+          user: user.id,
+        },
+      });
+
       if (!employee) {
-        return ctx.send({ business: null, employee: null, profile: null });
+        return ctx.send({
+          business: null,
+          employee: null,
+          profile: {
+            onboarding_step: profile.onboarding_step,
+            onboarding_complete: profile.onboarding_complete,
+            account_type: profile.account_type,
+            must_change_password: profile.must_change_password,
+            is_platform_admin: profile.is_platform_admin,
+          },
+        });
       }
 
       const business = await strapi.db.query('api::business.business').findOne({
         where: { id: employee.business?.id },
         populate: ['logo', 'branches'],
-      });
-
-      const profile = await strapi.db.query('api::user-profile.user-profile').findOne({
-        where: { user: user.id },
       });
 
       ctx.send({
@@ -237,20 +270,32 @@ export default factories.createCoreController('api::business.business', ({ strap
       const { businessId, dateFrom, dateTo } = ctx.request.body;
       if (!businessId) return ctx.badRequest('businessId is required');
 
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized('Not authenticated');
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: businessId, is_active: true },
+        populate: ['branch'],
+      });
+      if (!employee || !['owner', 'manager'].includes(employee.role)) return ctx.forbidden();
+      if (employee.role === 'manager' && !employee.branch?.id) return ctx.forbidden();
+
       const dateFilter: any = {};
       if (dateFrom) dateFilter.$gte = new Date(dateFrom);
       if (dateTo) dateFilter.$lte = new Date(dateTo);
 
       const ordersWhere: any = { business: businessId };
+      if (employee.role === 'manager') {
+        ordersWhere.table = { branch: employee.branch.id };
+      }
       if (Object.keys(dateFilter).length) ordersWhere.createdAt = dateFilter;
 
       const [allOrders, completedOrders, cancelledOrders] = await Promise.all([
         strapi.db.query('api::order.order').findMany({ where: ordersWhere }),
         strapi.db.query('api::order.order').findMany({
-          where: { ...ordersWhere, status: 'completed' },
+          where: { ...ordersWhere, orderStatus: 'completed' },
         }),
         strapi.db.query('api::order.order').findMany({
-          where: { ...ordersWhere, status: 'cancelled' },
+          where: { ...ordersWhere, orderStatus: 'cancelled' },
         }),
       ]);
 

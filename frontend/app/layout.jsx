@@ -1,5 +1,4 @@
 'use client'
-import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -8,18 +7,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useReactNative, ReactNativeWrapper } from '@/lib/contexts/ReactNativeWrapper';
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap", weight: ["400", "500", "600", "700"], style: ["normal", "italic"] });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap", weight: ["400", "500"] });
-
 // Public routes that never redirect to login
-const PUBLIC_ROUTES = ["/login", "/register", "/onboarding", "/accept-invite", "/setup-platform-master"];
+const PUBLIC_ROUTES = ["/login", "/register", "/onboarding", "/accept-invite", "/setup-platform-master", "/forgot-password", "/reset-password"];
 
 export default function RootLayout({ children }) {
     return (
         <html
             lang="en"
-            className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable}`}
             suppressHydrationWarning
         >
             <head>
@@ -45,8 +39,7 @@ export default function RootLayout({ children }) {
                 <meta name="twitter:description" content="Premium QR-based restaurant ordering and management platform." />
 
                 {/* Icons */}
-                <link rel="icon" href="/favicon.ico" />
-                <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+                <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
                 <link rel="manifest" href="/site.webmanifest" />
             </head>
             <body>
@@ -63,12 +56,19 @@ export default function RootLayout({ children }) {
 }
 
 function AppShell({ children }) {
-    const { user, loading } = useAuth();
+    const { user, employee, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const { isNative, servicesInitialized, initializeNativeServices } = useReactNative();
+    const {
+        isNative,
+        servicesInitialized,
+        initializeNativeServices,
+        getNativeLocation,
+        startLocationTracking,
+        stopLocationTracking,
+    } = useReactNative();
 
-    const isPublic = PUBLIC_ROUTES.some(r => pathname.startsWith(r));
+    const isPublic = pathname === "/" || PUBLIC_ROUTES.some(r => pathname.startsWith(r));
     useEffect(() => {
         if (loading) return;
         if (!user && !isPublic) {
@@ -80,10 +80,10 @@ function AppShell({ children }) {
         if (user) {
             const initializeNativeCode = async () => {
                 if (isNative && !servicesInitialized && user?.id) {
-                    console.log('🔧 Initializing native services for rider...');
+                    console.log('Initializing native staff services...');
                     const result = await initializeNativeServices(
                         user.id,
-                        'rider',
+                        employee?.role === 'owner' ? 'owner' : 'employee',
                         process.env.NEXT_PUBLIC_DEVICE_SOCKET_URL
                     );
 
@@ -145,7 +145,16 @@ function AppShell({ children }) {
             }
             initializeNativeCode()
         }
-    }, [user])
+    }, [
+        user,
+        employee?.role,
+        isNative,
+        servicesInitialized,
+        initializeNativeServices,
+        getNativeLocation,
+        startLocationTracking,
+        stopLocationTracking,
+    ])
     // Still loading — render nothing to avoid flash
     if (loading) return null;
 

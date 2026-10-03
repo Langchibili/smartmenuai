@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Box, CircularProgress, Typography } from "@mui/material";
+import LandingPage from "@/components/LandingPage";
 
 export default function MainPage() {
     const { user, employee, loading } = useAuth();
@@ -13,20 +14,36 @@ export default function MainPage() {
 
     useEffect(() => {
         if (loading) return; // wait for session to load
-        if (!user) {
-            router.replace("/login");
-            return;
-        }
+        if (!user) return;
 
         // Role-based redirect
         const role = employee?.role;
         if (role === "waiter") {
             router.replace("/waiter");
         } else {
-            // owner, manager, or any other non‑waiter role
-            router.replace("/dashboard");
+            // Owner dashboard lives under the owner route segment.
+            router.replace("/owner/dashboard");
         }
     }, [user, employee, loading, router]);
+
+    if (!loading && !user) {
+        return (
+            <Box
+                sx={{
+                    minHeight: "100dvh",
+                    width: "100%",
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 5, sm: 8 },
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "radial-gradient(ellipse at 50% 0%, rgba(212,133,10,0.12), transparent 55%), #0D0400",
+                }}
+            >
+                <LandingPage />
+            </Box>
+        );
+    }
 
     return (
         <Box

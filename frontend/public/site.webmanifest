@@ -1,0 +1,16 @@
+{
+  "name": "SmartMenu AI",
+  "short_name": "SmartMenu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2d1200",
+  "theme_color": "#d4850a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

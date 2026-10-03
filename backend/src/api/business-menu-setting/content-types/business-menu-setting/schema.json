@@ -90,9 +90,6 @@
       ],
       "default": "draft"
     },
-    "published_at": {
-      "type": "datetime"
-    },
     "business": {
       "type": "relation",
       "relation": "oneToOne",

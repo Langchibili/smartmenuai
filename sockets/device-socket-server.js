@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // device-socket-server/src/index.js
 // ==================== DEVICE SOCKET SERVER (Smart Menu AI) ====================
 // Allows ALL origins for native staff device connections and routes
@@ -14,8 +16,10 @@ const { io: ioClient } = require("socket.io-client");
 // ==================== ENVIRONMENT CONFIGURATION ====================
 const environment = process.env.NODE_ENV || 'local';
 const MAIN_SOCKET_URL = process.env.MAIN_SOCKET_URL || 'http://localhost:4000';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:1343';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:1357';
+const BACKEND_API_URL = `${BACKEND_URL.replace(/\/$/, '').replace(/\/api$/, '')}/api`;
 const PORT = process.env.DEVICESPORT || 3008;
+const SOCKET_INTERNAL_TOKEN = process.env.SOCKET_INTERNAL_TOKEN;
 const LOG_FILE_MAX_SIZE = 100 * 1024 * 1024; // 100MB
 
 // ==================== LOGGER SETUP ====================
@@ -90,7 +94,7 @@ function connectToMainServer() {
         autoConnect: true,
         reconnection: true,
         reconnectionDelay: 1000,
-        reconnectionAttempts: 10,
+        reconnectionAttempts: Infinity,
         transports: ['websocket', 'polling']
     });
 
@@ -154,10 +158,22 @@ function setupMainServerEventForwarding() {
 
     // payload: { ownerId, waiterId, payload, eventType }
     mainSocket.on('waiter_call:new', (data) => {
-        const { ownerId, waiterId, payload, eventType } = data;
-        const eventName = eventType === 'acknowledged' ? 'waiter_call:acknowledged' : 'waiter_call:new';
+        const { ownerId, waiterId, waiterIds = [], payload, eventType } = data;
+        const eventName = eventType === 'create'
+            ? 'waiter_call:new'
+            : eventType === 'acknowledged'
+                ? 'waiter_call:acknowledged'
+                : `waiter_call:${eventType || 'updated'}`;
         if (ownerId) forwardToUserDevices(ownerId, eventName, payload);
         if (waiterId) forwardToUserDevices(waiterId, eventName, payload);
+        waiterIds.forEach((id) => forwardToUserDevices(id, eventName, payload));
+    });
+
+    mainSocket.on('waiter_call:resolved', (data) => {
+        const { ownerId, waiterId, waiterIds = [], payload } = data;
+        if (ownerId) forwardToUserDevices(ownerId, 'waiter_call:resolved', payload);
+        if (waiterId) forwardToUserDevices(waiterId, 'waiter_call:resolved', payload);
+        waiterIds.forEach((id) => forwardToUserDevices(id, 'waiter_call:resolved', payload));
     });
 
     // ==================== TABLE EVENTS ====================
@@ -230,15 +246,80 @@ function setupMainServerEventForwarding() {
 // ==================== DEVICE SOCKET HANDLERS ====================
 io.on("connection", (socket) => {
     console.log(`📱 New device connection: ${socket.id}`);
+    const isInternalRelay = Boolean(
+        SOCKET_INTERNAL_TOKEN &&
+        socket.handshake.auth?.internalToken === SOCKET_INTERNAL_TOKEN
+    );
+    const onInternalRelayEvent = (eventName, handler) => (data = {}) => {
+        if (!isInternalRelay) {
+            logger.warn(`Rejected untrusted relay event '${eventName}' from socket ${socket.id}`);
+            socket.emit('device:relay:error', { message: 'Internal relay authentication failed' });
+            return;
+        }
+        handler(data);
+    };
+
+    socket.on('order:new', onInternalRelayEvent('order:new', ({ ownerId, waiterId, payload }) => {
+        if (ownerId) forwardToUserDevices(ownerId, 'order:new', payload);
+        if (waiterId) forwardToUserDevices(waiterId, 'order:new', payload);
+    }));
+
+    socket.on('order:status:updated', onInternalRelayEvent('order:status:updated', ({ ownerId, waiterId, payload }) => {
+        if (ownerId) forwardToUserDevices(ownerId, 'order:status:updated', payload);
+        if (waiterId) forwardToUserDevices(waiterId, 'order:status:updated', payload);
+    }));
+
+    socket.on('waiter_call:new', onInternalRelayEvent('waiter_call:new', ({ ownerId, waiterId, waiterIds = [], payload, eventType }) => {
+        const eventName = eventType === 'create'
+            ? 'waiter_call:new'
+            : eventType === 'acknowledged'
+                ? 'waiter_call:acknowledged'
+                : eventType === 'resolved'
+                    ? 'waiter_call:resolved'
+                    : `waiter_call:${eventType || 'updated'}`;
+        if (ownerId) forwardToUserDevices(ownerId, eventName, payload);
+        if (waiterId) forwardToUserDevices(waiterId, eventName, payload);
+        waiterIds.forEach((id) => forwardToUserDevices(id, eventName, payload));
+    }));
+
+    socket.on('table:status:updated', onInternalRelayEvent('table:status:updated', ({ ownerId, payload }) => {
+        if (ownerId) forwardToUserDevices(ownerId, 'table:status:updated', payload);
+    }));
+
+    socket.on('notification:new', onInternalRelayEvent('notification:new', (data) => {
+        const userId = data.userId || data.user_id;
+        if (userId) forwardToUserDevices(userId, 'notification:new', data);
+    }));
 
     // ── Device registration ────────────────────────────────────────────────
     socket.on('device:register', async (data) => {
+        if (!data?.deviceId || !data?.userId || !data?.userType || !data?.authToken) {
+            socket.emit('device:register:error', { message: 'Authentication and device details are required' });
+            return;
+        }
+
+        try {
+            const response = await axios.get(`${BACKEND_API_URL}/users/me`, {
+                headers: { Authorization: `Bearer ${data.authToken}` },
+                timeout: 5000,
+            });
+            if (String(response.data?.id) !== String(data.userId)) {
+                socket.emit('device:register:error', { message: 'Device user does not match the authenticated user' });
+                return;
+            }
+        } catch (error) {
+            socket.emit('device:register:error', { message: 'Device authentication failed' });
+            logger.error('Device authentication failed:', error.message);
+            return;
+        }
+
         const {
             deviceId,
             userType,        // 'owner' | 'employee'
             frontendName,
             notificationToken,
             deviceInfo,
+            authToken,
         } = data;
 
         const userId = normalizeUserId(data.userId);
@@ -271,6 +352,7 @@ io.on("connection", (socket) => {
             frontendName,
             notificationToken,
             deviceInfo,
+            authToken,
             registeredAt: Date.now()
         });
 
@@ -295,7 +377,7 @@ io.on("connection", (socket) => {
 
         // Persist device info to backend API
         try {
-            await axios.post(`${BACKEND_URL}/api/devices/register`, {
+            await axios.post(`${BACKEND_API_URL}/devices/register`, {
                 userId,
                 devices: [{
                     deviceId,
@@ -304,6 +386,8 @@ io.on("connection", (socket) => {
                     frontendName,
                     registeredAt: new Date().toISOString()
                 }]
+            }, {
+                headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
             });
         } catch (error) {
             logger.error('Error saving device to backend:', error.message);
@@ -325,20 +409,23 @@ io.on("connection", (socket) => {
     socket.on('device:location:update', async (data) => {
         const { deviceId, location } = data;
         const device = deviceConnections.get(deviceId);
-        if (!device) {
+        if (!device || device.socketId !== socket.id) {
             logger.warn(`Location update from unregistered device: ${deviceId}`);
             return;
         }
 
         try {
-            await axios.post(`${BACKEND_URL}/api/devices/updatecurrentloc`, {
+            await axios.post(`${BACKEND_API_URL}/devices/updatecurrentloc`, {
                 deviceId,
                 location: {
                     latitude: location.lat,
                     longitude: location.lng,
                     accuracy: location.accuracy,
                     heading: location.heading,
+                    timestamp: data.timestamp,
                 }
+            }, {
+                headers: device.authToken ? { Authorization: `Bearer ${device.authToken}` } : {},
             });
         } catch (error) {
             logger.error('Error saving current location to backend:', error.message);
@@ -391,9 +478,10 @@ io.on("connection", (socket) => {
         if (!device) return;
 
         try {
-            await axios.patch(
-                `${BACKEND_URL}/api/devices/${device.userId}/${deviceId}`,
-                { permissions }
+            await axios.put(
+                `${BACKEND_API_URL}/devices/${device.userId}/${deviceId}`,
+                { deviceInfo: { permissions } },
+                { headers: device.authToken ? { Authorization: `Bearer ${device.authToken}` } : {} }
             );
         } catch (error) {
             logger.error('Error updating device permissions:', error.message);
@@ -486,6 +574,10 @@ httpServer.on('request', (req, res) => {
 
 // ==================== SERVER START ====================
 connectToMainServer();
+
+if (!SOCKET_INTERNAL_TOKEN) {
+    console.error('SOCKET_INTERNAL_TOKEN is unset; device event forwarding is disabled');
+}
 
 httpServer.listen(PORT, () => {
     console.log(`🚀 Device Socket Server started`);

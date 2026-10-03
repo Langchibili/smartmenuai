@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Box,
+  Alert,
   Typography,
   Button,
   Stack,
@@ -15,6 +16,9 @@ import { useAuth } from "@/lib/auth-context";
 import { waiterCallApi, orderApi } from "@/lib/api";
 import { formatRelativeTime, formatCurrency, orderStatusLabel } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast-provider";
+import { subscribeBusinessActivity } from "@/lib/socket";
+import TablePreviewDrawer from "@/components/tables/TablePreviewDrawer";
+import { useRouter } from "next/navigation";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -39,21 +43,28 @@ const TABLE_STATUS_STYLE = {
 
 export default function WaiterDashboard() {
   const { employee, business } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [available, setAvailable] = useState(true);
+  const [selectedTable, setSelectedTable] = useState(null);
 
   const load = useCallback(async () => {
     if (!employee?.id || !business?.id) return;
     try {
       const res = await waiterCallApi.getWaiterDashboard(employee.id, business.id);
       setData(res);
-    } catch { /* silent */ }
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message || "Failed to load your service dashboard.");
+    }
     finally { setLoading(false); }
   }, [employee?.id, business?.id]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
   useEffect(() => { const t = setInterval(load, 15_000); return () => clearInterval(t); }, [load]);
 
   const toggleAvailability = async () => {
@@ -84,6 +95,16 @@ export default function WaiterDashboard() {
     } catch (e) { toast(e.message, "error"); }
   };
 
+  const respondToTableCall = async (table) => {
+    const call = activeCalls.find((item) => String(item.table?.id) === String(table.id));
+    if (call) {
+      await acknowledgeCall(call.id);
+      setSelectedTable(null);
+      return;
+    }
+    router.push(`/waiter/orders?tableId=${table.id}`);
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 2 }}>
@@ -103,6 +124,11 @@ export default function WaiterDashboard() {
 
   return (
     <Box sx={{ pb: 10, maxWidth: "640px", mx: "auto" }}>
+      {loadError && (
+        <Alert severity="error" action={<Button color="inherit" size="small" onClick={load}>Retry</Button>} sx={{ mx: 2, mt: 2 }}>
+          {loadError}
+        </Alert>
+      )}
       {/* Header */}
       <Box
         sx={{
@@ -359,8 +385,13 @@ export default function WaiterDashboard() {
                 return (
                   <Grid item xs={4} key={table.id}>
                     <Box
+                      component="button"
+                      type="button"
+                      aria-label={`Preview table ${table.table_number}, ${table.status.replace("_", " ")}`}
+                      onClick={() => setSelectedTable(table)}
                       sx={{
                         aspectRatio: "1/1",
+                        width: "100%",
                         borderRadius: "14px",
                         display: "flex",
                         flexDirection: "column",
@@ -368,8 +399,13 @@ export default function WaiterDashboard() {
                         justifyContent: "center",
                         textAlign: "center",
                         p: 1,
+                        cursor: "pointer",
                         background: sc.bg,
                         border: `1px solid ${sc.border}`,
+                        "&:focus-visible": {
+                          outline: `2px solid ${sc.dot}`,
+                          outlineOffset: 2,
+                        },
                       }}
                     >
                       <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: sc.dot, mb: 1 }} />
@@ -395,6 +431,15 @@ export default function WaiterDashboard() {
           </Box>
         )}
       </Box>
+      <TablePreviewDrawer
+        table={selectedTable}
+        onClose={() => setSelectedTable(null)}
+        viewMoreHref={selectedTable ? `/waiter/tables/${selectedTable.id}` : "/waiter"}
+        actionLabel={selectedTable && activeCalls.some(
+          (call) => String(call.table?.id) === String(selectedTable.id)
+        ) ? "Respond to call" : "Open table orders"}
+        onAction={respondToTableCall}
+      />
     </Box>
   );
 }

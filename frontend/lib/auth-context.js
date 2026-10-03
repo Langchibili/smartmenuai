@@ -4,6 +4,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authApi, businessApi, getToken, clearToken } from "./api";
+import { disconnectSocket, joinBusinessRoom, joinEmployeeRoom } from "./socket";
 
 const AuthContext = createContext(null);
 
@@ -55,6 +56,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { loadSession(); }, [loadSession]);
 
+  useEffect(() => {
+    const leaveBusiness = joinBusinessRoom(state.business?.id);
+    const leaveEmployee = joinEmployeeRoom(state.user?.id);
+    return () => {
+      leaveBusiness();
+      leaveEmployee();
+    };
+  }, [state.business?.id, state.user?.id]);
+
   const login = async (identifier, password) => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
@@ -95,6 +105,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     authApi.logout();
+    disconnectSocket();
     setState({
       user: null,
       profile: null,

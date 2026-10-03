@@ -1,11 +1,11 @@
 
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  Box, Typography, TextField, Button, InputAdornment,
+  Alert, Box, Typography, TextField, Button, InputAdornment,
   IconButton, Link as MuiLink, CircularProgress, alpha,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -42,6 +42,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [passwordReset, setPasswordReset] = useState(false);
+
+  useEffect(() => {
+    setPasswordReset(new URLSearchParams(window.location.search).get("passwordReset") === "1");
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,6 +64,7 @@ export default function LoginPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+      style={{ width: "100%", maxWidth: 460 }}
     >
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: TEXT_P, mb: 0.75, fontSize: { xs: 28, sm: 34 } }}>
@@ -68,6 +74,12 @@ export default function LoginPage() {
           Sign in to your SmartMenu workspace
         </Typography>
       </Box>
+
+      {passwordReset && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Your password has been updated. Sign in with your new password.
+        </Alert>
+      )}
 
       {error && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -170,4 +182,3 @@ export default function LoginPage() {
     </motion.div>
   );
 }
-

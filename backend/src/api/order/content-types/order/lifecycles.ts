@@ -3,35 +3,43 @@ export default {
     const { result } = event;
     const strapi = (global as any).strapi;
     try {
-      const business = await strapi.db.query('api::business.business').findOne({
-        where: { id: result.business }, populate: ['owner'],
+      const order = await strapi.db.query('api::order.order').findOne({
+        where: { id: result.id },
+        populate: {
+          business: { populate: ['owner'] },
+          table: { populate: { assigned_waiter: { populate: ['user'] } } },
+          waiter: { populate: ['user'] },
+          items: { populate: ['menu_item'] },
+        },
       });
-      const table = result.table
-        ? await strapi.db.query('api::table.table').findOne({ where: { id: result.table }, populate: ['assigned_waiter'] })
-        : null;
+      if (!order) return;
 
       const socket = require('../../../../services/socket-client').default;
       socket.emit('orders_event', {
         type: 'create',
         data: {
-          business_id: result.business,
-          table_id: result.table,
-          order_id: result.id,
-          order_number: result.order_number,
-          status: result.status,
-          total: result.total,
-          item_count: (result.items || []).length,
-          owner_id: business?.owner?.id || null,
-          waiter_id: table?.assigned_waiter?.id || null,
-          table_number: table?.table_number || null,
+          id: order.id,
+          business_id: order.business?.id,
+          table_id: order.table?.id,
+          order_id: order.id,
+          order_number: order.order_number,
+          status: order.orderStatus,
+          total: order.total,
+          items: order.items || [],
+          notes: order.notes || '',
+          item_count: (order.items || []).reduce((count, item) => count + Number(item.quantity || 0), 0),
+          owner_id: order.business?.owner?.id || null,
+          waiter_id: order.waiter?.user?.id || order.table?.assigned_waiter?.user?.id || null,
+          table_number: order.table?.table_number || null,
+          created_at: order.createdAt,
         },
       });
 
       await strapi.db.query('api::activity-log.activity-log').create({
         data: {
-          action: 'order_created', target_type: 'order', target_id: String(result.id),
-          metadata: { order_number: result.order_number, total: result.total },
-          business: result.business || null, publishedAt: new Date(),
+          action: 'order_created', target_type: 'order', target_id: String(order.id),
+          metadata: { order_number: order.order_number, total: order.total },
+          business: order.business?.id || null, publishedAt: new Date(),
         },
       });
     } catch (err) {
@@ -42,18 +50,30 @@ export default {
   async afterUpdate(event: any) {
     const { result, params } = event;
     const strapi = (global as any).strapi;
-    if (!params.data?.status) return;
+    if (!params.data?.orderStatus) return;
     try {
-      const business = await strapi.db.query('api::business.business').findOne({
-        where: { id: result.business }, populate: ['owner'],
+      const order = await strapi.db.query('api::order.order').findOne({
+        where: { id: result.id },
+        populate: {
+          business: { populate: ['owner'] },
+          waiter: { populate: ['user'] },
+          table: true,
+        },
       });
+      if (!order) return;
       const socket = require('../../../../services/socket-client').default;
       socket.emit('orders_event', {
         type: 'update',
         data: {
-          business_id: result.business, order_id: result.id,
-          order_number: result.order_number, status: result.status,
-          owner_id: business?.owner?.id || null,
+          id: order.id,
+          business_id: order.business?.id,
+          table_id: order.table?.id,
+          table_number: order.table?.table_number,
+          order_id: order.id,
+          order_number: order.order_number,
+          status: order.orderStatus,
+          owner_id: order.business?.owner?.id || null,
+          waiter_id: order?.waiter?.user?.id || null,
         },
       });
     } catch (err) {

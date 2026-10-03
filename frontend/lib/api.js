@@ -4,7 +4,7 @@
  * All auth is handled via JWT stored in localStorage.
  */
 
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1357";
 
 // ─── Token helpers ──────────────────────────────────────────────────────────
 export const getToken = () => {
@@ -81,6 +81,12 @@ export const authApi = {
     return data;
   },
 
+  forgotPassword: (email) =>
+    callStrapi("auth/forgot-password", { email }, { auth: false }),
+
+  resetPassword: (payload) =>
+    callStrapi("auth/reset-password", payload, { auth: false }),
+
   /** Get current user from Strapi */
   me: async () => {
     return callStrapi("users/me?populate=*", undefined, {
@@ -105,28 +111,28 @@ export const businessApi = {
     callStrapi("custom-functions/updateOnboardingStep", { step, complete }),
 
   getBusinessReports: (payload) =>
-    callStrapi("custom-functions/getBusinessReports", payload, { auth: false }),
+    callStrapi("custom-functions/getBusinessReports", payload),
 };
 
 // ─── Tables ──────────────────────────────────────────────────────────────────
 export const tableApi = {
   getBusinessTables: (businessId, branchId) =>
-    callStrapi("custom-functions/getBusinessTables", { businessId, branchId }, { auth: false }),
+    callStrapi("custom-functions/getBusinessTables", { businessId, branchId }),
 
   createBusinessTable: (payload) =>
-    callStrapi("custom-functions/createBusinessTable", payload, { auth: false }),
+    callStrapi("custom-functions/createBusinessTable", payload),
 
   updateTableStatus: (tableId, status) =>
-    callStrapi("custom-functions/updateTableStatus", { tableId, status }, { auth: false }),
+    callStrapi("custom-functions/updateTableStatus", { tableId, status }),
 
   assignWaiterToTable: (tableId, waiterId) =>
-    callStrapi("custom-functions/assignWaiterToTable", { tableId, waiterId }, { auth: false }),
+    callStrapi("custom-functions/assignWaiterToTable", { tableId, waiterId }),
 };
 
 // ─── Menu ─────────────────────────────────────────────────────────────────────
 export const menuApi = {
-  getPublicMenu: (businessId, tableId) =>
-    callStrapi("custom-functions/getPublicMenu", { businessId, tableId }, { auth: false }),
+  getPublicMenu: (businessId, tableId, branchId) =>
+    callStrapi("custom-functions/getPublicMenu", { businessId, tableId, branchId }, { auth: false }),
 
   // Standard CRUD via Strapi REST
   getCategories: (businessId) =>
@@ -173,7 +179,7 @@ export const menuApi = {
 // ─── Orders ──────────────────────────────────────────────────────────────────
 export const orderApi = {
   getBusinessOrders: (payload) =>
-    callStrapi("custom-functions/getBusinessOrders", payload, { auth: false }),
+    callStrapi("custom-functions/getBusinessOrders", payload),
 
   placeOrder: (payload) =>
     callStrapi("custom-functions/placeOrder", payload, { auth: false }),
@@ -182,7 +188,7 @@ export const orderApi = {
     callStrapi("custom-functions/getClientOrders", { customerSessionId }, { auth: false }),
 
   updateOrderStatus: (orderId, status, waiterId) =>
-    callStrapi("custom-functions/updateOrderStatus", { orderId, status, waiterId }, { auth: false }),
+    callStrapi("custom-functions/updateOrderStatus", { orderId, status, waiterId }),
 };
 
 // ─── Waiter calls ────────────────────────────────────────────────────────────
@@ -191,32 +197,28 @@ export const waiterCallApi = {
     callStrapi("custom-functions/callWaiter", payload, { auth: false }),
 
   acknowledgeCall: (callId, waiterId) =>
-    callStrapi("custom-functions/acknowledgeWaiterCall", { callId, waiterId }, { auth: false }),
+    callStrapi("custom-functions/acknowledgeWaiterCall", { callId, waiterId }),
 
   resolveCall: (callId, tableId) =>
-    callStrapi("custom-functions/resolveWaiterCall", { callId, tableId }, { auth: false }),
+    callStrapi("custom-functions/resolveWaiterCall", { callId, tableId }),
 
   getActiveCalls: (businessId) =>
-    callStrapi("custom-functions/getActiveWaiterCalls", { businessId }, { auth: false }),
+    callStrapi("custom-functions/getActiveWaiterCalls", { businessId }),
 
   getWaiterDashboard: (employeeId, businessId) =>
-    callStrapi("custom-functions/getWaiterDashboard", { employeeId, businessId }, { auth: false }),
+    callStrapi("custom-functions/getWaiterDashboard", { employeeId, businessId }),
 
   toggleAvailability: (employeeId, is_active) =>
-    callStrapi("custom-functions/toggleWaiterAvailability", { employeeId, is_active }, { auth: false }),
+    callStrapi("custom-functions/toggleWaiterAvailability", { employeeId, is_active }),
 };
 
 // ─── Employees ───────────────────────────────────────────────────────────────
 export const employeeApi = {
   getEmployees: (businessId) =>
-    callStrapi(
-      `employees?filters[business][id][$eq]=${businessId}&populate[user]=true&populate[branch]=true&sort=full_name:asc`,
-      undefined,
-      { method: "GET" }
-    ),
+    callStrapi("custom-functions/getBusinessEmployees", { businessId }),
 
   sendInvite: (payload) =>
-    callStrapi("custom-functions/sendEmployeeInvite", payload, { auth: false }),
+    callStrapi("custom-functions/sendEmployeeInvite", payload),
 
   validateInviteToken: (token) =>
     callStrapi("custom-functions/validateInviteToken", { token }, { auth: false }),
@@ -224,8 +226,12 @@ export const employeeApi = {
   acceptInvite: (token) =>
     callStrapi("custom-functions/acceptInvite", { token }),
 
-  updateEmployee: (id, payload) =>
-    callStrapi(`employees/${id}`, { data: payload }, { method: "PUT" }),
+  updateEmployee: (businessId, employeeId, is_active) =>
+    callStrapi("custom-functions/updateBusinessEmployee", {
+      businessId,
+      employeeId,
+      is_active,
+    }),
 
   deleteEmployee: (id) =>
     callStrapi(`employees/${id}`, undefined, { method: "DELETE" }),

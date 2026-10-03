@@ -25,15 +25,13 @@ const TEXT_D = "#5F3E22";
 
 // ─── Nav items definition ─────────────────────────────────────────────────────
 const NAV_ITEMS = [
-    { href: "/dashboard", icon: "⊞", label: "Dashboard" },
-    { href: "/menu", icon: "📋", label: "Menu" },
-    { href: "/tables", icon: "🪑", label: "Tables" },
-    { href: "/orders", icon: "🧾", label: "Orders" },
-    { href: "/employees", icon: "👥", label: "Employees", roles: ["owner"] },
-    { href: "/reports", icon: "📊", label: "Reports" },
-    { href: "/menu-customization", icon: "🎨", label: "Customise Menu", roles: ["owner"] },
-    { href: "/ads", icon: "📣", label: "Advertising", roles: ["owner"] },
-    { href: "/settings", icon: "⚙", label: "Settings", roles: ["owner"] },
+    { href: "/owner/dashboard", icon: "⊞", label: "Dashboard" },
+    { href: "/owner/menu", icon: "📋", label: "Menu" },
+    { href: "/owner/tables", icon: "🪑", label: "Tables" },
+    { href: "/owner/orders", icon: "🧾", label: "Orders" },
+    { href: "/owner/employees", icon: "👥", label: "Employees", roles: ["owner"] },
+    { href: "/owner/reports", icon: "📊", label: "Reports" },
+    { href: "/owner/settings", icon: "⚙", label: "Settings", roles: ["owner"] },
 ];
 
 export function OwnerSidebar({ role }) {

@@ -1,7 +1,7 @@
 import { factories } from '@strapi/strapi';
 import crypto from 'crypto';
 
-const INVITE_BASE = process.env.FRONTEND_URL || 'https://juicy-dine-smart-flow.base44.app';
+const INVITE_BASE = process.env.FRONTEND_URL || 'http://localhost:3007';
 
 export default factories.createCoreController('api::employee-invitation.employee-invitation', ({ strapi }) => ({
 
@@ -12,6 +12,24 @@ export default factories.createCoreController('api::employee-invitation.employee
       const { invited_name, invited_email, phone, role, branch_id, business_id, business_name } = ctx.request.body;
       if (!invited_name || !invited_email || !role || !business_id) {
         return ctx.send({ error: 'invited_name, invited_email, role and business_id are required' }, 400);
+      }
+      if (!['manager', 'waiter'].includes(role)) return ctx.badRequest('role must be manager or waiter');
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized();
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: business_id, role: 'owner', is_active: true },
+      });
+      if (!employee) return ctx.forbidden();
+
+      const business = await strapi.db.query('api::business.business').findOne({
+        where: { id: business_id },
+      });
+      if (!business) return ctx.notFound('Business not found');
+      if (branch_id) {
+        const branch = await strapi.db.query('api::branch.branch').findOne({
+          where: { id: branch_id, business: business_id },
+        });
+        if (!branch) return ctx.badRequest('Branch does not belong to this business');
       }
 
       // Cancel any prior pending invite for the same email + business
@@ -49,8 +67,8 @@ export default factories.createCoreController('api::employee-invitation.employee
       try {
         await strapi.plugins['email'].services.email.send({
           to: invited_email,
-          subject: `You've been invited to join ${business_name || 'a restaurant'} on SmartMenu`,
-          text: `Hi ${invited_name},\n\nYou've been invited to join ${business_name || 'a restaurant'} as a ${role}.\n\nAccept your invite here: ${inviteLink}\n\nThis link expires in 7 days.`,
+          subject: `You've been invited to join ${business_name || business.business_name} on Smart Menu`,
+          text: `Hi ${invited_name},\n\nYou've been invited to join ${business_name || business.business_name} as a ${role}.\n\nAccept your invite here: ${inviteLink}\n\nThis link expires in 7 days.`,
         });
         emailSent = true;
       } catch (mailErr) {
@@ -130,6 +148,13 @@ export default factories.createCoreController('api::employee-invitation.employee
 
       if (!invitation) return ctx.send({ success: false, error: 'Invalid invite link' });
       if (invitation.status !== 'pending') return ctx.send({ success: false, error: 'Invitation already used or expired' });
+      if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+        await strapi.db.query('api::employee-invitation.employee-invitation').update({
+          where: { id: invitation.id },
+          data: { status: 'expired' },
+        });
+        return ctx.send({ success: false, error: 'Invitation has expired' });
+      }
       if (invitation.invited_email.toLowerCase() !== user.email.toLowerCase()) {
         return ctx.send({ success: false, error: 'This invite was sent to a different email address' });
       }
@@ -170,4 +195,3 @@ export default factories.createCoreController('api::employee-invitation.employee
   },
 
 }));
-

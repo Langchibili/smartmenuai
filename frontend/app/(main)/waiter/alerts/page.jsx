@@ -33,6 +33,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { formatRelativeTime } from "@/lib/utils";
 import { GlowCard } from "@/components/ui/smart-card";
 import { tokens } from "@/lib/mui-theme";
+import { subscribeBusinessActivity } from "@/lib/socket";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const CALL_STATUS = {
@@ -182,7 +183,7 @@ function AlertCard({ call, onAcknowledge, onResolve, acknowledging, resolving })
                     maxWidth: "100%",
                   }}
                 >
-                  "{call.message}"
+                  &quot;{call.message}&quot;
                 </Typography>
               )}
 
@@ -408,6 +409,7 @@ export default function WaiterAlertsPage() {
   }, [business?.id, playAlert]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
   useEffect(() => {
     const t = setInterval(load, 8_000); // faster polling for alerts
     return () => clearInterval(t);

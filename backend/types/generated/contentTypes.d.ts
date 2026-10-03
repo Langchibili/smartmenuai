@@ -889,7 +889,6 @@ export interface ApiBusinessMenuSettingBusinessMenuSetting
     product_card_style: Schema.Attribute.String &
       Schema.Attribute.DefaultTo<'large_image'>;
     promo_text: Schema.Attribute.String;
-    published_at: Schema.Attribute.DateTime;
     publishedAt: Schema.Attribute.DateTime;
     show_ai_recommendations: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<true>;

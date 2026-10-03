@@ -16,6 +16,7 @@ import {
   CircularProgress,
   Divider,
   Paper,
+  Grid,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { motion } from "framer-motion";
@@ -131,7 +132,7 @@ export default function OnboardingPage() {
 
   const goToDashboard = async () => {
     await refreshBusiness();
-    router.replace("/dashboard");
+    router.replace("/owner/dashboard");
   };
 
   return (
@@ -290,14 +291,17 @@ export default function OnboardingPage() {
               This helps us set up the right defaults for your menu.
             </Typography>
 
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 3 }}>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
               {BUSINESS_TYPES.map((t) => {
                 const selected = form.businessType === t.value;
                 return (
-                  <Box
-                    key={t.value}
-                    onClick={() => set("businessType", t.value)}
-                    sx={{
+                  <Grid item xs={6} key={t.value}>
+                    <Box
+                      component="button"
+                      type="button"
+                      onClick={() => set("businessType", t.value)}
+                      sx={{
+                      width: "100%",
                       p: 2.5,
                       borderRadius: "14px",
                       border: "1px solid",
@@ -311,26 +315,28 @@ export default function OnboardingPage() {
                         ? "0 0 12px rgba(212,133,10,0.2)"
                         : "none",
                       cursor: "pointer",
+                      textAlign: "left",
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "rgba(212,133,10,0.4)",
                       },
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 28, mb: 1 }}>{t.icon}</Typography>
-                    <Typography
-                      sx={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: selected ? BRAND : TEXT_S,
                       }}
                     >
-                      {t.label}
-                    </Typography>
-                  </Box>
+                      <Typography sx={{ fontSize: 28, mb: 1 }}>{t.icon}</Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: selected ? BRAND : TEXT_S,
+                        }}
+                      >
+                        {t.label}
+                      </Typography>
+                    </Box>
+                  </Grid>
                 );
               })}
-            </Box>
+            </Grid>
 
             <Button
               variant="contained"
@@ -403,7 +409,8 @@ export default function OnboardingPage() {
                 sx={inputSx}
               />
 
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
                 <TextField
                   label="City"
                   placeholder="Lusaka"
@@ -412,6 +419,8 @@ export default function OnboardingPage() {
                   fullWidth
                   sx={inputSx}
                 />
+                </Grid>
+                <Grid item xs={12} sm={6}>
                 <TextField
                   label="Country"
                   placeholder="Zambia"
@@ -420,7 +429,8 @@ export default function OnboardingPage() {
                   fullWidth
                   sx={inputSx}
                 />
-              </Box>
+                </Grid>
+              </Grid>
 
               <FormControl fullWidth sx={inputSx}>
                 <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>

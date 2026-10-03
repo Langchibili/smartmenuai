@@ -25,6 +25,7 @@ import React, {
     useRef,
     useCallback,
 } from 'react';
+import { getToken } from '../api';
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 const ReactNativeContext = createContext(null);
@@ -42,6 +43,7 @@ const WEBVIEW_EVENTS = {
     ORDER_STATUS_UPDATED: 'ORDER_STATUS_UPDATED',
     WAITER_CALL_NEW: 'WAITER_CALL_NEW',
     WAITER_CALL_ACKNOWLEDGED: 'WAITER_CALL_ACKNOWLEDGED',
+    WAITER_CALL_RESOLVED: 'WAITER_CALL_RESOLVED',
     TABLE_STATUS_UPDATED: 'TABLE_STATUS_UPDATED',
     SOCKET_CONNECTED: 'SOCKET_CONNECTED',
     SOCKET_DISCONNECTED: 'SOCKET_DISCONNECTED',
@@ -253,6 +255,7 @@ export function ReactNativeWrapper({ children }) {
                 userId,
                 frontendName,   // 'owner' | 'employee' — sent to AppContent
                 socketServerUrl: socketServerUrl || '',
+                authToken: getToken(),
             });
 
             if (result?.success) {

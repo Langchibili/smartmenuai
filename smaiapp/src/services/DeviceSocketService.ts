@@ -9,6 +9,7 @@ type EventHandler = (data: any) => void;
 interface DeviceRegistration {
   deviceId: string; userId: string | number; userType: 'owner' | 'employee';
   frontendName: string; notificationToken: string | null; deviceInfo: any; socketServerUrl: string;
+  authToken?: string | null;
 }
 
 class DeviceSocketService {
@@ -67,6 +68,7 @@ class DeviceSocketService {
     this.socket.on(S.ORDER.STATUS_UPDATED, (d) => this.triggerEvent(S.ORDER.STATUS_UPDATED, d));
     this.socket.on(S.WAITER_CALL.NEW, (d) => this.triggerEvent(S.WAITER_CALL.NEW, d));
     this.socket.on(S.WAITER_CALL.ACKNOWLEDGED, (d) => this.triggerEvent(S.WAITER_CALL.ACKNOWLEDGED, d));
+    this.socket.on(S.WAITER_CALL.RESOLVED, (d) => this.triggerEvent(S.WAITER_CALL.RESOLVED, d));
     this.socket.on(S.TABLE.STATUS_UPDATED, (d) => this.triggerEvent(S.TABLE.STATUS_UPDATED, d));
 
     this.socket.on(S.NOTIFICATION.NEW, (d) => this.triggerEvent(S.NOTIFICATION.NEW, d));

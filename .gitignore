@@ -47,6 +47,7 @@
 
 *.zip
 *.txt
+!backend-permissions-matrix.txt
 backend/node_modules
 backend/src-old
 backend-err
@@ -136,7 +137,7 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 bugslog.txt
 # local env files
-frontend/.env
+frontend/.env 
 
 # vercel
 frontend/.vercel

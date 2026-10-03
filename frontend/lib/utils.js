@@ -53,6 +53,11 @@ export function formatTime(date) {
 
 /** Generate a random session ID (for anonymous customer sessions) */
 export function generateSessionId() {
+    if (globalThis.crypto?.randomUUID) return `sess_${globalThis.crypto.randomUUID()}`;
+    if (globalThis.crypto?.getRandomValues) {
+        const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+        return `sess_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    }
     return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -150,7 +155,7 @@ export function buildMenuUrl(
     tableId
 ) {
     const base =
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3007";
     return `${base}/m/${businessId}/${branchId}/${tableId}`;
 }
 

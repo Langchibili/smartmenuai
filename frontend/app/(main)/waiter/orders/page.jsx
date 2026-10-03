@@ -2,14 +2,15 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import {
-  Box, Typography, Chip, Stack, IconButton, Skeleton,
+  Alert, Box, Typography, Chip, Stack, IconButton, Skeleton,
   Tabs, Tab, Tooltip, Button, Collapse, alpha,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import LocalDiningIcon from "@mui/icons-material/Restaurant";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { useAuth } from "@/lib/auth-context";
 import { orderApi } from "@/lib/api";
@@ -18,6 +19,7 @@ import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/util
 import { SmartCard, OrderRowCard } from "@/components/ui/smart-card";
 import SmartModal from "@/components/ui/smart-modal";
 import { tokens } from "@/lib/mui-theme";
+import { subscribeBusinessActivity } from "@/lib/socket";
 
 const STATUS_CFG = {
   pending:   { label: "Pending",   color: "warning",  dot: tokens.warning, nextLabel: "Accept",     next: "accepted" },
@@ -94,7 +96,7 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
             </Stack>
             {order.notes && (
               <Typography variant="caption" sx={{ color: tokens.textMuted, fontStyle: "italic" }}>
-                · "{order.notes}"
+                · &quot;{order.notes}&quot;
               </Typography>
             )}
           </Stack>
@@ -158,20 +160,24 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
               </motion.div>
             ))}
           </Stack>
-          <Box sx={{ mt: 2, pt: 1.5, borderTop: `1px solid ${tokens.borderBase}`, display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 24px" }}>
-            <Typography variant="caption" sx={{ color: tokens.textMuted }}>Subtotal</Typography>
-            <Typography variant="caption" sx={{ color: tokens.textSecondary, textAlign: "right" }}>{formatCurrency(order.subtotal ?? 0, currency)}</Typography>
+          <Stack spacing={0.5} sx={{ mt: 2, pt: 1.5, borderTop: `1px solid ${tokens.borderBase}` }}>
+            <Stack direction="row" justifyContent="space-between" spacing={3}>
+              <Typography variant="caption" sx={{ color: tokens.textMuted }}>Subtotal</Typography>
+              <Typography variant="caption" sx={{ color: tokens.textSecondary, textAlign: "right" }}>{formatCurrency(order.subtotal ?? 0, currency)}</Typography>
+            </Stack>
             {(order.service_charge ?? 0) > 0 && (
-              <>
+              <Stack direction="row" justifyContent="space-between" spacing={3}>
                 <Typography variant="caption" sx={{ color: tokens.textMuted }}>Service</Typography>
                 <Typography variant="caption" sx={{ color: tokens.textSecondary, textAlign: "right" }}>{formatCurrency(order.service_charge, currency)}</Typography>
-              </>
+              </Stack>
             )}
-            <Typography variant="body2" sx={{ color: tokens.textPrimary, fontWeight: 700, pt: 0.5 }}>Total</Typography>
-            <Typography variant="body2" sx={{ fontFamily: '"Playfair Display", Georgia, serif', color: tokens.brand, fontWeight: 700, textAlign: "right", pt: 0.5 }}>
-              {formatCurrency(order.total ?? 0, currency)}
-            </Typography>
-          </Box>
+            <Stack direction="row" justifyContent="space-between" spacing={3} sx={{ pt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: tokens.textPrimary, fontWeight: 700 }}>Total</Typography>
+              <Typography variant="body2" sx={{ fontFamily: '"Playfair Display", Georgia, serif', color: tokens.brand, fontWeight: 700, textAlign: "right" }}>
+                {formatCurrency(order.total ?? 0, currency)}
+              </Typography>
+            </Stack>
+          </Stack>
           {order.status === "pending" && (
             <Box sx={{ mt: 2 }}>
               <motion.button
@@ -286,6 +292,7 @@ export default function WaiterOrdersPage() {
   }, [business?.id, toast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
   useEffect(() => { const t = setInterval(load, 18_000); return () => clearInterval(t); }, [load]);
 
   const advanceOrder = async (orderId, status) => {
@@ -363,4 +370,3 @@ export default function WaiterOrdersPage() {
     </Box>
   );
 }
-

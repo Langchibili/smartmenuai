@@ -11,10 +11,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { alpha, useTheme } from "@mui/material/styles";
 
 const NAV_ITEMS = [
-  { label: "Home", icon: HomeIcon, path: "/dashboard" },
-  { label: "Tables", icon: TablesIcon, path: "/tables" },
-  { label: "Menu", icon: MenuIcon, path: "/menu" },
-  { label: "Employees", icon: EmployeesIcon, path: "/employees" },
+  { label: "Home", icon: HomeIcon, path: "/owner/dashboard" },
+  { label: "Tables", icon: TablesIcon, path: "/owner/tables" },
+  { label: "Menu", icon: MenuIcon, path: "/owner/menu" },
+  { label: "Employees", icon: EmployeesIcon, path: "/owner/employees" },
 ];
 
 export default function OwnerBottomNav() {

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import {
-  Box, Typography, Button, Paper, Card, CardMedia, CardContent, CardActions,
+  Box, Typography, Button, Paper, Card, CardMedia, CardContent, CardActions, Grid,
   Chip, Stack, TextField, Switch, FormControlLabel, CircularProgress,
   IconButton, Divider,
   alpha,
@@ -234,15 +234,9 @@ export default function MenuPage() {
       />
 
       {/* Content */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "200px 1fr" },
-          gap: 3,
-        }}
-      >
+      <Grid container spacing={3}>
         {/* Categories sidebar */}
-        <Box>
+        <Grid item xs={12} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -344,10 +338,10 @@ export default function MenuPage() {
               )}
             </Stack>
           </Paper>
-        </Box>
+        </Grid>
 
         {/* Items grid */}
-        <Box>
+        <Grid item xs={12} md={9}>
           {visibleItems.length === 0 ? (
             <EmptyState
               icon="🍕"
@@ -370,26 +364,20 @@ export default function MenuPage() {
               }
             />
           ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", xl: "repeat(3, 1fr)" },
-                gap: 2,
-              }}
-            >
+            <Grid container spacing={2}>
               {visibleItems.map(item => (
-                <Card
-                  key={item.id}
-                  elevation={0}
-                  sx={{
+                <Grid item xs={12} sm={6} xl={4} key={item.id}>
+                  <Card
+                    elevation={0}
+                    sx={{
                     borderRadius: "16px",
                     background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
                     border: "1px solid rgba(107,51,24,0.25)",
                     backdropFilter: "blur(6px)",
                     transition: "all 0.2s",
                     "&:hover": { borderColor: alpha(BRAND, 0.3) },
-                  }}
-                >
+                    }}
+                  >
                   {item.image && (
                     <CardMedia
                       component="img"
@@ -467,12 +455,13 @@ export default function MenuPage() {
                       <span style={{ fontSize: "0.7rem" }}>✕</span>
                     </IconButton>
                   </CardActions>
-                </Card>
+                  </Card>
+                </Grid>
               ))}
-            </Box>
+            </Grid>
           )}
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* ── Category modal ── */}
       <Modal
@@ -578,14 +567,8 @@ export default function MenuPage() {
         }
       >
         <Stack spacing={2.5}>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 2,
-            }}
-          >
-            <Box sx={{ gridColumn: "1 / -1" }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <TextField
                 label="Item name *"
                 placeholder="Grilled Chicken"
@@ -596,8 +579,8 @@ export default function MenuPage() {
                 sx={inputSx}
                 InputLabelProps={{ shrink: !!itemForm.name || undefined }}
               />
-            </Box>
-            <Box>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Price *"
                 type="number"
@@ -610,8 +593,8 @@ export default function MenuPage() {
                 sx={inputSx}
                 InputLabelProps={{ shrink: !!itemForm.price || undefined }}
               />
-            </Box>
-            <Box>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Prep time"
                 placeholder="15 mins"
@@ -620,8 +603,8 @@ export default function MenuPage() {
                 fullWidth
                 sx={inputSx}
               />
-            </Box>
-            <Box sx={{ gridColumn: "1 / -1" }}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 label="Description"
                 multiline
@@ -632,8 +615,8 @@ export default function MenuPage() {
                 fullWidth
                 sx={inputSx}
               />
-            </Box>
-            <Box sx={{ gridColumn: "1 / -1" }}>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
                 label="Tags (comma-separated)"
                 placeholder="spicy, gluten-free"
@@ -642,40 +625,35 @@ export default function MenuPage() {
                 fullWidth
                 sx={inputSx}
               />
-            </Box>
-          </Box>
+            </Grid>
+          </Grid>
 
           {/* Toggles */}
           <Box sx={{ mt: 1 }}>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 1,
-              }}
-            >
+            <Grid container spacing={1}>
               {[
                 ["is_available", "Available"],
                 ["is_popular", "Popular 🔥"],
                 ["is_featured", "Featured ⭐"],
                 ["is_special_offer", "Special offer 🎁"],
               ].map(([field, label]) => (
-                <FormControlLabel
-                  key={field}
-                  control={
-                    <Switch
-                      checked={itemForm[field]}
-                      onChange={() => setItemForm(f => ({ ...f, [field]: !f[field] }))}
-                      sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": { color: BRAND },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: BRAND },
-                      }}
-                    />
-                  }
-                  label={<Typography sx={{ fontSize: "0.85rem", color: TEXT_S }}>{label}</Typography>}
-                />
+                <Grid item xs={6} key={field}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={itemForm[field]}
+                        onChange={() => setItemForm(f => ({ ...f, [field]: !f[field] }))}
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: BRAND },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: BRAND },
+                        }}
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: "0.85rem", color: TEXT_S }}>{label}</Typography>}
+                  />
+                </Grid>
               ))}
-            </Box>
+            </Grid>
           </Box>
         </Stack>
       </Modal>

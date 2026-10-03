@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Box, Typography, Button, Paper, Stack, Chip, Select, MenuItem,
+  Box, Typography, Button, Paper, Stack, Grid, Chip, Select, MenuItem,
   FormControl, InputLabel, TextField, IconButton, CircularProgress,
   Divider, alpha,
 } from "@mui/material";
@@ -11,6 +11,7 @@ import { tableApi, employeeApi, flattenStrapiResponse } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
+import { subscribeBusinessActivity } from "@/lib/socket";
 import QRCode from "qrcode";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ export default function TablesPage() {
   }, [business?.id, toast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
 
   // Generate QR on canvas when qrModal changes
   useEffect(() => {
@@ -134,22 +136,13 @@ export default function TablesPage() {
     return (
       <Box sx={{ p: { xs: 2, lg: 4 } }}>
         <Box sx={{ height: 32, width: "12rem", borderRadius: "8px", bgcolor: "rgba(45,18,0,0.6)", mb: 3 }} />
-        {/* Loading skeleton grid — replaced MUI Grid with CSS Grid */}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr 1fr",        // 2 columns
-              md: "repeat(3, 1fr)", // 3 columns
-              lg: "repeat(4, 1fr)", // 4 columns
-            },
-            gap: 2,
-          }}
-        >
+        <Grid container spacing={2}>
           {[...Array(8)].map((_, i) => (
-            <Box key={i} sx={{ height: 160, borderRadius: "14px", bgcolor: "rgba(45,18,0,0.6)" }} />
+            <Grid item xs={6} md={4} lg={3} key={i}>
+              <Box sx={{ height: 160, borderRadius: "14px", bgcolor: "rgba(45,18,0,0.6)" }} />
+            </Grid>
           ))}
-        </Box>
+        </Grid>
       </Box>
     );
   }
@@ -236,24 +229,12 @@ export default function TablesPage() {
           }
         />
       ) : (
-        /* Tables grid — replaced MUI Grid with CSS Grid for responsive columns */
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr 1fr",        // 2 columns on mobile
-              md: "repeat(3, 1fr)", // 3 columns
-              lg: "repeat(4, 1fr)", // 4 columns
-              xl: "repeat(5, 1fr)", // 5 columns on large screens
-            },
-            gap: 2,
-          }}
-        >
+        <Grid container spacing={2}>
           {tables.map(table => {
             const sc = STATUS_COLORS[table.status] ?? STATUS_COLORS.available;
             return (
+              <Grid item xs={6} sm={4} md={3} xl={2} key={table.id}>
               <Paper
-                key={table.id}
                 elevation={0}
                 sx={{
                   p: 2.5,
@@ -387,9 +368,10 @@ export default function TablesPage() {
                   </FormControl>
                 </Stack>
               </Paper>
+              </Grid>
             );
           })}
-        </Box>
+        </Grid>
       )}
 
       {/* Add table modal */}

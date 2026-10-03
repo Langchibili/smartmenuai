@@ -4,8 +4,12 @@ import { useAuth } from "@/lib/auth-context";
 import { orderApi, tableApi } from "@/lib/api";
 import { PageHeader, StatCard } from "@/components/ui/page-header";
 import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
+import { subscribeBusinessActivity } from "@/lib/socket";
 import {
   Box,
+  Alert,
+  Button,
+  Grid,
   Typography,
   Paper,
   Chip,
@@ -17,6 +21,8 @@ import {
 import { motion } from "framer-motion";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CircleIcon from "@mui/icons-material/Circle";
+import { useToast } from "@/components/ui/toast-provider";
+import TablePreviewDrawer from "@/components/tables/TablePreviewDrawer";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -50,9 +56,13 @@ const TABLE_STATUS_STYLE = {
 
 export default function DashboardPage() {
   const { business } = useAuth();
+  const { toast } = useToast();
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [updatingTable, setUpdatingTable] = useState(false);
 
   const load = useCallback(async () => {
     if (!business?.id) return;
@@ -63,12 +73,32 @@ export default function DashboardPage() {
       ]);
       setOrders(ordersRes.orders ?? []);
       setTables(tablesRes.tables ?? []);
-    } catch {/* silent */ } finally {
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message || "Failed to load dashboard data.");
+    } finally {
       setLoading(false);
     }
   }, [business?.id]);
 
+  const updateTableStatus = async (table, status) => {
+    setUpdatingTable(true);
+    try {
+      await tableApi.updateTableStatus(table.id, status);
+      setTables((current) =>
+        current.map((item) => item.id === table.id ? { ...item, status } : item)
+      );
+      setSelectedTable((current) => current?.id === table.id ? { ...current, status } : current);
+      toast("Table status updated", "success");
+    } catch (error) {
+      toast(error.message || "Failed to update table status", "error");
+    } finally {
+      setUpdatingTable(false);
+    }
+  };
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
   // Poll every 30s
   useEffect(() => {
     const t = setInterval(load, 30_000);
@@ -85,18 +115,13 @@ export default function DashboardPage() {
     return (
       <Box sx={{ p: { xs: 2, lg: 4 } }}>
         <MuiSkeleton variant="text" width="12rem" height={32} sx={{ mb: 4 }} />
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4, 1fr)" },
-            gap: 3,
-            mb: 4,
-          }}
-        >
+        <Grid container spacing={3} sx={{ mb: 4 }}>
           {[...Array(4)].map((_, i) => (
-            <MuiSkeleton key={i} variant="rounded" height={112} />
+            <Grid item xs={6} lg={3} key={i}>
+              <MuiSkeleton variant="rounded" height={112} />
+            </Grid>
           ))}
-        </Box>
+        </Grid>
         <MuiSkeleton variant="rounded" height={384} />
       </Box>
     );
@@ -134,16 +159,15 @@ export default function DashboardPage() {
           </Box>
         }
       />
+      {loadError && (
+        <Alert severity="error" action={<Button color="inherit" size="small" onClick={load}>Retry</Button>} sx={{ mb: 3 }}>
+          {loadError}
+        </Alert>
+      )}
 
       {/* KPI row */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4, 1fr)" },
-          gap: 3,
-          mb: 4,
-        }}
-      >
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={6} lg={3}>
         <StatCard
           label="Active orders"
           value={activeOrders.length}
@@ -151,6 +175,8 @@ export default function DashboardPage() {
           color="amber"
           sub="right now"
         />
+        </Grid>
+        <Grid item xs={6} lg={3}>
         <StatCard
           label="Waiter alerts"
           value={needsWaiter}
@@ -158,6 +184,8 @@ export default function DashboardPage() {
           color={needsWaiter > 0 ? "red" : "green"}
           sub="tables calling"
         />
+        </Grid>
+        <Grid item xs={6} lg={3}>
         <StatCard
           label="Revenue today"
           value={formatCurrency(todayRevenue, currency)}
@@ -165,6 +193,8 @@ export default function DashboardPage() {
           color="green"
           sub={`${todayComplete.length} completed`}
         />
+        </Grid>
+        <Grid item xs={6} lg={3}>
         <StatCard
           label="Tables"
           value={`${tables.filter(t => t.status !== "available").length}/${tables.length}`}
@@ -172,18 +202,13 @@ export default function DashboardPage() {
           color="blue"
           sub="occupied"
         />
-      </Box>
+        </Grid>
+      </Grid>
 
       {/* Main content */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", xl: "7fr 5fr" },
-          gap: 3,
-        }}
-      >
+      <Grid container spacing={3}>
         {/* Live orders feed */}
-        <Box>
+        <Grid item xs={12} xl={7}>
           <Paper
             elevation={0}
             sx={{
@@ -315,10 +340,10 @@ export default function DashboardPage() {
               </Stack>
             )}
           </Paper>
-        </Box>
+        </Grid>
 
         {/* Table grid */}
-        <Box>
+        <Grid item xs={12} xl={5}>
           <Paper
             elevation={0}
             sx={{
@@ -349,24 +374,19 @@ export default function DashboardPage() {
             ) : (
               <>
                 {/* Table cells grid */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: 1.2,
-                    maxHeight: 480,
-                    overflow: "auto",
-                    mb: 3,
-                    "& > *": { minWidth: 0, minHeight: 0 },
-                  }}
-                >
+                <Grid container spacing={1.2} sx={{ maxHeight: 480, overflow: "auto", mb: 3 }}>
                   {tables.map((table) => {
                     const style = TABLE_STATUS_STYLE[table.status] || TABLE_STATUS_STYLE.available;
                     return (
+                      <Grid item xs={4} key={table.id}>
                       <Box
-                        key={table.id}
+                        component="button"
+                        type="button"
+                        aria-label={`Preview table ${table.table_number}, ${table.status.replace("_", " ")}`}
+                        onClick={() => setSelectedTable(table)}
                         sx={{
                           aspectRatio: "1/1",
+                          width: "100%",
                           borderRadius: "14px",
                           display: "flex",
                           flexDirection: "column",
@@ -374,12 +394,17 @@ export default function DashboardPage() {
                           justifyContent: "center",
                           textAlign: "center",
                           p: 1,
+                          cursor: "pointer",
                           background: style.bg,
                           border: `1px solid ${style.border}`,
                           transition: "all 0.15s",
                           "&:hover": {
                             transform: "scale(1.02)",
                             boxShadow: `0 0 12px ${alpha(style.dot, 0.3)}`,
+                          },
+                          "&:focus-visible": {
+                            outline: `2px solid ${style.dot}`,
+                            outlineOffset: 2,
                           },
                         }}
                       >
@@ -398,22 +423,17 @@ export default function DashboardPage() {
                           {table.status.replace("_", " ")}
                         </Typography>
                       </Box>
+                      </Grid>
                     );
                   })}
-                </Box>
+                </Grid>
 
                 {/* Legend */}
                 <Divider sx={{ borderColor: "rgba(107,51,24,0.2)", mb: 2 }} />
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 1.5,
-                    "& > *": { minWidth: 0, minHeight: 0 },
-                  }}
-                >
+                <Grid container spacing={1.5}>
                   {Object.entries(TABLE_STATUS_STYLE).map(([status, s]) => (
-                    <Stack key={status} direction="row" alignItems="center" spacing={0.8}>
+                    <Grid item xs={6} key={status}>
+                    <Stack direction="row" alignItems="center" spacing={0.8}>
                       <CircleIcon sx={{ fontSize: 8, color: s.dot }} />
                       <Typography
                         sx={{
@@ -425,13 +445,21 @@ export default function DashboardPage() {
                         {status.replace("_", " ")}
                       </Typography>
                     </Stack>
+                    </Grid>
                   ))}
-                </Box>
+                </Grid>
               </>
             )}
           </Paper>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
+      <TablePreviewDrawer
+        table={selectedTable}
+        onClose={() => setSelectedTable(null)}
+        onStatusChange={updateTableStatus}
+        busy={updatingTable}
+        viewMoreHref={selectedTable ? `/owner/tables/${selectedTable.id}` : "/owner/tables"}
+      />
     </Box>
   );
 }

@@ -2,9 +2,6 @@
    FILE: smartmenuai/frontend/app/globals.css
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Google Fonts ──────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ── CSS Custom Properties (mirrors the dark theme tokens) ────────────────── */
 :root {
     /* Backgrounds */
@@ -37,7 +34,9 @@
     /* Fonts */
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-display: 'Playfair Display', Georgia, serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-playfair: 'Playfair Display', Georgia, serif;
 }
 
 /* ── Global reset / box‑sizing ───────────────────────────────────────────── */

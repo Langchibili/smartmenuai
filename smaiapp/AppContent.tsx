@@ -33,6 +33,7 @@ export default function AppContent() {
   const deviceIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | number | null>(null);
   const frontendNameRef = useRef<string | null>(null); // 'owner' | 'employee'
+  const authTokenRef = useRef<string | null>(null);
 
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
@@ -59,7 +60,7 @@ export default function AppContent() {
     try {
       const { deviceId } = await getDeviceInfo();
       await fetch(`${API_URL}/devices/acceptorder/${deviceId}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authTokenRef.current}` },
         body: JSON.stringify({ orderId, status: 'accepted' }),
       });
       setCurrentOrder(null);
@@ -73,7 +74,7 @@ export default function AppContent() {
     try {
       const { deviceId } = await getDeviceInfo();
       await fetch(`${API_URL}/devices/acknowledgecall/${deviceId}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authTokenRef.current}` },
         body: JSON.stringify({ callId }),
       });
       setCurrentCall(null);
@@ -105,6 +106,12 @@ export default function AppContent() {
       sendToWebView({ type: WEBVIEW_EVENTS.WAITER_CALL_ACKNOWLEDGED, payload: data });
     });
 
+    DeviceSocketService.on(SOCKET_EVENTS.WAITER_CALL.RESOLVED, (data: any) => {
+      setCurrentCall((call) => call?.callId === data.callId ? null : call);
+      setShowCallModal(false);
+      sendToWebView({ type: WEBVIEW_EVENTS.WAITER_CALL_RESOLVED, payload: data });
+    });
+
     DeviceSocketService.on(SOCKET_EVENTS.TABLE.STATUS_UPDATED, (data: any) => {
       sendToWebView({ type: WEBVIEW_EVENTS.TABLE_STATUS_UPDATED, payload: data });
     });
@@ -130,15 +137,15 @@ export default function AppContent() {
 
   const handleInitializeServices = async (payload: any) => {
     try {
-      const { userId, frontendName, socketServerUrl } = payload;
+      const { userId, frontendName, socketServerUrl, authToken } = payload;
       const deviceInfo = await getDeviceInfo();
       const deviceId = deviceInfo.deviceId;
       deviceIdRef.current = deviceId; userIdRef.current = userId; frontendNameRef.current = frontendName;
+      authTokenRef.current = authToken || null;
       LocationService.setDeviceId(deviceId);
       const permissions = await PermissionManager.requestCriticalPermissions();
-      if (!permissions.location) return { success: false, error: 'Location permission required' };
       const socketUrl = socketServerUrl || CONSTANTS.DEVICE_SOCKET_URL;
-      const started = await BackgroundService.start({ deviceId, userId, frontendName, socketServerUrl: socketUrl });
+      const started = await BackgroundService.start({ deviceId, userId, frontendName, socketServerUrl: socketUrl, authToken });
       if (!started) return { success: false, error: 'Failed to start services' };
       setupSocketListeners();
       return { success: true, deviceId, permissions, socketConnected: DeviceSocketService.isConnected() };

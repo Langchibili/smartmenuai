@@ -31,8 +31,9 @@ export function ToastProvider({ children }) {
       );
     } else if (event === "waiter_calls_event") {
       if (payload?.type === "create") {
+        const isBillRequest = payload.data?.request_type === "bill";
         toast(
-          `Waiter requested${payload.data?.table_number ? ` at Table ${payload.data.table_number}` : ""}${payload.data?.message ? `: ${payload.data.message}` : ""}`,
+          `${isBillRequest ? "Bill requested" : "Waiter requested"}${payload.data?.table_number ? ` at Table ${payload.data.table_number}` : ""}${payload.data?.message ? `: ${payload.data.message}` : ""}`,
           "info"
         );
       } else if (payload?.type === "acknowledged") {

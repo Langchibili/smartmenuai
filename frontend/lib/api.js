@@ -273,6 +273,9 @@ export const waiterCallApi = {
   callWaiter: (payload) =>
     callStrapi("custom-functions/callWaiter", payload, { auth: false }),
 
+  requestBill: (orderId, customerInstallationId) =>
+    callStrapi("custom-functions/requestBill", { orderId, customerInstallationId }, { auth: false }),
+
   acknowledgeCall: (callId, waiterId) =>
     callStrapi("custom-functions/acknowledgeWaiterCall", { callId, waiterId }),
 

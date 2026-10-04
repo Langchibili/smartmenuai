@@ -8,6 +8,12 @@ export default {
     },
     {
       method: 'POST',
+      path: '/custom-functions/requestBill',
+      handler: 'waiter-call.requestBill',
+      config: { auth: false },
+    },
+    {
+      method: 'POST',
       path: '/custom-functions/acknowledgeWaiterCall',
       handler: 'waiter-call.acknowledgeWaiterCall',
     },

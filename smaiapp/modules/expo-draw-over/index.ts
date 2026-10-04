@@ -9,14 +9,18 @@ import { Platform } from 'react-native';
 const DrawOverStub = {
   checkPermission:         async () => false,
   requestPermission:       async () => {},
+  prepareFloatingBubbleService: async () => false,
   startFloatingBubble:     async () => {},
   stopFloatingBubble:      async () => {},
   isFloatingBubbleShowing: async () => false,
   updateBubbleBadge:       async (_count: number) => {},
   showBubbleRipple:        async () => {},
   showOverlay:             async (_data: any) => {},
+  showRideCard:            async (_json: string) => {},
   hideOverlay:             async () => {},
   isOverlayShowing:        async () => false,
+  notifyAppForeground:     async () => {},
+  notifyAppBackground:     async () => {},
 };
 
 let DrawOverNativeModule: typeof DrawOverStub;

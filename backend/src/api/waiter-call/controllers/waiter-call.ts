@@ -23,6 +23,32 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       populate: ['owner'],
     });
     if (!business) return ctx.notFound('Business not found');
+    const platformSettings = await strapi.db.query('api::platform-admin.platform-admin').findOne({
+      where: { role: 'platform_master', is_active: true },
+      select: ['waiter_call_delay'],
+    });
+    const delayMinutes = Math.max(1, Number(platformSettings?.waiter_call_delay) || 1);
+    const latestCall = await strapi.db.query('api::waiter-call.waiter-call').findMany({
+      where: {
+        table: tableId,
+        business: businessId,
+        $or: [{ request_type: 'waiter' }, { request_type: { $null: true } }],
+      },
+      select: ['createdAt'],
+      orderBy: { createdAt: 'desc' },
+      limit: 1,
+    });
+    const availableAt = latestCall[0]?.createdAt
+      ? new Date(latestCall[0].createdAt).getTime() + delayMinutes * 60 * 1000
+      : 0;
+    const retryAfterSeconds = Math.max(0, Math.ceil((availableAt - Date.now()) / 1000));
+    if (retryAfterSeconds > 0) {
+      return ctx.send({
+        success: false,
+        retryAfterSeconds,
+        message: 'Please wait before calling a waiter again.',
+      });
+    }
     const activeWaiters = await strapi.db.query('api::employee.employee').findMany({
       where: {
         business: businessId,
@@ -36,12 +62,15 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       ? activeWaiters.find((employee) => String(employee.id) === String(waiterId))
       : null;
     if (waiterId && !selectedWaiter) return ctx.badRequest('Waiter does not belong to this business');
-    const assignedWaiter = selectedWaiter || table.assigned_waiter;
+    const assignedWaiter = selectedWaiter ||
+      activeWaiters.find((employee) => String(employee.id) === String(table.assigned_waiter?.id)) ||
+      null;
     const cleanMessage = typeof message === 'string' ? message.slice(0, 500) : '';
 
     const call = await strapi.db.query('api::waiter-call.waiter-call').create({
       data: {
         message: cleanMessage,
+        request_type: 'waiter',
         status: 'pending',
         table: tableId,
         business: businessId,
@@ -56,6 +85,7 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       data: {
         id: call.id,
         callId: call.id,
+        request_type: 'waiter',
         business_id: businessId,
         table_id: tableId,
         table_number: table.table_number || tableNumber,
@@ -75,6 +105,94 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       status: 'needs_waiter',
     });
 
+    ctx.send({ success: true, callId: call.id, cooldownSeconds: delayMinutes * 60 });
+  },
+
+  async requestBill(ctx) {
+    const { orderId, customerInstallationId } = ctx.request.body || {};
+    if (!orderId || typeof customerInstallationId !== 'string' ||
+      !/^[a-zA-Z0-9_-]{16,128}$/.test(customerInstallationId)) {
+      return ctx.badRequest('A valid order and customer installation are required');
+    }
+
+    const order = await strapi.db.query('api::order.order').findOne({
+      where: {
+        id: orderId,
+        customer_installation_id: customerInstallationId,
+        orderStatus: { $notIn: ['completed', 'cancelled'] },
+      },
+      populate: {
+        business: { populate: ['owner'] },
+        table: { populate: ['assigned_waiter', 'branch'] },
+      },
+    });
+    if (!order?.table || !order.business) return ctx.notFound('Active customer order not found');
+
+    const activeCall = await strapi.db.query('api::waiter-call.waiter-call').findMany({
+      where: {
+        table: order.table.id,
+        business: order.business.id,
+        request_type: 'bill',
+        status: { $in: ['pending', 'acknowledged'] },
+      },
+      select: ['id'],
+      limit: 1,
+    });
+    if (activeCall.length) return ctx.send({ success: true, alreadyRequested: true });
+
+    const activeWaiters = await strapi.db.query('api::employee.employee').findMany({
+      where: {
+        business: order.business.id,
+        role: 'waiter',
+        is_active: true,
+        ...(order.table.branch?.id ? { branch: order.table.branch.id } : {}),
+      },
+      populate: ['user'],
+    });
+    const assignedWaiter = activeWaiters.find(
+      (employee) => String(employee.id) === String(order.table.assigned_waiter?.id)
+    ) || null;
+    const message = 'Customer requests the bill.';
+    const call = await strapi.db.query('api::waiter-call.waiter-call').create({
+      data: {
+        message,
+        request_type: 'bill',
+        status: 'pending',
+        table: order.table.id,
+        business: order.business.id,
+        waiter: assignedWaiter?.id || null,
+        publishedAt: new Date(),
+      },
+    });
+
+    await strapi.db.query('api::table.table').update({
+      where: { id: order.table.id },
+      data: { status: 'bill_requested' },
+    });
+    socket.emit('waiter_calls_event', {
+      type: 'create',
+      data: {
+        id: call.id,
+        callId: call.id,
+        request_type: 'bill',
+        business_id: order.business.id,
+        table_id: order.table.id,
+        table_number: order.table.table_number,
+        message,
+        status: 'pending',
+        owner_id: order.business.owner?.id || null,
+        assigned_waiter_id: assignedWaiter?.user?.id || null,
+        available_waiter_ids: activeWaiters.map((employee) => employee.user?.id).filter(Boolean),
+      },
+    });
+    socket.emit('table_status_updated', {
+      business_id: order.business.id,
+      owner_id: order.business.owner?.id || null,
+      waiter_id: assignedWaiter?.user?.id || null,
+      table_id: order.table.id,
+      table_number: order.table.table_number,
+      status: 'bill_requested',
+    });
     ctx.send({ success: true, callId: call.id });
   },
 
@@ -278,6 +396,7 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
         calls: calls.map((c) => ({
           id: c.id,
           message: c.message,
+          request_type: c.request_type || 'waiter',
           status: c.status,
           table: c.table
             ? {

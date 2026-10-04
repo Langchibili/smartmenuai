@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useThemeMode } from "@/components/ThemeProvider"; // Adjust import as needed
 import { initials } from "@/lib/utils";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 
 export default function OwnerHeader() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function OwnerHeader() {
   const { toggleTheme } = useThemeMode();
 
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const open = Boolean(anchorEl);
 
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
@@ -45,6 +47,11 @@ export default function OwnerHeader() {
 
   const handleLogout = () => {
     handleMenuClose();
+    setLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutConfirmOpen(false);
     logout();
     router.replace("/login");
   };
@@ -254,6 +261,15 @@ export default function OwnerHeader() {
           </MenuItem>
         </Menu>
       </Toolbar>
+      <ConfirmModal
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={confirmLogout}
+        title="Sign out?"
+        message="Are you sure you want to sign out of your account?"
+        confirmLabel="Sign out"
+        danger
+      />
     </AppBar>
   );
 }

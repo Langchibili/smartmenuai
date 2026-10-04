@@ -11,7 +11,7 @@ export default function PlatformSettingsPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [links, setLinks] = useState({ android: "", ios: "" });
+  const [links, setLinks] = useState({ android: "", ios: "", waiterCallDelay: 1 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +30,7 @@ export default function PlatformSettingsPage() {
           setLinks({
             android: response.appLinks?.android || "",
             ios: response.appLinks?.ios || "",
+            waiterCallDelay: response.waiterCallDelay || 1,
           });
         }
       })
@@ -44,11 +45,16 @@ export default function PlatformSettingsPage() {
 
   const save = async (event) => {
     event.preventDefault();
+    const delay = Number(links.waiterCallDelay);
+    if (!Number.isInteger(delay) || delay < 1 || delay > 1440) {
+      setError("Waiter call delay must be a whole number from 1 to 1440 minutes.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       await platformApi.updateAppLinks(links);
-      toast("App download links saved", "success");
+      toast("Platform settings saved", "success");
     } catch (saveError) {
       setError(saveError.message || "Unable to save app links.");
       toast(saveError.message || "Unable to save app links.", "error");
@@ -81,7 +87,7 @@ export default function PlatformSettingsPage() {
           Platform settings
         </Typography>
         <Typography sx={{ mt: 1, mb: 3, color: "#D4A872" }}>
-          Configure the app store links shown to customers on the web experience.
+          Configure customer app links and the table-level waiter-call cooldown.
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Stack spacing={2.5}>
@@ -105,8 +111,21 @@ export default function PlatformSettingsPage() {
             helperText="Use the App Store listing URL, or leave blank until it is available."
             InputLabelProps={{ shrink: true }}
           />
+          <TextField
+            label="Waiter call delay (minutes)"
+            type="number"
+            value={links.waiterCallDelay}
+            onChange={(event) => setLinks((current) => ({
+              ...current,
+              waiterCallDelay: event.target.value,
+            }))}
+            inputProps={{ min: 1, max: 1440, step: 1 }}
+            helperText="Minimum time before a customer can call a waiter again. Default: 1 minute."
+            fullWidth
+            required
+          />
           <Button type="submit" variant="contained" disabled={saving} sx={{ alignSelf: "flex-start" }}>
-            {saving ? "Saving…" : "Save app links"}
+            {saving ? "Saving…" : "Save settings"}
           </Button>
         </Stack>
       </Paper>

@@ -124,13 +124,14 @@ export default factories.createCoreController(
       try {
         const admin = await strapi.db.query('api::platform-admin.platform-admin').findOne({
           where: { role: 'platform_master', is_active: true },
-          select: ['android_app_link', 'ios_app_link'],
+          select: ['android_app_link', 'ios_app_link', 'waiter_call_delay'],
         });
         ctx.send({
           appLinks: {
             android: admin?.android_app_link || '',
             ios: admin?.ios_app_link || '',
           },
+          waiterCallDelay: admin?.waiter_call_delay || 1,
         });
       } catch (err) {
         strapi.log.error(`[getAppLinks] ${err?.stack || err?.message || err}`);
@@ -143,7 +144,8 @@ export default factories.createCoreController(
         const admin = await requirePlatformAdmin(ctx, strapi);
         if (!admin) return;
 
-        const { android, ios } = ctx.request.body || {};
+        const { android, ios, waiterCallDelay } = ctx.request.body || {};
+        const delay = Number(waiterCallDelay);
         const isValidLink = (value) => {
           if (typeof value !== 'string' || value.length > 2048) return false;
           if (!value.trim()) return true;
@@ -156,12 +158,16 @@ export default factories.createCoreController(
         if (!isValidLink(android) || !isValidLink(ios)) {
           return ctx.badRequest('App links must be valid HTTPS URLs (or blank)');
         }
+        if (!Number.isInteger(delay) || delay < 1 || delay > 1440) {
+          return ctx.badRequest('Waiter call delay must be a whole number from 1 to 1440 minutes');
+        }
 
         await strapi.db.query('api::platform-admin.platform-admin').update({
           where: { id: admin.id },
           data: {
             android_app_link: android.trim() || null,
             ios_app_link: ios.trim() || null,
+            waiter_call_delay: delay,
           },
         });
         ctx.send({ success: true });

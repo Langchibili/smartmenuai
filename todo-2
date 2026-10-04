@@ -138,6 +138,21 @@ work only in SmartMenuAI, and do not run an app in development mode.
 
 ## Pending native app verification
 
+- [x] Added the Android draw-over permission check/request to authenticated
+  device-service initialization. The app opens Android's per-app "Display over
+  other apps" settings when access is missing and checks again after returning;
+  once granted, it prepares the foreground overlay service.
+- [x] Connected app foreground/background events to hide/reveal an existing
+  system overlay, and added a native order-alert card so the outside-app
+  overlay displays the order number, table, item count, and total.
+- [x] Native Android manifest already includes `SYSTEM_ALERT_WINDOW`; verified
+  it in the generated app manifest and Expo config.
+- [x] `npx tsc --noEmit` passed after the TypeScript changes.
+- [ ] Build and install a new Android package, then grant the special-access
+  permission on-device and verify the order overlay appears over another app
+  and hides again when SmartMenuAI returns to foreground. This pass could not
+  run a second Gradle build because an existing `expo run:android` process owns
+  port 8081; do not stop or duplicate that process.
 - [ ] On a supported device or emulator, verify WebView loading, QR camera
   permission and scanning, QR URL validation, and opening the matching menu in
   the app. Verify pending-order display and five-digit order lookup.
@@ -204,3 +219,24 @@ work only in SmartMenuAI, and do not run an app in development mode.
 - [ ] Complete any remaining live browser/device/socket verification using the
   approved ports and a safe test record, without starting duplicate dev-mode
   processes or altering existing MySQL data.
+
+## Customer ordering controls
+
+- [x] Added platform-admin `waiter_call_delay` with a one-minute default and
+  whole-minute limits; the public menu returns the configured delay and
+  remaining cooldown.
+- [x] Enforced waiter-call cooldown on the backend per table and display a
+  countdown on the customer menu, including after reload.
+- [x] Added a bill-request action for active customer orders. It validates the
+  installation/order association, avoids duplicate active bill requests, marks
+  the table `bill_requested`, and emits the existing waiter-call and table
+  status socket events.
+- [x] Made ordered-item names very bold, enabled swipe selection for customer
+  menu categories, and added bill-request actions to the customer order cards.
+- [x] Added MUI sign-out confirmations to the owner header, sidebar, and main
+  navigation.
+- [x] Frontend ESLint completed with zero errors (56 existing warnings); final
+  frontend and Strapi production builds passed.
+- [ ] Verify cooldown timing and reload behavior, bill-request delivery to
+  owner/waiter clients, and sign-out confirmation in the running apps. No
+  runtime servers were started and no MySQL data was changed during this pass.

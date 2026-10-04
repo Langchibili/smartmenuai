@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import org.json.JSONObject
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -13,7 +14,7 @@ class DrawOverModule : Module() {
         Name("DrawOverNativeModule")
         Function("checkPermission") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                Settings.canDrawOverlays(appContext.reactContext)
+                appContext.reactContext?.let { Settings.canDrawOverlays(it) } ?: false
             } else {
                 true
             }
@@ -21,13 +22,15 @@ class DrawOverModule : Module() {
 
         Function("requestPermission") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!Settings.canDrawOverlays(appContext.reactContext)) {
+                val context = appContext.reactContext
+                    ?: throw IllegalStateException("Android context is unavailable")
+                if (!Settings.canDrawOverlays(context)) {
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${appContext.reactContext?.packageName}")
+                        Uri.parse("package:${context.packageName}")
                     )
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    appContext.reactContext?.startActivity(intent)
+                    context.startActivity(intent)
                     false
                 } else {
                     true
@@ -38,6 +41,17 @@ class DrawOverModule : Module() {
         }
 
         // ===== FLOATING BUBBLE CONTROLS =====
+
+        Function("prepareFloatingBubbleService") {
+            val context = appContext.reactContext
+                ?: throw IllegalStateException("Android context is unavailable")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) {
+                FloatingBubbleService.prepare(context)
+                true
+            } else {
+                false
+            }
+        }
         
         Function("startFloatingBubble") {
             FloatingBubbleService.start(appContext.reactContext!!)
@@ -50,7 +64,7 @@ class DrawOverModule : Module() {
         }
         
         Function("isFloatingBubbleShowing") {
-            FloatingBubbleService.isRunning()
+            FloatingBubbleService.isShowing()
         }
         
         Function("updateBubbleBadge") { count: Int ->
@@ -66,6 +80,13 @@ class DrawOverModule : Module() {
             FloatingBubbleService.showRideCard(appContext.reactContext!!, json)
             true
         }
+        AsyncFunction("showOverlay") { data: Map<String, Any?> ->
+            FloatingBubbleService.showRideCard(
+                appContext.reactContext!!,
+                JSONObject(data).toString()
+            )
+            true
+        }
         Function("notifyAppForeground") {
             FloatingBubbleService.notifyAppForeground(appContext.reactContext!!)
             true
@@ -76,19 +97,12 @@ class DrawOverModule : Module() {
             true
         }
 
-        // ===== LEGACY OVERLAY (for ride request popups) =====
-        
-        AsyncFunction("showOverlay") { data: Map<String, Any?> ->
-            // Your existing overlay code here
-            // ... (keep the existing implementation)
-        }
-
         AsyncFunction("hideOverlay") {
-            // Your existing hide code
+            FloatingBubbleService.stop(appContext.reactContext!!)
         }
 
         Function("isOverlayShowing") {
-            false // or your existing implementation
+            FloatingBubbleService.isShowing()
         }
     }
 }

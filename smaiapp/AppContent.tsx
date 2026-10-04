@@ -5,6 +5,7 @@ import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
 
 import BackgroundService from './src/services/BackgroundService';
+import DrawOverModule from './src/services/DrawOverModule';
 import DeviceSocketService from './src/services/DeviceSocketService';
 import LocationService from './src/services/LocationService';
 import NotificationService from './src/services/NotificationService';
@@ -57,6 +58,7 @@ export default function AppContent() {
   const userIdRef = useRef<string | number | null>(null);
   const frontendNameRef = useRef<string | null>(null); // 'owner' | 'employee'
   const authTokenRef = useRef<string | null>(null);
+  const servicesInitializedRef = useRef(false);
 
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
@@ -178,6 +180,21 @@ export default function AppContent() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void DrawOverModule.setAppForeground(true);
+        if (servicesInitializedRef.current) {
+          void DrawOverModule.prepareServiceIfPermitted();
+        }
+      } else if (nextState === 'background') {
+        void DrawOverModule.setAppForeground(false);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   const handleInitializeServices = async (payload: any) => {
     try {
       const { userId, frontendName, socketServerUrl, authToken } = payload;
@@ -191,7 +208,15 @@ export default function AppContent() {
       const started = await BackgroundService.start({ deviceId, userId, frontendName, socketServerUrl: socketUrl, authToken });
       if (!started) return { success: false, error: 'Failed to start services' };
       setupSocketListeners();
-      return { success: true, deviceId, permissions, socketConnected: DeviceSocketService.isConnected() };
+      servicesInitializedRef.current = true;
+      const drawOverPermission = await DrawOverModule.requestPermission();
+      if (drawOverPermission) await DrawOverModule.prepareServiceIfPermitted();
+      return {
+        success: true,
+        deviceId,
+        permissions: { ...permissions, drawOver: drawOverPermission },
+        socketConnected: DeviceSocketService.isConnected(),
+      };
     } catch (e: any) { return { success: false, error: e.message }; }
   };
 

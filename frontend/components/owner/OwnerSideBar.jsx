@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { motion } from "framer-motion";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -39,12 +40,18 @@ export function OwnerSidebar({ role }) {
     const router = useRouter();
     const { user, employee, business, logout } = useAuth();
     const [collapsed, setCollapsed] = useState(false);
+    const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
     const visibleItems = NAV_ITEMS.filter(
         (item) => !item.roles || item.roles.includes(role)
     );
 
     const handleLogout = () => {
+        setLogoutConfirmOpen(true);
+    };
+
+    const confirmLogout = () => {
+        setLogoutConfirmOpen(false);
         logout();
         router.replace("/login");
     };
@@ -381,6 +388,15 @@ export function OwnerSidebar({ role }) {
                     )}
                 </Button>
             </Box>
+            <ConfirmModal
+                open={logoutConfirmOpen}
+                onClose={() => setLogoutConfirmOpen(false)}
+                onConfirm={confirmLogout}
+                title="Sign out?"
+                message="Are you sure you want to sign out of your account?"
+                confirmLabel="Sign out"
+                danger
+            />
         </Box>
     );
 }

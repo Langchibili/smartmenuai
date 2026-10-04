@@ -17,13 +17,30 @@ import {
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { orderApi } from "@/lib/api";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import { orderApi, waiterCallApi } from "@/lib/api";
 import { getLastCustomerMenuUrl, getOrCreateCustomerInstallationId, formatCurrency } from "@/lib/utils";
 import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
 
-function OrderCard({ order }) {
+function OrderCard({ order, installationId }) {
   const business = order.business;
   const location = [business?.city, business?.country].filter(Boolean).join(", ");
+  const [billRequested, setBillRequested] = useState(false);
+  const [requestingBill, setRequestingBill] = useState(false);
+  const [billError, setBillError] = useState("");
+
+  const requestBill = async () => {
+    setRequestingBill(true);
+    setBillError("");
+    try {
+      await waiterCallApi.requestBill(order.id, installationId);
+      setBillRequested(true);
+    } catch (error) {
+      setBillError(error.message || "Unable to request the bill.");
+    } finally {
+      setRequestingBill(false);
+    }
+  };
 
   return (
     <Card sx={{ bgcolor: "#21150D", color: "#F9EDD8", border: "1px solid #49301B" }}>
@@ -47,7 +64,7 @@ function OrderCard({ order }) {
         </Typography>
         <Stack spacing={0.5}>
           {(order.items || []).map((item, index) => (
-            <Typography key={`${order.id}-${index}`} variant="body2">
+            <Typography key={`${order.id}-${index}`} variant="body2" fontWeight={900}>
               {item.quantity} × {item.name} · {formatCurrency(Number(item.price) || 0, business?.currency || "USD")}
             </Typography>
           ))}
@@ -92,6 +109,19 @@ function OrderCard({ order }) {
               </Stack>
             </AccordionDetails>
           </Accordion>
+        )}
+        {!["completed", "cancelled"].includes(order.status) && (
+          <Stack spacing={0.5} sx={{ mt: 1 }}>
+            {billError && <Alert severity="error">{billError}</Alert>}
+            <Button
+              onClick={requestBill}
+              disabled={billRequested || requestingBill || !installationId}
+              startIcon={<ReceiptLongIcon />}
+              sx={{ alignSelf: "flex-start", color: "#F5C842" }}
+            >
+              {billRequested ? "Bill requested" : requestingBill ? "Requesting…" : "Request bill"}
+            </Button>
+          </Stack>
         )}
       </CardContent>
     </Card>
@@ -180,11 +210,13 @@ export default function CustomerOrdersPage() {
             </CardContent>
           </Card>
           {error && <Alert severity="error">{error}</Alert>}
-          {matchedOrder && <OrderCard order={matchedOrder} />}
+          {matchedOrder && <OrderCard order={matchedOrder} installationId={installationId} />}
           {loading ? (
             <Box sx={{ display: "grid", placeItems: "center", py: 6 }}><CircularProgress /></Box>
           ) : orders.length ? (
-            orders.map((order) => <OrderCard key={order.id} order={order} />)
+            orders.map((order) => (
+              <OrderCard key={order.id} order={order} installationId={installationId} />
+            ))
           ) : (
             <Typography color="#D4A872">Your orders will appear here after you place an order from a QR menu.</Typography>
           )}

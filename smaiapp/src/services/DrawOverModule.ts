@@ -40,6 +40,46 @@ class DrawOverModule {
     return true;
   }
 
+  async requestPermission(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      if (await DrawOverNativeModule.checkPermission()) return true;
+      await DrawOverNativeModule.requestPermission();
+      const granted = await DrawOverNativeModule.checkPermission();
+      if (!granted) {
+        logger.warn('Draw-over access must be enabled in Android settings.');
+      }
+      return granted;
+    } catch (error) {
+      logger.error('Unable to request draw-over permission:', error);
+      return false;
+    }
+  }
+
+  async prepareServiceIfPermitted(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      if (!(await DrawOverNativeModule.checkPermission())) return false;
+      return Boolean(await DrawOverNativeModule.prepareFloatingBubbleService());
+    } catch (error) {
+      logger.error('Unable to prepare draw-over service:', error);
+      return false;
+    }
+  }
+
+  async setAppForeground(isForeground: boolean): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+      if (isForeground) {
+        await DrawOverNativeModule.notifyAppForeground();
+      } else {
+        await DrawOverNativeModule.notifyAppBackground();
+      }
+    } catch (error) {
+      logger.error('Unable to update draw-over visibility:', error);
+    }
+  }
+
   async show(data: DrawOverData): Promise<void> {
     if (Platform.OS !== 'android') {
       logger.warn('⚠️ Draw-over only on Android');
@@ -54,6 +94,10 @@ class DrawOverModule {
 
       if (!this.validateData(data)) {
         logger.error('❌ Invalid data');
+        return;
+      }
+      if (!(await DrawOverNativeModule.checkPermission())) {
+        logger.warn('Draw-over access is not enabled; skipping the system overlay.');
         return;
       }
 

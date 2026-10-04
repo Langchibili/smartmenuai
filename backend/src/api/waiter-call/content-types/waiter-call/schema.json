@@ -10,6 +10,14 @@
     "message": {
       "type": "string"
     },
+    "request_type": {
+      "type": "enumeration",
+      "enum": [
+        "waiter",
+        "bill"
+      ],
+      "default": "waiter"
+    },
     "status": {
       "type": "enumeration",
       "enum": [

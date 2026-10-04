@@ -164,7 +164,11 @@ function AlertCard({ call, onAcknowledge, onResolve, acknowledging, resolving })
                 >
                   Table {call.table?.table_number ?? "—"}
                 </Typography>
-                <Chip label={cfg.label} color={cfg.chipColor} size="small" />
+                <Chip
+                  label={call.request_type === "bill" ? "Bill requested" : cfg.label}
+                  color={call.request_type === "bill" ? "warning" : cfg.chipColor}
+                  size="small"
+                />
               </Stack>
 
               {call.message && (

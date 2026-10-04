@@ -28,6 +28,7 @@ import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { alpha } from "@mui/material/styles";
 import { useAuth } from "@/lib/auth-context";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 
 const OWNER_ITEMS = [
   { label: "Home", path: "/owner/dashboard", icon: DashboardIcon },
@@ -55,6 +56,7 @@ export default function MainNavigation() {
   const { business, employee, logout } = useAuth();
   const internalPaths = useRef([]);
   const [moreAnchor, setMoreAnchor] = useState(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const role = employee?.role?.toLowerCase();
   const items = role === "waiter"
     ? WAITER_ITEMS
@@ -104,6 +106,11 @@ export default function MainNavigation() {
 
   const handleLogout = () => {
     setMoreAnchor(null);
+    setLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutConfirmOpen(false);
     logout();
     router.replace("/login");
   };
@@ -114,7 +121,7 @@ export default function MainNavigation() {
         position="sticky"
         elevation={0}
         sx={{
-          zIndex: (theme) => theme.zIndex.modal + 1,
+          zIndex: (theme) => theme.zIndex.appBar + 1,
           bgcolor: "rgba(13,4,0,0.94)",
           borderBottom: `1px solid ${alpha("#D4850A", 0.15)}`,
           backdropFilter: "blur(16px)",
@@ -236,6 +243,15 @@ export default function MainNavigation() {
           </MenuItem>
         </Menu>
       </Paper>
+      <ConfirmModal
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={confirmLogout}
+        title="Sign out?"
+        message="Are you sure you want to sign out of your account?"
+        confirmLabel="Sign out"
+        danger
+      />
     </>
   );
 }

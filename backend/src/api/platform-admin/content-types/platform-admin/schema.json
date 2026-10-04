@@ -26,6 +26,12 @@
     "ios_app_link": {
       "type": "string"
     },
+    "waiter_call_delay": {
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 1440
+    },
     "user": {
       "type": "relation",
       "relation": "oneToOne",

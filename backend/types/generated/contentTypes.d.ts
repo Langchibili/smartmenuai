@@ -1551,6 +1551,15 @@ export interface ApiPlatformAdminPlatformAdmin
       'oneToOne',
       'plugin::users-permissions.user'
     >;
+    waiter_call_delay: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1440;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<1>;
   };
 }
 
@@ -1704,6 +1713,8 @@ export interface ApiWaiterCallWaiterCall extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     message: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
+    request_type: Schema.Attribute.Enumeration<['waiter', 'bill']> &
+      Schema.Attribute.DefaultTo<'waiter'>;
     status: Schema.Attribute.Enumeration<
       ['pending', 'acknowledged', 'completed']
     > &

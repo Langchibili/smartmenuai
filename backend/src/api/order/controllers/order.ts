@@ -46,7 +46,17 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       const { businessId, tableId, branchId } = ctx.request.body;
       if (!businessId) return ctx.badRequest('businessId is required');
 
-      const [business, table, menuSettings, categories, items, promotions] = await Promise.all([
+      const [
+        business,
+        table,
+        menuSettings,
+        categories,
+        items,
+        promotions,
+        platformSettings,
+        latestWaiterCall,
+        activeBillRequest,
+      ] = await Promise.all([
         strapi.db.query('api::business.business').findOne({
           where: { id: businessId },
           populate: ['logo', 'country_record', 'city_record'],
@@ -73,6 +83,34 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           where: { business: businessId, is_active: true },
           populate: ['image'],
         }),
+        strapi.db.query('api::platform-admin.platform-admin').findOne({
+          where: { role: 'platform_master', is_active: true },
+          select: ['waiter_call_delay'],
+        }),
+        tableId
+          ? strapi.db.query('api::waiter-call.waiter-call').findMany({
+              where: {
+                table: tableId,
+                business: businessId,
+                $or: [{ request_type: 'waiter' }, { request_type: { $null: true } }],
+              },
+              select: ['createdAt'],
+              orderBy: { createdAt: 'desc' },
+              limit: 1,
+            })
+          : Promise.resolve([]),
+        tableId
+          ? strapi.db.query('api::waiter-call.waiter-call').findMany({
+              where: {
+                table: tableId,
+                business: businessId,
+                request_type: 'bill',
+                status: { $in: ['pending', 'acknowledged'] },
+              },
+              select: ['id'],
+              limit: 1,
+            })
+          : Promise.resolve([]),
       ]);
 
       if (!business) return ctx.notFound('Business not found');
@@ -83,8 +121,16 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       )) {
         return ctx.notFound('Table not found for this business');
       }
+      const waiterCallDelayMinutes = Math.max(1, Number(platformSettings?.waiter_call_delay) || 1);
+      const cooldownEndsAt = latestWaiterCall[0]?.createdAt
+        ? new Date(latestWaiterCall[0].createdAt).getTime() + waiterCallDelayMinutes * 60 * 1000
+        : 0;
+      const waiterCallRemainingSeconds = Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000));
 
       ctx.send({
+        waiterCallDelayMinutes,
+        waiterCallRemainingSeconds,
+        billRequestActive: activeBillRequest.length > 0,
         business: {
           id: business.id,
           business_name: business.business_name,

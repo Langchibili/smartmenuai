@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
 import android.view.*
@@ -42,6 +43,7 @@ class FloatingBubbleService : Service() {
         const val ACTION_SHOW_RIPPLE       = "ACTION_SHOW_RIPPLE"
         const val ACTION_APP_FOREGROUND    = "ACTION_APP_FOREGROUND"
         const val ACTION_APP_BACKGROUND    = "ACTION_APP_BACKGROUND"
+        const val ACTION_PREPARE           = "ACTION_PREPARE"
         // New: delivers ride/delivery JSON to the card
         const val ACTION_SHOW_RIDE_CARD    = "ACTION_SHOW_RIDE_CARD"
 
@@ -58,6 +60,12 @@ class FloatingBubbleService : Service() {
         fun start(context: Context) {
             dispatch(context, Intent(context, FloatingBubbleService::class.java).apply {
                 action = ACTION_START
+            })
+        }
+
+        fun prepare(context: Context) {
+            dispatch(context, Intent(context, FloatingBubbleService::class.java).apply {
+                action = ACTION_PREPARE
             })
         }
 
@@ -85,23 +93,29 @@ class FloatingBubbleService : Service() {
          * rideJson — a JSON string with the ride or delivery payload.
          */
         fun showRideCard(context: Context, rideJson: String) {
-            dispatch(context, Intent(context, FloatingBubbleService::class.java).apply {
+            val intent = Intent(context, FloatingBubbleService::class.java).apply {
                 action = ACTION_SHOW_RIDE_CARD
                 putExtra(EXTRA_RIDE_JSON, rideJson)
-            })
+            }
+            if (isRunning()) context.startService(intent) else dispatch(context, intent)
         }
 
         fun notifyAppForeground(context: Context) {
+            if (!isRunning()) return
             context.startService(Intent(context, FloatingBubbleService::class.java).apply {
                 action = ACTION_APP_FOREGROUND
             })
         }
 
         fun notifyAppBackground(context: Context) {
-            dispatch(context, Intent(context, FloatingBubbleService::class.java).apply {
+            if (!isRunning()) return
+            context.startService(Intent(context, FloatingBubbleService::class.java).apply {
                 action = ACTION_APP_BACKGROUND
             })
         }
+
+        fun isShowing(): Boolean =
+            instance?.floatingView?.let { it.isAttachedToWindow && it.visibility == View.VISIBLE } == true
 
         private fun dispatch(context: Context, intent: Intent) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -130,6 +144,10 @@ class FloatingBubbleService : Service() {
         }
 
         when (intent?.action) {
+
+            ACTION_PREPARE -> {
+                Log.d(TAG, "✅ Overlay service prepared")
+            }
 
             ACTION_START -> {
                 // Start without ride data (generic "you're online" card)
@@ -217,7 +235,7 @@ class FloatingBubbleService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("SmartMenu AI")
-            .setContentText("Tap to open the order")
+            .setContentText("Ready to show new order alerts")
             .setSmallIcon(applicationInfo.icon)
             .setContentIntent(pi)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -257,6 +275,11 @@ class FloatingBubbleService : Service() {
             return
         }
         Log.d(TAG, "🃏 showFloatingCard()")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Log.e(TAG, "Draw-over permission is not granted")
+            return
+        }
 
         try {
             floatingView = buildCardView(rideJson)
@@ -311,6 +334,18 @@ class FloatingBubbleService : Service() {
     // ─── Card view builder ────────────────────────────────────────────────────
 
     private fun buildCardView(rideJson: String?): View {
+        val payload = rideJson?.let {
+            try {
+                JSONObject(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "JSON parse error", e)
+                null
+            }
+        }
+        if (payload?.optString("type") == "order_request") {
+            return buildOrderCardView(payload)
+        }
+
         val d = resources.displayMetrics.density
 
         // ── Parse ride data ────────────────────────────────────────────────────
@@ -531,6 +566,117 @@ class FloatingBubbleService : Service() {
         }.also { card.addView(it) }
 
         return card
+    }
+
+    private fun buildOrderCardView(payload: JSONObject): View {
+        val d = resources.displayMetrics.density
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.WHITE)
+                cornerRadius = 22 * d
+            }
+            elevation = 28f
+            clipToOutline = true
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            setPadding((20 * d).toInt(), (18 * d).toInt(), (20 * d).toInt(), (20 * d).toInt())
+        }
+
+        val header = FrameLayout(this).apply {
+            layoutParams = lp(w = LinearLayout.LayoutParams.MATCH_PARENT, bottomMargin = (14 * d).toInt())
+        }
+        TextView(this).apply {
+            text = "NEW ORDER"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#A65300"))
+            gravity = Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        }.also { header.addView(it) }
+        TextView(this).apply {
+            text = "✕"
+            textSize = 13f
+            setTextColor(Color.parseColor("#777777"))
+            gravity = Gravity.CENTER
+            background = ovalDrawable("#F0F0F0")
+            layoutParams = FrameLayout.LayoutParams((30 * d).toInt(), (30 * d).toInt(), Gravity.END or Gravity.TOP)
+            setOnClickListener {
+                cancelFadeTimer()
+                hideCard()
+            }
+        }.also { header.addView(it) }
+        card.addView(header)
+
+        TextView(this).apply {
+            text = payload.optString("orderNumber").ifBlank { "Order received" }
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#1A1A1A"))
+            gravity = Gravity.CENTER
+            layoutParams = lp(w = LinearLayout.LayoutParams.MATCH_PARENT, bottomMargin = (14 * d).toInt())
+        }.also { card.addView(it) }
+
+        card.addView(divider(d))
+        addOrderDetail(card, "Table", payload.optString("tableNumber", "—"), d)
+        addOrderDetail(card, "Items", payload.optInt("itemCount", 0).toString(), d)
+        addOrderDetail(card, "Total", "%.2f".format(payload.optDouble("total", 0.0)), d)
+        card.addView(divider(d))
+
+        TextView(this).apply {
+            text = payload.optString("message").ifBlank { "A customer placed a new order." }
+            textSize = 14f
+            setTextColor(Color.parseColor("#555555"))
+            gravity = Gravity.CENTER
+            layoutParams = lp(
+                w = LinearLayout.LayoutParams.MATCH_PARENT,
+                topMargin = (12 * d).toInt(),
+                bottomMargin = (12 * d).toInt()
+            )
+        }.also { card.addView(it) }
+
+        TextView(this).apply {
+            text = "Tap to view the order"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = pillDrawable("#FF6B00", 14 * d)
+            setPadding((16 * d).toInt(), (15 * d).toInt(), (16 * d).toInt(), (15 * d).toInt())
+            layoutParams = lp(w = LinearLayout.LayoutParams.MATCH_PARENT, topMargin = (8 * d).toInt())
+            setOnClickListener { openApp() }
+        }.also { card.addView(it) }
+
+        return card
+    }
+
+    private fun addOrderDetail(card: LinearLayout, label: String, value: String, density: Float) {
+        LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = lp(
+                w = LinearLayout.LayoutParams.MATCH_PARENT,
+                topMargin = (10 * density).toInt(),
+                bottomMargin = (10 * density).toInt()
+            )
+            TextView(this@FloatingBubbleService).apply {
+                text = label
+                textSize = 14f
+                setTextColor(Color.parseColor("#777777"))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }.also { addView(it) }
+            TextView(this@FloatingBubbleService).apply {
+                text = value
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#1A1A1A"))
+                gravity = Gravity.END
+            }.also { addView(it) }
+        }.also { card.addView(it) }
     }
 
     // ─── Helper: open main app activity ──────────────────────────────────────

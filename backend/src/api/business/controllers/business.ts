@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { getAdminSettings } from '../../../utils/admin-settings';
 import crypto from 'crypto';
 
 export default factories.createCoreController('api::business.business', ({ strapi }) => ({
@@ -286,12 +287,18 @@ export default factories.createCoreController('api::business.business', ({ strap
         );
       }
 
+      const adminSettings = await getAdminSettings(strapi);
+      const businessTerminology = adminSettings.business_terminology?.[
+        String(business?.business_type || '').toLocaleLowerCase()
+      ] || {};
+
       ctx.send({
         business: business
           ? {
               id: business.id,
               business_name: business.business_name,
               business_type: business.business_type,
+              terminology: businessTerminology,
               plan_type: business.plan_type,
               currency: business.currency,
               city: business.city,

@@ -20,6 +20,9 @@
     "price": {
       "type": "decimal"
     },
+    "image": {
+      "type": "string"
+    },
     "notes": {
       "type": "text"
     },

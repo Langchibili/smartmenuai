@@ -19,22 +19,41 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { orderApi, waiterCallApi } from "@/lib/api";
-import { getLastCustomerMenuUrl, getOrCreateCustomerInstallationId, formatCurrency } from "@/lib/utils";
+import { formatCurrency, getBusinessWord, getLastCustomerMenuUrl, getMediaUrl, getOrCreateCustomerInstallationId } from "@/lib/utils";
 import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
+import { ConfirmModal } from "@/components/ui/smart-modal";
+import OrderReviewDialog from "@/components/customer/OrderReviewDialog";
+import ImagePreview from "@/components/ui/image-preview";
 
 function OrderCard({ order, installationId }) {
   const business = order.business;
   const location = [business?.city, business?.country].filter(Boolean).join(", ");
-  const [billRequested, setBillRequested] = useState(false);
+  const [billRequested, setBillRequested] = useState(Boolean(order.bill_request_active));
   const [requestingBill, setRequestingBill] = useState(false);
   const [billError, setBillError] = useState("");
+  const [billCooldownSeconds, setBillCooldownSeconds] = useState(
+    Number(order.bill_request_remaining_seconds) || 0
+  );
+  const [confirmBillOpen, setConfirmBillOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBillCooldownSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const requestBill = async () => {
+    if (requestingBill || billCooldownSeconds > 0 || billRequested) return;
     setRequestingBill(true);
     setBillError("");
     try {
-      await waiterCallApi.requestBill(order.id, installationId);
-      setBillRequested(true);
+      const response = await waiterCallApi.requestBill(order.id, installationId);
+      if (response.alreadyRequested || response.callId) setBillRequested(true);
+      setBillCooldownSeconds(Number(response.cooldownSeconds || response.cooldownRemainingSeconds) || 0);
+      if (response.cooldownRemainingSeconds > 0 && !response.alreadyRequested) {
+        setBillError(`Please wait ${Math.ceil(response.cooldownRemainingSeconds / 60)} minute(s) before requesting the bill again.`);
+      }
     } catch (error) {
       setBillError(error.message || "Unable to request the bill.");
     } finally {
@@ -64,9 +83,18 @@ function OrderCard({ order, installationId }) {
         </Typography>
         <Stack spacing={0.5}>
           {(order.items || []).map((item, index) => (
-            <Typography key={`${order.id}-${index}`} variant="body2" fontWeight={900}>
-              {item.quantity} × {item.name} · {formatCurrency(Number(item.price) || 0, business?.currency || "USD")}
-            </Typography>
+            <Stack key={`${order.id}-${index}`} direction="row" alignItems="center" spacing={1}>
+              {item.image && (
+                <ImagePreview
+                  src={getMediaUrl(item.image)}
+                  alt={item.name}
+                  sx={{ width: 52, height: 52, borderRadius: 1.5, flexShrink: 0 }}
+                />
+              )}
+              <Typography variant="body1" fontWeight={900} sx={{ color: "#F9EDD8" }}>
+                {item.quantity} × {item.name} · {formatCurrency(Number(item.price) || 0, business?.currency || "USD")}
+              </Typography>
+            </Stack>
           ))}
         </Stack>
         {order.menu_snapshot?.items?.length > 0 && (
@@ -83,7 +111,7 @@ function OrderCard({ order, installationId }) {
             <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#D4A872" }} />}>
               <Box>
                 <Typography fontWeight={700}>
-                  Menu at time of order · {order.menu_snapshot.display_name || business?.business_name || "Menu"}
+                  {getBusinessWord(business, "menu", "Menu")} at time of order · {order.menu_snapshot.display_name || business?.business_name || "Menu"}
                 </Typography>
                 {order.menu_snapshot.tagline && (
                   <Typography variant="caption" color="#D4A872">
@@ -97,7 +125,16 @@ function OrderCard({ order, installationId }) {
                 {order.menu_snapshot.items.map((item, index) => (
                   <Box key={`${order.id}-menu-${item.id || index}`} sx={{ py: 0.75, borderBottom: "1px solid #49301B" }}>
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Typography fontWeight={600}>{item.name}</Typography>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        {item.image && (
+                          <ImagePreview
+                            src={getMediaUrl(item.image)}
+                            alt={item.name}
+                            sx={{ width: 48, height: 48, borderRadius: 1.5, flexShrink: 0 }}
+                          />
+                        )}
+                        <Typography fontWeight={600}>{item.name}</Typography>
+                      </Stack>
                       <Typography color="#D4A872">
                         {formatCurrency(Number(item.price) || 0, order.menu_snapshot.currency || business?.currency || "USD")}
                       </Typography>
@@ -114,16 +151,34 @@ function OrderCard({ order, installationId }) {
           <Stack spacing={0.5} sx={{ mt: 1 }}>
             {billError && <Alert severity="error">{billError}</Alert>}
             <Button
-              onClick={requestBill}
-              disabled={billRequested || requestingBill || !installationId}
+              onClick={() => setConfirmBillOpen(true)}
+              disabled={billRequested || requestingBill || billCooldownSeconds > 0 || !installationId}
               startIcon={<ReceiptLongIcon />}
               sx={{ alignSelf: "flex-start", color: "#F5C842" }}
             >
-              {billRequested ? "Bill requested" : requestingBill ? "Requesting…" : "Request bill"}
+              {billRequested
+                ? "Bill requested"
+                : requestingBill
+                  ? "Requesting…"
+                  : billCooldownSeconds > 0
+                    ? `Request bill (${Math.floor(billCooldownSeconds / 60)}:${String(billCooldownSeconds % 60).padStart(2, "0")})`
+                    : "Request bill"}
             </Button>
           </Stack>
         )}
       </CardContent>
+      <ConfirmModal
+        open={confirmBillOpen}
+        onClose={() => setConfirmBillOpen(false)}
+        onConfirm={async () => {
+          await requestBill();
+          setConfirmBillOpen(false);
+        }}
+        title="Request the bill?"
+        message="Notify the staff that you are ready for the bill?"
+        confirmLabel="Request bill"
+        loading={requestingBill}
+      />
     </Card>
   );
 }
@@ -134,6 +189,7 @@ export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [lookupOrderNumber, setLookupOrderNumber] = useState("");
   const [matchedOrder, setMatchedOrder] = useState(null);
+  const [reviewOrder, setReviewOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [error, setError] = useState("");
@@ -144,10 +200,15 @@ export default function CustomerOrdersPage() {
       try {
         const id = getOrCreateCustomerInstallationId();
         setMenuHref(getLastCustomerMenuUrl());
+        setInstallationId(id);
         const result = await orderApi.getCustomerHistory(id);
         if (!cancelled) {
-          setInstallationId(id);
-          setOrders(result.orders || []);
+          const history = result.orders || [];
+          setOrders(history);
+          const nextReview = history.find(
+            (order) => order.status === "completed" && !order.customer_rating
+          );
+          if (nextReview) setReviewOrder((current) => current || nextReview);
         }
       } catch (loadError) {
         if (!cancelled) setError(loadError.message || "Unable to load your order history.");
@@ -156,7 +217,11 @@ export default function CustomerOrdersPage() {
       }
     };
     load();
-    return () => { cancelled = true; };
+    const interval = window.setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, []);
 
   const findOrder = async () => {
@@ -223,6 +288,20 @@ export default function CustomerOrdersPage() {
         </Stack>
       </Box>
       <CustomerBottomNav selected="orders" menuHref={menuHref} />
+      <OrderReviewDialog
+        key={reviewOrder?.id || "order-review"}
+        order={reviewOrder}
+        installationId={installationId}
+        onSubmitted={(updatedOrder) => {
+          setOrders((current) =>
+            current.map((order) => order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order)
+          );
+          setMatchedOrder((current) =>
+            current?.id === updatedOrder.id ? { ...current, ...updatedOrder } : current
+          );
+          setReviewOrder(null);
+        }}
+      />
     </Box>
   );
 }

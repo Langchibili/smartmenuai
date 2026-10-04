@@ -33,6 +33,7 @@ export default function TablePreviewDrawer({
   actionLabel,
   onAction,
   busy = false,
+  waiterWord = "waiter",
 }) {
   const open = Boolean(table);
 
@@ -114,7 +115,7 @@ export default function TablePreviewDrawer({
 
           <Stack spacing={1.25}>
             <Typography variant="body2" sx={{ color: "#D4A872" }}>
-              Assigned waiter: {table.assigned_waiter?.full_name ?? table.waiter?.full_name ?? "Unassigned"}
+              Assigned {waiterWord}: {table.assigned_waiter?.full_name ?? table.waiter?.full_name ?? "Unassigned"}
             </Typography>
             {table.branch?.branch_name && (
               <Typography variant="body2" sx={{ color: "#D4A872" }}>

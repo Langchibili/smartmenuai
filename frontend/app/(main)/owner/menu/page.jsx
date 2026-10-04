@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import {
-  Alert, Box, Typography, Button, Paper, Card, CardMedia, CardContent, CardActions, Grid,
+  Alert, Box, Typography, Button, Paper, Card, CardContent, CardActions, Grid,
   Chip, Stack, TextField, Switch, FormControlLabel, CircularProgress,
   IconButton, Divider,
   alpha,
@@ -13,7 +13,8 @@ import { Modal } from "@/components/ui/modal";
 import MenuItemImageUpload from "@/components/menu/MenuItemImageUpload";
 import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency, getMediaUrl } from "@/lib/utils";
+import { formatCurrency, getBusinessWord, getMediaUrl } from "@/lib/utils";
+import ImagePreview from "@/components/ui/image-preview";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -227,7 +228,7 @@ export default function MenuPage() {
     <Box sx={{ px: { xs: 2, lg: 4 }, py: 3, maxWidth: "1440px", mx: "auto" }}>
       {/* Header */}
       <PageHeader
-        title="Menu"
+        title={getBusinessWord(business, "menu", "Menu")}
         icon="📋"
         subtitle={`${items.length} items across ${categories.length} categories`}
         actions={
@@ -425,11 +426,10 @@ export default function MenuPage() {
                     }}
                   >
                   {item.image && (
-                    <CardMedia
-                      component="img"
-                      image={getMediaUrl(item.image?.url ?? item.image)}
+                    <ImagePreview
+                      src={getMediaUrl(item.image?.url ?? item.image)}
                       alt={item.name}
-                      sx={{ height: 140, objectFit: "cover" }}
+                      sx={{ width: "100%", height: 140 }}
                     />
                   )}
                   <CardContent sx={{ p: 2.5, pb: 1 }}>
@@ -705,6 +705,9 @@ export default function MenuPage() {
               ))}
             </Grid>
           </Box>
+          <Alert severity="info">
+            Create the menu first, then upload the image afterwards.
+          </Alert>
           <MenuItemImageUpload
             menuItemId={editing?.id}
             image={editing?.image}

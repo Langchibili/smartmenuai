@@ -591,143 +591,48 @@ export interface ApiAdmnSettingAdmnSetting extends Struct.SingleTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
-    adminSupportEmails: Schema.Attribute.JSON;
-    adminSupportNumbers: Schema.Attribute.JSON;
-    affiliateSystemEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    allowFloatTopUpWithOkraPay: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    allowManualCompletion: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    allowMultipleTrials: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    allowNegativeFloat: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    allowRidePaymentWithOkraPay: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    appsServerPollingIntervalInSeconds: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<20>;
-    autoApproveDeliverers: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    autoApproveDrivers: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    autoRenewByDefault: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    blockCashRidesOnInsufficientFloat: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    cashEnabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
-    commissionTiers: Schema.Attribute.JSON;
-    commissionType: Schema.Attribute.Enumeration<
-      ['percentage', 'flat_rate', 'tiered']
-    > &
-      Schema.Attribute.DefaultTo<'percentage'>;
+    android_app_link: Schema.Attribute.String;
+    business_terminology: Schema.Attribute.JSON &
+      Schema.Attribute.DefaultTo<{
+        bar: {
+          menu: 'drinks';
+          waiter: 'atteindant';
+        };
+      }>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    defaultCommissionPercentage: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<15>;
-    defaultCurrency: Schema.Attribute.Relation<
-      'oneToOne',
-      'api::currency.currency'
-    >;
-    defaultFlatCommission: Schema.Attribute.Decimal;
-    defaultFreeTrialDays: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<7>;
-    deliveryRequestTimeoutSeconds: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<60>;
-    driverCancellationCooldownMinutes: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<15>;
-    driverOrderRequestRingtone: Schema.Attribute.Media<'audios'>;
-    driverOrderRequestVibration: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    emailEnabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
-    externalPaymentGateway: Schema.Attribute.Enumeration<['lencopay']> &
-      Schema.Attribute.DefaultTo<'lencopay'>;
-    freeTrialEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    getOnlineDriverCurrentLocationCronIntervalInSecs: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<30>;
-    initialDelivererFloat: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<0>;
-    initialDriverFloat: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<0>;
+    email: Schema.Attribute.Email & Schema.Attribute.Required;
+    ios_app_link: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::admn-setting.admn-setting'
     > &
       Schema.Attribute.Private;
-    maximumCommission: Schema.Attribute.Decimal;
-    maximumFloatTopup: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<1000>;
-    maxSimultaneousDriverRequests: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<1>;
-    minimumCommission: Schema.Attribute.Decimal;
-    minimumFloatTopup: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<10>;
-    minimumPointsForRedemption: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<100>;
-    minimumWithdrawAmount: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<10>;
-    moneyPerPoint: Schema.Attribute.Decimal & Schema.Attribute.DefaultTo<0.1>;
-    negativeFloatLimit: Schema.Attribute.Decimal &
-      Schema.Attribute.DefaultTo<0>;
-    okrapayEnabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
-    overideOtpCode: Schema.Attribute.String &
-      Schema.Attribute.DefaultTo<'121212'>;
-    paymentSystemType: Schema.Attribute.Enumeration<
-      ['float_based', 'subscription_based', 'hybrid']
-    > &
-      Schema.Attribute.DefaultTo<'float_based'>;
-    platformName: Schema.Attribute.String &
-      Schema.Attribute.DefaultTo<'Okra Rides'>;
-    pointsPerDriverReferral: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<50>;
-    pointsPerRiderFirstRide: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<20>;
-    pointsPerRiderReferral: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<10>;
     publishedAt: Schema.Attribute.DateTime;
-    pushNotificationsEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    referralBonusEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireArrivalConfirmation: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireDriverLicense: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireFitnessDocument: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireInsurance: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireNationalId: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireProofOfAddress: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
-    requireRoadTax: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
-    requireVehicleRegistration: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    rideBookingRadius: Schema.Attribute.Integer;
-    rideCompletionProximity: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<100>;
-    rideRequestTimeoutSeconds: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<30>;
-    smsEnabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
-    subscriptionGracePeriodDays: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<3>;
-    supportEmail: Schema.Attribute.Email;
-    supportPhone: Schema.Attribute.String;
-    targetRidesForUnlock: Schema.Attribute.Integer &
-      Schema.Attribute.DefaultTo<1000>;
-    tieredCommissionEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
+    request_bill_delay: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1440;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<1>;
+    support_phone_number: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    whatsappEnabled: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    withdrawableBalance: Schema.Attribute.Enumeration<['float', 'earnings']> &
-      Schema.Attribute.DefaultTo<'float'>;
+    waiter_call_delay: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1440;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<1>;
   };
 }
 
@@ -1487,6 +1392,15 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     customer_installation_id: Schema.Attribute.String;
+    customer_rating: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 5;
+          min: 1;
+        },
+        number
+      >;
+    customer_review: Schema.Attribute.Text;
     customer_session_id: Schema.Attribute.String;
     items: Schema.Attribute.Component<'order.order-item', true>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1542,6 +1456,15 @@ export interface ApiPlatformAdminPlatformAdmin
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    request_bill_delay: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1440;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<1>;
     role: Schema.Attribute.String &
       Schema.Attribute.DefaultTo<'platform_master'>;
     updatedAt: Schema.Attribute.DateTime;

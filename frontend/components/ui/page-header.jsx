@@ -86,18 +86,21 @@ const colorMap = {
   red: { text: ERROR, bg: alpha(ERROR, 0.1), border: alpha(ERROR, 0.2) },
 };
 
-export function StatCard({ label, value, sub, icon, trend, color = "amber" }) {
+export function StatCard({ label, value, sub, icon, trend, color = "amber", sx }) {
   const c = colorMap[color] || colorMap.amber;
 
   return (
     <Box
-      sx={{
-        p: 2.5,
-        borderRadius: "16px",
-        background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
-        border: "1px solid rgba(107,51,24,0.25)",
-        backdropFilter: "blur(6px)",
-      }}
+      sx={[
+        {
+          p: 2.5,
+          borderRadius: "16px",
+          background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
+          border: "1px solid rgba(107,51,24,0.25)",
+          backdropFilter: "blur(6px)",
+        },
+        ...(sx ? (Array.isArray(sx) ? sx : [sx]) : []),
+      ]}
     >
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
         <Typography

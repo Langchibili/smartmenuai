@@ -12,6 +12,7 @@ import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { subscribeBusinessActivity } from "@/lib/socket";
+import { getBusinessWord } from "@/lib/utils";
 import QRCode from "qrcode";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
@@ -58,6 +59,7 @@ const inputSx = {
 
 export default function TablesPage() {
   const { business } = useAuth();
+  const waiterWord = getBusinessWord(business, "waiter", "waiter");
   const { toast } = useToast();
 
   const [tables, setTables] = useState([]);
@@ -67,6 +69,7 @@ export default function TablesPage() {
   const [page, setPage] = useState(1);
   const [addModal, setAddModal] = useState(false);
   const [qrModal, setQrModal] = useState(null);
+  const [assigningTableId, setAssigningTableId] = useState(null);
   const qrCanvasRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -126,6 +129,26 @@ export default function TablesPage() {
       await tableApi.updateTableStatus(tableId, status);
       setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
     } catch (e) { toast(e.message, "error"); }
+  };
+
+  const assignWaiter = async (table, waiterId) => {
+    setAssigningTableId(table.id);
+    try {
+      await tableApi.assignWaiterToTable(table.id, waiterId || null);
+      const assignedWaiter = waiters.find((waiter) => String(waiter.id) === String(waiterId)) || null;
+      setTables((current) => current.map((item) =>
+        item.id === table.id
+          ? { ...item, assigned_waiter: assignedWaiter }
+          : assignedWaiter && String(item.assigned_waiter?.id) === String(waiterId)
+            ? { ...item, assigned_waiter: null }
+            : item
+      ));
+      toast(assignedWaiter ? "Waiter assigned to table" : "Waiter unassigned from table", "success");
+    } catch (error) {
+      toast(error.message || "Unable to assign waiter to table", "error");
+    } finally {
+      setAssigningTableId(null);
+    }
   };
 
   const downloadQr = () => {
@@ -299,6 +322,7 @@ export default function TablesPage() {
               <Paper
                 elevation={0}
                 sx={{
+                  position: "relative",
                   p: 2.5,
                   borderRadius: "16px",
                   background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
@@ -332,6 +356,9 @@ export default function TablesPage() {
                   </Box>
                   <Box
                     sx={{
+                      position: "absolute",
+                      top: 18,
+                      right: 18,
                       width: 10,
                       height: 10,
                       borderRadius: "50%",
@@ -370,6 +397,24 @@ export default function TablesPage() {
                 </Box>
 
                 {/* Actions */}
+                <FormControl fullWidth size="small" sx={inputSx}>
+                  <InputLabel id={`assigned-waiter-${table.id}`} sx={{ color: TEXT_M }}>
+                    Assigned {waiterWord}
+                  </InputLabel>
+                  <Select
+                    labelId={`assigned-waiter-${table.id}`}
+                    value={table.assigned_waiter?.id ?? ""}
+                    label={`Assigned ${waiterWord}`}
+                    disabled={assigningTableId === table.id}
+                    onChange={(event) => assignWaiter(table, event.target.value)}
+                  >
+                    <MenuItem value="">Unassigned</MenuItem>
+                    {waiters.map((waiter) => (
+                      <MenuItem key={waiter.id} value={waiter.id}>{waiter.full_name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
                 <Stack direction="row" spacing={0.8}>
                   <Button
                     size="small"
@@ -523,10 +568,10 @@ export default function TablesPage() {
             sx={inputSx}
           />
           <FormControl fullWidth sx={inputSx}>
-            <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>Assign waiter</InputLabel>
+            <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>Assign {waiterWord}</InputLabel>
             <Select
               value={form.assignedWaiterId}
-              label="Assign waiter"
+              label={`Assign ${waiterWord}`}
               onChange={e => setForm(f => ({ ...f, assignedWaiterId: e.target.value }))}
             >
               <MenuItem value="">None</MenuItem>

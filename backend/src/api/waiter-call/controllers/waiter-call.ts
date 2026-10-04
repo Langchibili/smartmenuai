@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { getAdminSettings } from '../../../utils/admin-settings';
 import socket from '../../../services/socket-client';
 
 export default factories.createCoreController('api::waiter-call.waiter-call', ({ strapi }) => ({
@@ -23,11 +24,8 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       populate: ['owner'],
     });
     if (!business) return ctx.notFound('Business not found');
-    const platformSettings = await strapi.db.query('api::platform-admin.platform-admin').findOne({
-      where: { role: 'platform_master', is_active: true },
-      select: ['waiter_call_delay'],
-    });
-    const delayMinutes = Math.max(1, Number(platformSettings?.waiter_call_delay) || 1);
+    const adminSettings = await getAdminSettings(strapi);
+    const delayMinutes = Math.max(1, Number(adminSettings.waiter_call_delay) || 1);
     const latestCall = await strapi.db.query('api::waiter-call.waiter-call').findMany({
       where: {
         table: tableId,
@@ -128,17 +126,38 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
     });
     if (!order?.table || !order.business) return ctx.notFound('Active customer order not found');
 
-    const activeCall = await strapi.db.query('api::waiter-call.waiter-call').findMany({
+    const adminSettings = await getAdminSettings(strapi);
+    const delayMinutes = Math.max(1, Number(adminSettings.request_bill_delay) || 1);
+    const latestBillRequest = await strapi.db.query('api::waiter-call.waiter-call').findMany({
       where: {
         table: order.table.id,
         business: order.business.id,
         request_type: 'bill',
-        status: { $in: ['pending', 'acknowledged'] },
       },
-      select: ['id'],
+      select: ['id', 'createdAt'],
+      orderBy: { createdAt: 'desc' },
       limit: 1,
     });
-    if (activeCall.length) return ctx.send({ success: true, alreadyRequested: true });
+    const cooldownEndsAt = latestBillRequest[0]?.createdAt
+      ? new Date(latestBillRequest[0].createdAt).getTime() + delayMinutes * 60 * 1000
+      : 0;
+    const cooldownRemainingSeconds = Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000));
+    const activeCall = latestBillRequest[0]?.id
+      ? await strapi.db.query('api::waiter-call.waiter-call').findOne({
+          where: {
+            id: latestBillRequest[0].id,
+            status: { $in: ['pending', 'acknowledged'] },
+          },
+          select: ['id'],
+        })
+      : null;
+    if (activeCall || cooldownRemainingSeconds > 0) {
+      return ctx.send({
+        success: true,
+        alreadyRequested: Boolean(activeCall),
+        cooldownRemainingSeconds,
+      });
+    }
 
     const activeWaiters = await strapi.db.query('api::employee.employee').findMany({
       where: {
@@ -193,7 +212,11 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       table_number: order.table.table_number,
       status: 'bill_requested',
     });
-    ctx.send({ success: true, callId: call.id });
+    ctx.send({
+      success: true,
+      callId: call.id,
+      cooldownSeconds: delayMinutes * 60,
+    });
   },
 
   // ─────────────────────────────────────────────────────────────────────────────

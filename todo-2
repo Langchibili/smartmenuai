@@ -231,6 +231,10 @@ work only in SmartMenuAI, and do not run an app in development mode.
   installation/order association, avoids duplicate active bill requests, marks
   the table `bill_requested`, and emits the existing waiter-call and table
   status socket events.
+- [x] Added the independent platform-admin `request_bill_delay` setting
+  (default 1 minute) and enforce its table-level cooldown in the backend.
+- [x] Show a confirmation dialog before bill requests, and expose the remaining
+  bill cooldown on the menu and customer order history.
 - [x] Made ordered-item names very bold, enabled swipe selection for customer
   menu categories, and added bill-request actions to the customer order cards.
 - [x] Added MUI sign-out confirmations to the owner header, sidebar, and main
@@ -240,3 +244,19 @@ work only in SmartMenuAI, and do not run an app in development mode.
 - [ ] Verify cooldown timing and reload behavior, bill-request delivery to
   owner/waiter clients, and sign-out confirmation in the running apps. No
   runtime servers were started and no MySQL data was changed during this pass.
+
+## SmartMenu owner, customer, and settings enhancements
+
+- [x] Added full-screen image previews, dashboard order counts and navigation,
+  blinking waiter alerts, live-order previews, table-worker reassignment, and
+  menu image-upload guidance.
+- [x] Added required customer ratings for completed orders and configurable
+  business terminology backed by `api::admn-setting.admn-setting`.
+- [x] Replaced ride-app settings with support contact, app links, and bounded
+  waiter/bill delay settings; regenerated Strapi types with no ride fields.
+- [x] Focused frontend ESLint reported zero errors; frontend and backend
+  production builds passed; `git diff --check` passed.
+- [ ] Live browser verification remains blocked because the existing frontend
+  served stale build chunks and the backend port was unreachable. Do not stop
+  or restart pre-existing processes without approval. No database records
+  were written.

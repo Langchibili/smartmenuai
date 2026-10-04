@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { getAdminSettings } from '../../../utils/admin-settings';
 
 const isInstallationId = (value) =>
   typeof value === 'string' && /^[a-zA-Z0-9_-]{16,128}$/.test(value);
@@ -8,7 +9,7 @@ const countryTokens = (country) =>
     .filter(Boolean)
     .map((value) => String(value).trim().toLocaleLowerCase());
 
-const mapOrder = (order) => {
+const mapOrder = (order, businessTerminology = {}) => {
   const business = order.business;
   const branch = order.table?.branch;
   return {
@@ -17,6 +18,8 @@ const mapOrder = (order) => {
     numeric_order_number: order.numeric_order_number,
     status: order.orderStatus,
     payment_status: order.payment_status,
+    customer_rating: order.customer_rating || null,
+    customer_review: order.customer_review || null,
     items: order.items || [],
     menu_snapshot: order.menu_snapshot || null,
     subtotal: order.subtotal,
@@ -43,6 +46,10 @@ const mapOrder = (order) => {
       ? {
           id: business.id,
           business_name: business.business_name,
+          business_type: business.business_type,
+          terminology: businessTerminology[
+            String(business.business_type || '').toLocaleLowerCase()
+          ] || {},
           address: business.address,
           city: business.city_record?.name || business.city || null,
           country: business.country_record?.name || business.country || null,
@@ -52,7 +59,82 @@ const mapOrder = (order) => {
   };
 };
 
+const addBillCooldowns = async (strapi, orders) => {
+  const settings = await getAdminSettings(strapi);
+  const terminology = settings.business_terminology || {};
+  const tableIds = [...new Set(orders.map((order) => order.table?.id).filter(Boolean))];
+  if (!tableIds.length) {
+    return orders.map((order) => ({
+      ...mapOrder(order, terminology),
+      bill_request_remaining_seconds: 0,
+      bill_request_active: false,
+    }));
+  }
+
+  const billRequests = await strapi.db.query('api::waiter-call.waiter-call').findMany({
+      where: {
+        table: { id: { $in: tableIds } },
+        request_type: 'bill',
+      },
+      select: ['createdAt', 'status'],
+      populate: ['table'],
+      orderBy: { createdAt: 'desc' },
+      limit: 1000,
+    });
+  const delayMs = Math.max(1, Number(settings.request_bill_delay) || 1) * 60 * 1000;
+  const latestByTable = new Map();
+  for (const request of billRequests) {
+    const tableId = String(request.table?.id || request.table);
+    if (!latestByTable.has(tableId)) latestByTable.set(tableId, request);
+  }
+
+  return orders.map((order) => {
+    const latest = latestByTable.get(String(order.table?.id));
+    const cooldownEndsAt = latest?.createdAt
+      ? new Date(latest.createdAt).getTime() + delayMs
+      : 0;
+    return {
+      ...mapOrder(order, terminology),
+      bill_request_remaining_seconds: Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000)),
+      bill_request_active: ['pending', 'acknowledged'].includes(latest?.status),
+    };
+  });
+};
+
 export default factories.createCoreController('api::customer.customer', ({ strapi }) => ({
+  async submitOrderReview(ctx) {
+    const { orderId, customerInstallationId, rating, review = '' } = ctx.request.body || {};
+    const numericRating = Number(rating);
+    if (!orderId || !isInstallationId(customerInstallationId)) {
+      return ctx.badRequest('A valid order and customer installation are required');
+    }
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return ctx.badRequest('Rating must be a whole number from 1 to 5');
+    }
+    if (typeof review !== 'string' || review.length > 1000) {
+      return ctx.badRequest('Review must be 1000 characters or fewer');
+    }
+
+    const order = await strapi.db.query('api::order.order').findOne({
+      where: { id: orderId, customer_installation_id: customerInstallationId },
+      select: ['id', 'orderStatus', 'customer_rating'],
+    });
+    if (!order) return ctx.notFound('Order not found for this customer installation');
+    if (order.orderStatus !== 'completed') {
+      return ctx.badRequest('Only completed orders can be reviewed');
+    }
+    if (order.customer_rating) return ctx.badRequest('This order has already been reviewed');
+
+    await strapi.db.query('api::order.order').update({
+      where: { id: order.id },
+      data: {
+        customer_rating: numericRating,
+        customer_review: review.trim() || null,
+      },
+    });
+    ctx.send({ success: true, rating: numericRating });
+  },
+
   async getCustomerHistory(ctx) {
     const { customerInstallationId } = ctx.request.body || {};
     if (!isInstallationId(customerInstallationId)) {
@@ -70,7 +152,7 @@ export default factories.createCoreController('api::customer.customer', ({ strap
         orderBy: { createdAt: 'desc' },
         limit: 100,
       });
-      ctx.send({ orders: orders.map(mapOrder) });
+      ctx.send({ orders: await addBillCooldowns(strapi, orders) });
     } catch (err) {
       strapi.log.error(`[getCustomerHistory] ${err?.stack || err?.message || err}`);
       ctx.throw(500, 'Unable to load customer history');
@@ -102,7 +184,8 @@ export default factories.createCoreController('api::customer.customer', ({ strap
         orderBy: { createdAt: 'desc' },
         limit: 1,
       });
-      ctx.send({ order: orders[0] ? mapOrder(orders[0]) : null });
+      const enrichedOrders = await addBillCooldowns(strapi, orders);
+      ctx.send({ order: enrichedOrders[0] || null });
     } catch (err) {
       strapi.log.error(`[getCustomerOrder] ${err?.stack || err?.message || err}`);
       ctx.throw(500, 'Unable to look up customer order');

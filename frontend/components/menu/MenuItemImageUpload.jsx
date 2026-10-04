@@ -15,6 +15,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlin
 import CloseIcon from "@mui/icons-material/Close";
 import { menuApi } from "@/lib/api";
 import { getMediaUrl } from "@/lib/utils";
+import ImagePreview from "@/components/ui/image-preview";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -138,11 +139,10 @@ export default function MenuItemImageUpload({
               bgcolor: "rgba(34,197,94,0.04)",
             }}
           >
-            <Box
-              component="img"
+            <ImagePreview
               src={previewUrl}
               alt="Menu item"
-              sx={{ width: { xs: "100%", sm: 112 }, height: 96, borderRadius: 2, objectFit: "cover" }}
+              sx={{ width: { xs: "100%", sm: 112 }, height: 96, borderRadius: 2 }}
             />
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
               <CheckCircleOutlineIcon sx={{ color: "#22c55e" }} />

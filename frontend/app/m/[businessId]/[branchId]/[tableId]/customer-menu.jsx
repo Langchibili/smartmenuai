@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardMedia,
   Chip,
   CircularProgress,
   Divider,
@@ -26,11 +25,15 @@ import {
   getCustomerSessionId,
   getMediaUrl,
   getOrCreateCustomerInstallationId,
+  getBusinessWord,
 } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
 import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
 import AppDownloadPrompt from "@/components/customer/AppDownloadPrompt";
+import { ConfirmModal } from "@/components/ui/smart-modal";
+import ImagePreview from "@/components/ui/image-preview";
+import OrderReviewDialog from "@/components/customer/OrderReviewDialog";
 
 export default function CustomerMenu({ businessId, branchId, tableId }) {
   const router = useRouter();
@@ -48,9 +51,12 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const [notice, setNotice] = useState("");
   const [lastPlacedOrder, setLastPlacedOrder] = useState(null);
   const [waiterCooldownSeconds, setWaiterCooldownSeconds] = useState(0);
+  const [billCooldownSeconds, setBillCooldownSeconds] = useState(0);
   const [callingWaiter, setCallingWaiter] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
   const [requestingBill, setRequestingBill] = useState(false);
+  const [confirmBillOrderId, setConfirmBillOrderId] = useState(null);
+  const [reviewOrder, setReviewOrder] = useState(null);
   const categoryTouchStart = useRef(null);
 
   useEffect(() => {
@@ -73,7 +79,14 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
     const loadOrders = async () => {
       try {
         const result = await orderApi.getClientOrders(sessionId);
-        if (!cancelled) setCustomerOrders(result.orders || []);
+        if (!cancelled) {
+          const orders = result.orders || [];
+          setCustomerOrders(orders);
+          const orderToReview = orders.find(
+            (order) => order.status === "completed" && !order.customer_rating
+          );
+          if (orderToReview) setReviewOrder((current) => current || orderToReview);
+        }
       } catch (loadError) {
         if (!cancelled) setError(loadError.message || "Unable to refresh your order status.");
       }
@@ -94,6 +107,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
         if (!cancelled) {
           setMenu(data);
           setWaiterCooldownSeconds(Number(data.waiterCallRemainingSeconds) || 0);
+          setBillCooldownSeconds(Number(data.billRequestRemainingSeconds) || 0);
           setBillRequested(Boolean(data.billRequestActive));
         }
       })
@@ -109,6 +123,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setWaiterCooldownSeconds((remaining) => Math.max(0, remaining - 1));
+      setBillCooldownSeconds((remaining) => Math.max(0, remaining - 1));
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
@@ -180,12 +195,12 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
       });
       if (!response.success) {
         setWaiterCooldownSeconds(Number(response.retryAfterSeconds) || 0);
-        setNotice(response.message || "Please wait before calling a waiter again.");
+        setNotice(`Please wait before calling ${waiterWord} again.`);
         return;
       }
       setWaiterCooldownSeconds(Number(response.cooldownSeconds) ||
         (Number(menu?.waiterCallDelayMinutes) || 1) * 60);
-      setNotice("A waiter has been notified.");
+      setNotice(`${waiterWord} has been notified.`);
     } catch (callError) {
       setError(callError.message || "Unable to call a waiter.");
     } finally {
@@ -194,13 +209,18 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   };
 
   const requestBill = async (orderId) => {
-    if (!orderId || !installationId || requestingBill) return;
+    if (!orderId || !installationId || requestingBill || billCooldownSeconds > 0) return;
     setRequestingBill(true);
     setError("");
     try {
-      await waiterCallApi.requestBill(orderId, installationId);
-      setBillRequested(true);
-      setNotice("The waiter has been notified that you would like the bill.");
+      const response = await waiterCallApi.requestBill(orderId, installationId);
+      if (response.alreadyRequested || response.callId) setBillRequested(true);
+      setBillCooldownSeconds(Number(response.cooldownSeconds || response.cooldownRemainingSeconds) || 0);
+      setNotice(response.alreadyRequested
+        ? "A bill request is already active for this table."
+        : response.cooldownRemainingSeconds > 0
+          ? `Please wait ${Math.ceil(response.cooldownRemainingSeconds / 60)} minute(s) before requesting the bill again.`
+          : "The waiter has been notified that you would like the bill.");
     } catch (requestError) {
       setError(requestError.message || "Unable to request the bill.");
     } finally {
@@ -220,6 +240,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const formatPrice = (value) => formatCurrency(Number(value) || 0, currency);
   const pendingOrder = customerOrders.find((order) => !["completed", "cancelled"].includes(order.status));
   const activeOrderId = pendingOrder?.id || lastPlacedOrder?.id;
+  const waiterWord = getBusinessWord(menu.business, "waiter", "waiter");
   const categoryIds = ["all", ...(menu.categories || []).map((category) => category.id)];
   const changeCategoryBySwipe = (event) => {
     const startX = categoryTouchStart.current;
@@ -236,6 +257,9 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   };
   const cooldownLabel = waiterCooldownSeconds > 0
     ? ` (${Math.floor(waiterCooldownSeconds / 60)}:${String(waiterCooldownSeconds % 60).padStart(2, "0")})`
+    : "";
+  const billCooldownLabel = billCooldownSeconds > 0
+    ? ` (${Math.floor(billCooldownSeconds / 60)}:${String(billCooldownSeconds % 60).padStart(2, "0")})`
     : "";
 
   return (
@@ -267,17 +291,21 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
               endIcon={<WavingHandIcon />}
               sx={{ color: "#F5C842", borderColor: "#D4850A" }}
             >
-              {callingWaiter ? "Calling…" : waiterCooldownSeconds > 0 ? `Call a waiter${cooldownLabel}` : "Call a waiter"}
+              {callingWaiter
+                ? `Calling ${waiterWord}…`
+                : waiterCooldownSeconds > 0
+                  ? `Call ${waiterWord}${cooldownLabel}`
+                  : `Call ${waiterWord}`}
             </Button>
             {activeOrderId && (
               <Button
-                onClick={() => requestBill(activeOrderId)}
+                onClick={() => setConfirmBillOrderId(activeOrderId)}
                 variant="outlined"
-                disabled={billRequested || requestingBill}
+                disabled={billRequested || billCooldownSeconds > 0 || requestingBill}
                 endIcon={<ReceiptLongIcon />}
                 sx={{ color: "#F5C842", borderColor: "#D4850A" }}
               >
-                {billRequested ? "Bill requested" : requestingBill ? "Requesting…" : "Request bill"}
+                {billRequested ? "Bill requested" : requestingBill ? "Requesting…" : `Request bill${billCooldownLabel}`}
               </Button>
             )}
           </Stack>
@@ -297,7 +325,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
               <Stack spacing={0.75}>
                 {lastPlacedOrder.items.map((item) => (
                   <Stack key={item.id} direction="row" justifyContent="space-between" spacing={2}>
-                    <Typography variant="body2" fontWeight={900}>
+                    <Typography variant="body1" fontWeight={900} sx={{ color: "#F9EDD8" }}>
                       {item.quantity} × {item.name}
                     </Typography>
                     <Typography variant="body2" color="#D4A872">
@@ -340,19 +368,19 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
                       {formatPrice(order.total)} · {new Date(order.created_date).toLocaleTimeString()}
                     </Typography>
                     {order.items?.map((item, index) => (
-                      <Typography key={`${order.id}-${index}`} variant="body2" color="#D4A872" fontWeight={900}>
+                      <Typography key={`${order.id}-${index}`} variant="body1" color="#F9EDD8" fontWeight={900}>
                         {item.quantity} × {item.name}
                       </Typography>
                     ))}
                     {!["completed", "cancelled"].includes(order.status) && (
                       <Button
                         size="small"
-                        onClick={() => requestBill(order.id)}
-                        disabled={billRequested || requestingBill}
+                        onClick={() => setConfirmBillOrderId(order.id)}
+                        disabled={billRequested || billCooldownSeconds > 0 || requestingBill}
                         startIcon={<ReceiptLongIcon />}
                         sx={{ mt: 0.5, color: "#F5C842" }}
                       >
-                        {billRequested ? "Bill requested" : "Request bill"}
+                        {billRequested ? "Bill requested" : `Request bill${billCooldownLabel}`}
                       </Button>
                     )}
                   </Box>
@@ -385,11 +413,10 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           {visibleItems.map((item) => (
             <Card key={item.id} sx={{ display: "flex", bgcolor: "#21150D", color: "inherit", border: "1px solid #49301B" }}>
               {item.image && (
-                <CardMedia
-                  component="img"
-                  image={getMediaUrl(item.image)}
+                <ImagePreview
+                  src={getMediaUrl(item.image)}
                   alt={item.name}
-                  sx={{ width: 112, objectFit: "cover" }}
+                  sx={{ width: 112, minHeight: 112, flexShrink: 0 }}
                 />
               )}
               <CardContent sx={{ flex: 1, minWidth: 0 }}>
@@ -456,6 +483,30 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           What deals are out there?
         </Button>
       )}
+      <ConfirmModal
+        open={Boolean(confirmBillOrderId)}
+        onClose={() => setConfirmBillOrderId(null)}
+        onConfirm={async () => {
+          const orderId = confirmBillOrderId;
+          await requestBill(orderId);
+          setConfirmBillOrderId(null);
+        }}
+        title="Request the bill?"
+        message="Notify the staff that you are ready for the bill?"
+        confirmLabel="Request bill"
+        loading={requestingBill}
+      />
+      <OrderReviewDialog
+        key={reviewOrder?.id || "order-review"}
+        order={reviewOrder}
+        installationId={installationId}
+        onSubmitted={(updatedOrder) => {
+          setCustomerOrders((current) =>
+            current.map((order) => order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order)
+          );
+          setReviewOrder(null);
+        }}
+      />
     </Box>
   );
 }

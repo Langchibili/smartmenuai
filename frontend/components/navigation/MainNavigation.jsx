@@ -28,6 +28,7 @@ import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { alpha } from "@mui/material/styles";
 import { useAuth } from "@/lib/auth-context";
+import { getBusinessWord } from "@/lib/utils";
 import { ConfirmModal } from "@/components/ui/smart-modal";
 
 const OWNER_ITEMS = [
@@ -204,7 +205,7 @@ export default function MainNavigation() {
               component={path === "more" ? "button" : Link}
               href={path === "more" ? undefined : path}
               value={path}
-              label={label}
+              label={path === "/owner/menu" ? getBusinessWord(business, "menu", label) : label}
               icon={<Icon fontSize="small" />}
               onClick={path === "more" ? (event) => setMoreAnchor(event.currentTarget) : undefined}
             />

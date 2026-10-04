@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { getAdminSettings } from '../../../utils/admin-settings';
 import { randomBytes } from 'crypto';
 
 async function createOrderWithDisplayNumber(strapi, businessId, data) {
@@ -53,8 +54,9 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         categories,
         items,
         promotions,
-        platformSettings,
+        adminSettings,
         latestWaiterCall,
+        latestBillRequest,
         activeBillRequest,
       ] = await Promise.all([
         strapi.db.query('api::business.business').findOne({
@@ -83,10 +85,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           where: { business: businessId, is_active: true },
           populate: ['image'],
         }),
-        strapi.db.query('api::platform-admin.platform-admin').findOne({
-          where: { role: 'platform_master', is_active: true },
-          select: ['waiter_call_delay'],
-        }),
+        getAdminSettings(strapi),
         tableId
           ? strapi.db.query('api::waiter-call.waiter-call').findMany({
               where: {
@@ -94,6 +93,14 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
                 business: businessId,
                 $or: [{ request_type: 'waiter' }, { request_type: { $null: true } }],
               },
+              select: ['createdAt'],
+              orderBy: { createdAt: 'desc' },
+              limit: 1,
+            })
+          : Promise.resolve([]),
+        tableId
+          ? strapi.db.query('api::waiter-call.waiter-call').findMany({
+              where: { table: tableId, business: businessId, request_type: 'bill' },
               select: ['createdAt'],
               orderBy: { createdAt: 'desc' },
               limit: 1,
@@ -121,20 +128,33 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       )) {
         return ctx.notFound('Table not found for this business');
       }
-      const waiterCallDelayMinutes = Math.max(1, Number(platformSettings?.waiter_call_delay) || 1);
+      const waiterCallDelayMinutes = Math.max(1, Number(adminSettings.waiter_call_delay) || 1);
       const cooldownEndsAt = latestWaiterCall[0]?.createdAt
         ? new Date(latestWaiterCall[0].createdAt).getTime() + waiterCallDelayMinutes * 60 * 1000
         : 0;
       const waiterCallRemainingSeconds = Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000));
+      const billRequestDelayMinutes = Math.max(1, Number(adminSettings.request_bill_delay) || 1);
+      const activeBillCooldownEndsAt = latestBillRequest[0]?.createdAt
+        ? new Date(latestBillRequest[0].createdAt).getTime() + billRequestDelayMinutes * 60 * 1000
+        : 0;
+      const billRequestRemainingSeconds = Math.max(
+        0,
+        Math.ceil((activeBillCooldownEndsAt - Date.now()) / 1000)
+      );
 
       ctx.send({
         waiterCallDelayMinutes,
         waiterCallRemainingSeconds,
+        billRequestDelayMinutes,
+        billRequestRemainingSeconds,
         billRequestActive: activeBillRequest.length > 0,
         business: {
           id: business.id,
           business_name: business.business_name,
           business_type: business.business_type,
+          terminology: adminSettings.business_terminology?.[
+            String(business.business_type || '').toLocaleLowerCase()
+          ] || {},
           plan_type: business.plan_type,
           currency: business.currency,
           address: business.address,
@@ -243,10 +263,11 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
       const orders = await strapi.db.query('api::order.order').findMany({
         where: { customer_session_id: customerSessionId },
-        populate: { items: true },
+        populate: { items: true, business: true },
         orderBy: { createdAt: 'desc' },
         limit: 50,
       });
+      const adminSettings = await getAdminSettings(strapi);
 
       ctx.send({
         orders: orders.map((o) => ({
@@ -255,6 +276,18 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           numeric_order_number: o.numeric_order_number,
           status: o.orderStatus,
           payment_status: o.payment_status,
+          customer_rating: o.customer_rating || null,
+          customer_review: o.customer_review || null,
+          business: o.business
+            ? {
+                id: o.business.id,
+                business_name: o.business.business_name,
+                business_type: o.business.business_type,
+                terminology: adminSettings.business_terminology?.[
+                  String(o.business.business_type || '').toLocaleLowerCase()
+                ] || {},
+              }
+            : null,
           items: o.items,
           subtotal: o.subtotal,
           service_charge: o.service_charge,
@@ -322,6 +355,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         }
         const menuItem = await strapi.db.query('api::menu-item.menu-item').findOne({
           where: { id: item.id, business: businessId, is_available: true },
+          populate: ['image'],
         });
         if (!menuItem) return ctx.badRequest('An item is unavailable or does not belong to this business');
         normalizedItems.push({
@@ -329,6 +363,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           name: menuItem.name,
           quantity,
           price: Number(menuItem.price),
+          image: menuItem.image?.url || null,
           notes: typeof item.notes === 'string' ? item.notes.slice(0, 500) : '',
         });
       }
@@ -391,6 +426,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          image: item.image,
           notes: item.notes,
           status: 'pending' as const,
         })),
@@ -536,7 +572,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
   // ─────────────────────────────────────────────────────────────────────────────
   async getBusinessOrders(ctx) {
     try {
-      const { businessId, branchId, status, limit = 50 } = ctx.request.body;
+      const { businessId, branchId, status, limit = 50, includeSummary = false } = ctx.request.body;
       if (!businessId) return ctx.badRequest('businessId is required');
       const user = ctx.state.user;
       if (!user) return ctx.unauthorized();
@@ -555,6 +591,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       if (employee.role === 'manager') where.table = { branch: employee.branch?.id };
       else if (branchId) where.table = { branch: branchId };
 
+      const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
       const orders = await strapi.db.query('api::order.order').findMany({
         where,
         populate: {
@@ -562,16 +599,32 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           waiter: { populate: ['user'] },
         },
         orderBy: { createdAt: 'desc' },
-        limit: Math.min(limit, 200),
+        limit: safeLimit,
       });
 
+      let ordersToday;
+      if (includeSummary) {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const startOfTomorrow = new Date(startOfToday);
+        startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+        const todayWhere: any = {
+          ...where,
+          createdAt: { $gte: startOfToday, $lt: startOfTomorrow },
+        };
+        ordersToday = await strapi.db.query('api::order.order').count({ where: todayWhere });
+      }
+
       ctx.send({
+        ...(includeSummary ? { ordersToday } : {}),
         orders: orders.map((o) => ({
           id: o.id,
           order_number: o.order_number,
           numeric_order_number: o.numeric_order_number,
           status: o.orderStatus,
           payment_status: o.payment_status,
+          customer_rating: o.customer_rating || null,
+          customer_review: o.customer_review || null,
           items: o.items,
           subtotal: o.subtotal,
           service_charge: o.service_charge,

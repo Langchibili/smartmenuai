@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Box, Card, CardContent, CardMedia, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Card, CardContent, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import { orderApi } from "@/lib/api";
-import { getLastCustomerMenuUrl, getOrCreateCustomerInstallationId } from "@/lib/utils";
+import { getLastCustomerMenuUrl, getMediaUrl, getOrCreateCustomerInstallationId } from "@/lib/utils";
 import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
+import ImagePreview from "@/components/ui/image-preview";
 
 export default function DealsAndPromosPage() {
   const [deals, setDeals] = useState([]);
@@ -50,7 +51,13 @@ export default function DealsAndPromosPage() {
             <Box sx={{ display: "grid", placeItems: "center", py: 6 }}><CircularProgress /></Box>
           ) : deals.length ? deals.map((deal) => (
             <Card key={`${deal.business.id}-${deal.id}`} sx={{ bgcolor: "#21150D", color: "inherit", border: "1px solid #49301B" }}>
-              {deal.image && <CardMedia component="img" height="180" image={deal.image} alt="" />}
+              {deal.image && (
+                <ImagePreview
+                  src={getMediaUrl(deal.image)}
+                  alt={`${deal.title} promotion`}
+                  sx={{ width: "100%", height: 180 }}
+                />
+              )}
               <CardContent>
                 <Chip size="small" label={deal.type.replaceAll("_", " ")} color="warning" sx={{ mb: 1 }} />
                 <Typography variant="h6" fontWeight={800}>{deal.title}</Typography>

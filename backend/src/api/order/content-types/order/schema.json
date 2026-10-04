@@ -52,6 +52,14 @@
     "customer_installation_id": {
       "type": "string"
     },
+    "customer_rating": {
+      "type": "integer",
+      "min": 1,
+      "max": 5
+    },
+    "customer_review": {
+      "type": "text"
+    },
     "menu_snapshot": {
       "type": "json"
     },

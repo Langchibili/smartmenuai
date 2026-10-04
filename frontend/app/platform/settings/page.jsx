@@ -11,7 +11,20 @@ export default function PlatformSettingsPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [links, setLinks] = useState({ android: "", ios: "", waiterCallDelay: 1 });
+  const [links, setLinks] = useState({
+    email: "",
+    supportPhoneNumber: "",
+    android: "",
+    ios: "",
+    waiterCallDelay: 1,
+    requestBillDelay: 1,
+    businessTerminology: JSON.stringify({
+      bar: {
+        menu: "drinks",
+        waiter: "atteindant",
+      },
+    }, null, 2),
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -28,9 +41,13 @@ export default function PlatformSettingsPage() {
       .then((response) => {
         if (active) {
           setLinks({
+            email: response.email || "",
+            supportPhoneNumber: response.supportPhoneNumber || "",
             android: response.appLinks?.android || "",
             ios: response.appLinks?.ios || "",
             waiterCallDelay: response.waiterCallDelay || 1,
+            requestBillDelay: response.requestBillDelay || 1,
+            businessTerminology: JSON.stringify(response.businessTerminology || {}, null, 2),
           });
         }
       })
@@ -46,14 +63,27 @@ export default function PlatformSettingsPage() {
   const save = async (event) => {
     event.preventDefault();
     const delay = Number(links.waiterCallDelay);
-    if (!Number.isInteger(delay) || delay < 1 || delay > 1440) {
-      setError("Waiter call delay must be a whole number from 1 to 1440 minutes.");
+    const billDelay = Number(links.requestBillDelay);
+    if (!Number.isInteger(delay) || delay < 1 || delay > 1440 ||
+      !Number.isInteger(billDelay) || billDelay < 1 || billDelay > 1440) {
+      setError("Waiter call and bill request delays must be whole numbers from 1 to 1440 minutes.");
+      return;
+    }
+    let businessTerminology;
+    try {
+      businessTerminology = JSON.parse(links.businessTerminology);
+    } catch {
+      setError("Business terminology must be valid JSON.");
+      return;
+    }
+    if (!businessTerminology || typeof businessTerminology !== "object" || Array.isArray(businessTerminology)) {
+      setError("Business terminology must be a JSON object grouped by business type.");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      await platformApi.updateAppLinks(links);
+      await platformApi.updateAppLinks({ ...links, businessTerminology });
       toast("Platform settings saved", "success");
     } catch (saveError) {
       setError(saveError.message || "Unable to save app links.");
@@ -87,10 +117,28 @@ export default function PlatformSettingsPage() {
           Platform settings
         </Typography>
         <Typography sx={{ mt: 1, mb: 3, color: "#D4A872" }}>
-          Configure customer app links and the table-level waiter-call cooldown.
+          Configure customer app links and the table-level waiter and bill-request cooldowns.
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Stack spacing={2.5}>
+          <TextField
+            label="Email"
+            type="email"
+            value={links.email}
+            onChange={(event) => setLinks((current) => ({ ...current, email: event.target.value }))}
+            fullWidth
+            required
+          />
+          <TextField
+            label="Support phone number"
+            type="tel"
+            value={links.supportPhoneNumber}
+            onChange={(event) => setLinks((current) => ({
+              ...current,
+              supportPhoneNumber: event.target.value,
+            }))}
+            fullWidth
+          />
           <TextField
             label="Android app link"
             type="url"
@@ -123,6 +171,32 @@ export default function PlatformSettingsPage() {
             helperText="Minimum time before a customer can call a waiter again. Default: 1 minute."
             fullWidth
             required
+          />
+          <TextField
+            label="Request bill delay (minutes)"
+            type="number"
+            value={links.requestBillDelay}
+            onChange={(event) => setLinks((current) => ({
+              ...current,
+              requestBillDelay: event.target.value,
+            }))}
+            inputProps={{ min: 1, max: 1440, step: 1 }}
+            helperText="Minimum time before a customer can request the bill again for the same table. Default: 1 minute."
+            fullWidth
+            required
+          />
+          <TextField
+            label="Business terminology (JSON)"
+            value={links.businessTerminology}
+            onChange={(event) => setLinks((current) => ({
+              ...current,
+              businessTerminology: event.target.value,
+            }))}
+            multiline
+            minRows={6}
+            fullWidth
+            helperText={'Map business types to word overrides, e.g. {"bar":{"menu":"drinks","waiter":"atteindant"}}.'}
+            InputLabelProps={{ shrink: true }}
           />
           <Button type="submit" variant="contained" disabled={saving} sx={{ alignSelf: "flex-start" }}>
             {saving ? "Saving…" : "Save settings"}

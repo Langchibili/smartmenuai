@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { getAdminSettings } from '../../../utils/admin-settings';
 import crypto from 'crypto';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,16 +123,17 @@ export default factories.createCoreController(
 
     async getAppLinks(ctx) {
       try {
-        const admin = await strapi.db.query('api::platform-admin.platform-admin').findOne({
-          where: { role: 'platform_master', is_active: true },
-          select: ['android_app_link', 'ios_app_link', 'waiter_call_delay'],
-        });
+        const settings = await getAdminSettings(strapi);
         ctx.send({
           appLinks: {
-            android: admin?.android_app_link || '',
-            ios: admin?.ios_app_link || '',
+            android: settings.android_app_link || '',
+            ios: settings.ios_app_link || '',
           },
-          waiterCallDelay: admin?.waiter_call_delay || 1,
+          email: settings.email || '',
+          supportPhoneNumber: settings.support_phone_number || '',
+          waiterCallDelay: settings.waiter_call_delay || 1,
+          requestBillDelay: settings.request_bill_delay || 1,
+          businessTerminology: settings.business_terminology || {},
         });
       } catch (err) {
         strapi.log.error(`[getAppLinks] ${err?.stack || err?.message || err}`);
@@ -144,8 +146,22 @@ export default factories.createCoreController(
         const admin = await requirePlatformAdmin(ctx, strapi);
         if (!admin) return;
 
-        const { android, ios, waiterCallDelay } = ctx.request.body || {};
+        const {
+          android,
+          ios,
+          email,
+          supportPhoneNumber,
+          waiterCallDelay,
+          requestBillDelay,
+          businessTerminology,
+        } = ctx.request.body || {};
         const delay = Number(waiterCallDelay);
+        const billDelay = Number(requestBillDelay);
+        const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+        const normalizedPhone = typeof supportPhoneNumber === 'string'
+          ? supportPhoneNumber.trim()
+          : '';
+        const terminology = businessTerminology;
         const isValidLink = (value) => {
           if (typeof value !== 'string' || value.length > 2048) return false;
           if (!value.trim()) return true;
@@ -158,18 +174,55 @@ export default factories.createCoreController(
         if (!isValidLink(android) || !isValidLink(ios)) {
           return ctx.badRequest('App links must be valid HTTPS URLs (or blank)');
         }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+          return ctx.badRequest('A valid support email address is required');
+        }
+        if (normalizedPhone.length > 50) {
+          return ctx.badRequest('Support phone number must be 50 characters or fewer');
+        }
+        if (
+          !terminology ||
+          typeof terminology !== 'object' ||
+          Array.isArray(terminology) ||
+          JSON.stringify(terminology).length > 10000 ||
+          Object.values(terminology).some((words) =>
+            !words ||
+            typeof words !== 'object' ||
+            Array.isArray(words) ||
+            Object.values(words).some((word) => typeof word !== 'string' || word.length > 80)
+          )
+        ) {
+          return ctx.badRequest('Business terminology must be a JSON object of string values');
+        }
         if (!Number.isInteger(delay) || delay < 1 || delay > 1440) {
           return ctx.badRequest('Waiter call delay must be a whole number from 1 to 1440 minutes');
         }
+        if (!Number.isInteger(billDelay) || billDelay < 1 || billDelay > 1440) {
+          return ctx.badRequest('Request bill delay must be a whole number from 1 to 1440 minutes');
+        }
 
-        await strapi.db.query('api::platform-admin.platform-admin').update({
-          where: { id: admin.id },
-          data: {
-            android_app_link: android.trim() || null,
-            ios_app_link: ios.trim() || null,
-            waiter_call_delay: delay,
-          },
-        });
+        const existingSettings = await strapi.db
+          .query('api::admn-setting.admn-setting')
+          .findOne({ where: {} });
+        const settingsData = {
+          email: normalizedEmail,
+          support_phone_number: normalizedPhone || null,
+          android_app_link: android.trim() || null,
+          ios_app_link: ios.trim() || null,
+          waiter_call_delay: delay,
+          request_bill_delay: billDelay,
+          business_terminology: terminology,
+        };
+        if (existingSettings) {
+          await strapi.db.query('api::admn-setting.admn-setting').update({
+            where: { id: existingSettings.id },
+            data: settingsData,
+          });
+        } else {
+          await strapi.db.query('api::admn-setting.admn-setting').create({
+            data: settingsData,
+          });
+        }
         ctx.send({ success: true });
       } catch (err) {
         strapi.log.error(`[updateAppLinks] ${err?.stack || err?.message || err}`);

@@ -2,6 +2,12 @@ export default {
   routes: [
     {
       method: 'POST',
+      path: '/custom-functions/submitOrderReview',
+      handler: 'customer.submitOrderReview',
+      config: { auth: false },
+    },
+    {
+      method: 'POST',
       path: '/custom-functions/getCustomerHistory',
       handler: 'customer.getCustomerHistory',
       config: { auth: false },

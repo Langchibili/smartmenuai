@@ -12,285 +12,39 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "paymentSystemType": {
-      "type": "enumeration",
-      "default": "float_based",
-      "enum": [
-        "float_based",
-        "subscription_based",
-        "hybrid"
-      ]
+    "email": {
+      "type": "email",
+      "required": true
     },
-    "freeTrialEnabled": {
-      "type": "boolean",
-      "default": false
-    },
-    "defaultFreeTrialDays": {
-      "type": "integer",
-      "default": 7
-    },
-    "allowMultipleTrials": {
-      "type": "boolean",
-      "default": false
-    },
-    "subscriptionGracePeriodDays": {
-      "type": "integer",
-      "default": 3
-    },
-    "autoRenewByDefault": {
-      "type": "boolean",
-      "default": true
-    },
-    "maxSimultaneousDriverRequests": {
-      "type": "integer",
-      "default": 1
-    },
-    "rideRequestTimeoutSeconds": {
-      "type": "integer",
-      "default": 30
-    },
-    "deliveryRequestTimeoutSeconds": {
-      "type": "integer",
-      "default": 60
-    },
-    "driverCancellationCooldownMinutes": {
-      "type": "integer",
-      "default": 15
-    },
-    "minimumFloatTopup": {
-      "type": "decimal",
-      "default": 10
-    },
-    "maximumFloatTopup": {
-      "type": "decimal",
-      "default": 1000
-    },
-    "allowNegativeFloat": {
-      "type": "boolean",
-      "default": false
-    },
-    "negativeFloatLimit": {
-      "type": "decimal",
-      "default": 0
-    },
-    "blockCashRidesOnInsufficientFloat": {
-      "type": "boolean",
-      "default": true
-    },
-    "commissionType": {
-      "type": "enumeration",
-      "default": "percentage",
-      "enum": [
-        "percentage",
-        "flat_rate",
-        "tiered"
-      ]
-    },
-    "defaultCommissionPercentage": {
-      "type": "decimal",
-      "default": 15
-    },
-    "defaultFlatCommission": {
-      "type": "decimal"
-    },
-    "minimumCommission": {
-      "type": "decimal"
-    },
-    "maximumCommission": {
-      "type": "decimal"
-    },
-    "tieredCommissionEnabled": {
-      "type": "boolean",
-      "default": false
-    },
-    "commissionTiers": {
-      "type": "json"
-    },
-    "affiliateSystemEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "pointsPerRiderReferral": {
-      "type": "integer",
-      "default": 10
-    },
-    "pointsPerDriverReferral": {
-      "type": "integer",
-      "default": 50
-    },
-    "pointsPerRiderFirstRide": {
-      "type": "integer",
-      "default": 20
-    },
-    "moneyPerPoint": {
-      "type": "decimal",
-      "default": 0.1
-    },
-    "minimumPointsForRedemption": {
-      "type": "integer",
-      "default": 100
-    },
-    "referralBonusEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "driverOrderRequestRingtone": {
-      "type": "media",
-      "multiple": false,
-      "allowedTypes": [
-        "audios"
-      ]
-    },
-    "driverOrderRequestVibration": {
-      "type": "boolean",
-      "default": true
-    },
-    "rideCompletionProximity": {
-      "type": "integer",
-      "default": 100
-    },
-    "allowManualCompletion": {
-      "type": "boolean",
-      "default": false
-    },
-    "requireArrivalConfirmation": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireDriverLicense": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireNationalId": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireProofOfAddress": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireInsurance": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireRoadTax": {
-      "type": "boolean",
-      "default": true
-    },
-    "requireFitnessDocument": {
-      "type": "boolean",
-      "default": true
-    },
-    "targetRidesForUnlock": {
-      "type": "integer",
-      "default": 1000
-    },
-    "smsEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "emailEnabled": {
-      "type": "boolean",
-      "default": false
-    },
-    "pushNotificationsEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "whatsappEnabled": {
-      "type": "boolean",
-      "default": false
-    },
-    "cashEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "okrapayEnabled": {
-      "type": "boolean",
-      "default": true
-    },
-    "defaultCurrency": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::currency.currency"
-    },
-    "platformName": {
-      "type": "string",
-      "default": "Okra Rides"
-    },
-    "supportEmail": {
-      "type": "email"
-    },
-    "supportPhone": {
+    "support_phone_number": {
       "type": "string"
     },
-    "requireVehicleRegistration": {
-      "type": "boolean",
-      "default": false
+    "android_app_link": {
+      "type": "string"
     },
-    "rideBookingRadius": {
-      "type": "integer"
+    "ios_app_link": {
+      "type": "string"
     },
-    "getOnlineDriverCurrentLocationCronIntervalInSecs": {
+    "waiter_call_delay": {
       "type": "integer",
-      "default": 30
+      "default": 1,
+      "min": 1,
+      "max": 1440
     },
-    "externalPaymentGateway": {
-      "type": "enumeration",
-      "default": "lencopay",
-      "enum": [
-        "lencopay"
-      ]
-    },
-    "allowFloatTopUpWithOkraPay": {
-      "type": "boolean",
-      "default": true
-    },
-    "allowRidePaymentWithOkraPay": {
-      "type": "boolean",
-      "default": true
-    },
-    "appsServerPollingIntervalInSeconds": {
+    "request_bill_delay": {
       "type": "integer",
-      "default": 20
+      "default": 1,
+      "min": 1,
+      "max": 1440
     },
-    "adminSupportNumbers": {
-      "type": "json"
-    },
-    "adminSupportEmails": {
-      "type": "json"
-    },
-    "withdrawableBalance": {
-      "type": "enumeration",
-      "default": "float",
-      "enum": [
-        "float",
-        "earnings"
-      ]
-    },
-    "minimumWithdrawAmount": {
-      "type": "integer",
-      "default": 10
-    },
-    "autoApproveDrivers": {
-      "type": "boolean",
-      "default": false
-    },
-    "autoApproveDeliverers": {
-      "type": "boolean",
-      "default": false
-    },
-    "overideOtpCode": {
-      "type": "string",
-      "default": "121212"
-    },
-    "initialDriverFloat": {
-      "type": "decimal",
-      "default": 0
-    },
-    "initialDelivererFloat": {
-      "type": "decimal",
-      "default": 0
+    "business_terminology": {
+      "type": "json",
+      "default": {
+        "bar": {
+          "menu": "drinks",
+          "waiter": "atteindant"
+        }
+      }
     }
   }
 }

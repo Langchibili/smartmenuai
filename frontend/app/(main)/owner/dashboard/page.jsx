@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { orderApi, tableApi } from "@/lib/api";
 import { PageHeader, StatCard } from "@/components/ui/page-header";
-import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
+import { formatCurrency, formatRelativeTime, getBusinessWord } from "@/lib/utils";
 import { subscribeBusinessActivity } from "@/lib/socket";
 import {
   Box,
@@ -17,12 +17,16 @@ import {
   Stack,
   Divider,
   alpha,
+  IconButton,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CircleIcon from "@mui/icons-material/Circle";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import Link from "next/link";
 import { useToast } from "@/components/ui/toast-provider";
 import TablePreviewDrawer from "@/components/tables/TablePreviewDrawer";
+import OrderPreviewDrawer from "@/components/orders/OrderPreviewDrawer";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -62,16 +66,19 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [ordersToday, setOrdersToday] = useState(0);
   const [updatingTable, setUpdatingTable] = useState(false);
 
   const load = useCallback(async () => {
     if (!business?.id) return;
     try {
       const [ordersRes, tablesRes] = await Promise.all([
-        orderApi.getBusinessOrders({ businessId: business.id, limit: 20 }),
+        orderApi.getBusinessOrders({ businessId: business.id, limit: 20, includeSummary: true }),
         tableApi.getBusinessTables(business.id),
       ]);
       setOrders(ordersRes.orders ?? []);
+      setOrdersToday(ordersRes.ordersToday ?? 0);
       setTables(tablesRes.tables ?? []);
       setLoadError("");
     } catch (error) {
@@ -106,10 +113,14 @@ export default function DashboardPage() {
   }, [load]);
 
   const activeOrders = orders.filter(o => !["completed", "cancelled"].includes(o.status));
-  const todayComplete = orders.filter(o => o.status === "completed");
-  const todayRevenue = todayComplete.reduce((s, o) => s + (o.total ?? 0), 0);
   const needsWaiter = tables.filter(t => t.status === "needs_waiter").length;
   const currency = business?.currency ?? "USD";
+  const dashboardLinks = [
+    { label: "Go to orders", href: "/owner/orders" },
+    { label: "Go to tables", href: "/owner/tables" },
+    { label: "View today's orders", href: "/owner/orders" },
+    { label: "Go to tables", href: "/owner/tables" },
+  ];
 
   if (loading) {
     return (
@@ -168,40 +179,99 @@ export default function DashboardPage() {
       {/* KPI row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 6, lg: 3 }} >
+        <Box sx={{ position: "relative" }}>
         <StatCard
           label="Active orders"
           value={activeOrders.length}
           icon="🧾"
           color="amber"
           sub="right now"
+          sx={{ pb: 5 }}
         />
+        <IconButton
+          component={Link}
+          href={dashboardLinks[0].href}
+          aria-label={dashboardLinks[0].label}
+          size="small"
+          sx={{ position: "absolute", right: 10, bottom: 8, color: TEXT_S }}
+        >
+          <ArrowForwardIcon fontSize="small" />
+        </IconButton>
+        </Box>
         </Grid>
         <Grid size={{ xs: 6, lg: 3 }} >
+        <Box sx={{ position: "relative" }}>
         <StatCard
-          label="Waiter alerts"
+          label={`${getBusinessWord(business, "waiter", "Waiter")} alerts`}
           value={needsWaiter}
           icon="🔔"
           color={needsWaiter > 0 ? "red" : "green"}
           sub="tables calling"
+          sx={{
+            pb: 5,
+            ...(needsWaiter > 0 ? {
+              border: "1px solid rgba(239,68,68,0.95)",
+              animation: "waiterAlertBlink 1s steps(1, end) infinite",
+              "@keyframes waiterAlertBlink": {
+                "0%, 100%": { borderColor: "rgba(239,68,68,0.95)", boxShadow: "0 0 12px rgba(239,68,68,0.35)" },
+                "50%": { borderColor: "rgba(239,68,68,0.12)", boxShadow: "none" },
+              },
+              "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+            } : {}),
+          }}
         />
+        <IconButton
+          component={Link}
+          href={dashboardLinks[1].href}
+          aria-label={dashboardLinks[1].label}
+          size="small"
+          sx={{ position: "absolute", right: 10, bottom: 8, color: TEXT_S }}
+        >
+          <ArrowForwardIcon fontSize="small" />
+        </IconButton>
+        </Box>
         </Grid>
         <Grid size={{ xs: 6, lg: 3 }} >
+        <Box sx={{ position: "relative" }}>
         <StatCard
-          label="Revenue today"
-          value={formatCurrency(todayRevenue, currency)}
-          icon="💰"
+          label="Orders today"
+          value={ordersToday}
+          icon="📦"
           color="green"
-          sub={`${todayComplete.length} completed`}
+          sub="total orders today"
+          sx={{ pb: 5 }}
         />
+        <IconButton
+          component={Link}
+          href={dashboardLinks[2].href}
+          aria-label={dashboardLinks[2].label}
+          size="small"
+          sx={{ position: "absolute", right: 10, bottom: 8, color: TEXT_S }}
+        >
+          <ArrowForwardIcon fontSize="small" />
+        </IconButton>
+        </Box>
         </Grid>
         <Grid size={{ xs: 6, lg: 3 }} >
+        <Box sx={{ position: "relative" }}>
         <StatCard
           label="Tables"
           value={`${tables.filter(t => t.status !== "available").length}/${tables.length}`}
           icon="🪑"
           color="blue"
           sub="occupied"
+          sx={{ pb: 5 }}
         />
+        <IconButton
+          component={Link}
+          href={dashboardLinks[3].href}
+          aria-label={dashboardLinks[3].label}
+          size="small"
+          sx={{ position: "absolute", right: 10, bottom: 8, color: TEXT_S }}
+        >
+          <ArrowForwardIcon fontSize="small" />
+        </IconButton>
+        </Box>
         </Grid>
       </Grid>
 
@@ -258,6 +328,10 @@ export default function DashboardPage() {
                   return (
                     <Box
                       key={order.id}
+                      component="button"
+                      type="button"
+                      aria-label={`Preview order ${order.numeric_order_number || order.order_number}`}
+                      onClick={() => setSelectedOrder(order)}
                       sx={{
                         display: "flex",
                         alignItems: "center",
@@ -268,6 +342,11 @@ export default function DashboardPage() {
                         background: "rgba(45,18,0,0.5)",
                         border: "1px solid rgba(107,51,24,0.25)",
                         transition: "all 0.15s",
+                        cursor: "pointer",
+                        width: "100%",
+                        textAlign: "left",
+                        color: "inherit",
+                        font: "inherit",
                         "&:hover": { borderColor: "rgba(212,133,10,0.4)" },
                       }}
                     >
@@ -455,10 +534,16 @@ export default function DashboardPage() {
       </Grid>
       <TablePreviewDrawer
         table={selectedTable}
+        waiterWord={getBusinessWord(business, "waiter", "waiter")}
         onClose={() => setSelectedTable(null)}
         onStatusChange={updateTableStatus}
         busy={updatingTable}
         viewMoreHref={selectedTable ? `/owner/tables/${selectedTable.id}` : "/owner/tables"}
+      />
+      <OrderPreviewDrawer
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        currency={currency}
       />
     </Box>
   );

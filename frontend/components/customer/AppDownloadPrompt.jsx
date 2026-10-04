@@ -17,7 +17,12 @@ export default function AppDownloadPrompt({ hidden = false }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [links, setLinks] = useState({ android: "", ios: "" });
+  const [links, setLinks] = useState({
+    android: "",
+    ios: "",
+    email: "",
+    supportPhoneNumber: "",
+  });
 
   const openDownloadDialog = async () => {
     setOpen(true);
@@ -28,6 +33,8 @@ export default function AppDownloadPrompt({ hidden = false }) {
       setLinks({
         android: response.appLinks?.android || "",
         ios: response.appLinks?.ios || "",
+        email: response.email || "",
+        supportPhoneNumber: response.supportPhoneNumber || "",
       });
     } catch (loadError) {
       setError(loadError.message || "Unable to load app download links.");
@@ -81,6 +88,13 @@ export default function AppDownloadPrompt({ hidden = false }) {
                 </Button>
               ) : (
                 <Alert severity="info">iOS app link has not been configured yet.</Alert>
+              )}
+              {(links.email || links.supportPhoneNumber) && (
+                <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>
+                  Support: {links.email}
+                  {links.email && links.supportPhoneNumber ? " · " : ""}
+                  {links.supportPhoneNumber}
+                </Typography>
               )}
             </Stack>
           )}

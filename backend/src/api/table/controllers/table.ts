@@ -85,19 +85,39 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
       });
       if (existingTable) return ctx.badRequest('A table with this number already exists in the branch');
 
-      // Create the table record first to get its ID
-      const table = await strapi.db.query('api::table.table').create({
-        data: {
-          table_name: tableName || `Table ${parsedTableNumber}`,
-          table_number: parsedTableNumber,
-          capacity: parsedCapacity,
-          status: 'available',
-          business: businessId,
-          branch: finalBranchId,
-          assigned_waiter: assignedWaiterId || null,
-          publishedAt: new Date(),
-        },
-      });
+      // Move an assigned waiter from any previous table atomically with creation.
+      const createTable = async () => {
+        if (assignedWaiterId) {
+          const previousAssignments = await strapi.db.query('api::table.table').findMany({
+            where: {
+              business: businessId,
+              assigned_waiter: assignedWaiterId,
+            },
+            select: ['id'],
+          });
+          for (const previousTable of previousAssignments) {
+            await strapi.db.query('api::table.table').update({
+              where: { id: previousTable.id },
+              data: { assigned_waiter: null },
+            });
+          }
+        }
+        return strapi.db.query('api::table.table').create({
+          data: {
+            table_name: tableName || `Table ${parsedTableNumber}`,
+            table_number: parsedTableNumber,
+            capacity: parsedCapacity,
+            status: 'available',
+            business: businessId,
+            branch: finalBranchId,
+            assigned_waiter: assignedWaiterId || null,
+            publishedAt: new Date(),
+          },
+        });
+      };
+      const table = assignedWaiterId
+        ? await strapi.db.transaction(createTable)
+        : await createTable();
 
       // Build and save the QR / menu URL now that we have the real table ID
       const appUrl = (process.env.FRONTEND_URL || 'http://localhost:3007').replace(/\/$/, '');
@@ -279,10 +299,54 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
         if (!waiter) return ctx.badRequest('Assigned waiter does not belong to this business');
       }
 
-      await strapi.db.query('api::table.table').update({
-        where: { id: tableId },
-        data: { assigned_waiter: waiterId || null },
-      });
+      if (waiterId) {
+        const previousAssignments = await strapi.db.query('api::table.table').findMany({
+          where: {
+            business: table.business?.id,
+            assigned_waiter: waiterId,
+            id: { $ne: tableId },
+          },
+          select: ['id'],
+        });
+        await strapi.db.transaction(async () => {
+          for (const previousTable of previousAssignments) {
+            await strapi.db.query('api::table.table').update({
+              where: { id: previousTable.id },
+              data: { assigned_waiter: null },
+            });
+          }
+          await strapi.db.query('api::table.table').update({
+            where: { id: tableId },
+            data: { assigned_waiter: waiterId },
+          });
+        });
+      } else {
+        await strapi.db.query('api::table.table').update({
+          where: { id: tableId },
+          data: { assigned_waiter: null },
+        });
+      }
+
+      try {
+        const socket = require('../../../services/socket-client').default;
+        const updatedTable = await strapi.db.query('api::table.table').findOne({
+          where: { id: tableId },
+          populate: {
+            business: { populate: ['owner'] },
+            assigned_waiter: { populate: ['user'] },
+          },
+        });
+        socket.emit('table_status_updated', {
+          business_id: updatedTable?.business?.id,
+          owner_id: updatedTable?.business?.owner?.id || null,
+          waiter_id: updatedTable?.assigned_waiter?.user?.id || null,
+          table_id: tableId,
+          table_number: updatedTable?.table_number,
+          status: updatedTable?.status,
+        });
+      } catch (error) {
+        strapi.log.warn(`[Table waiter assignment socket event] ${error.message}`);
+      }
 
       ctx.send({ success: true });
     } catch (err) {

@@ -11,7 +11,8 @@ import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
+import ImagePreview from "@/components/ui/image-preview";
+import { formatCurrency, formatRelativeTime, getMediaUrl, orderStatusLabel } from "@/lib/utils";
 import { subscribeBusinessActivity } from "@/lib/socket";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
@@ -420,14 +421,23 @@ export default function OrdersPage() {
                     borderBottom: i < (selected.items?.length ?? 0) - 1 ? "1px solid rgba(107,51,24,0.2)" : "none",
                   }}
                 >
-                  <Box>
-                    <Typography sx={{ fontWeight: 500, color: TEXT_P, fontSize: "0.9rem" }}>
-                      {item.quantity}× {item.name}
-                    </Typography>
-                    {item.notes && (
-                      <Typography variant="caption" sx={{ color: TEXT_M }}>{item.notes}</Typography>
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                    {item.image && (
+                      <ImagePreview
+                        src={getMediaUrl(item.image)}
+                        alt={item.name}
+                        sx={{ width: 52, height: 52, borderRadius: 1.5, flexShrink: 0 }}
+                      />
                     )}
-                  </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 500, color: TEXT_P, fontSize: "0.9rem" }}>
+                        {item.quantity}× {item.name}
+                      </Typography>
+                      {item.notes && (
+                        <Typography variant="caption" sx={{ color: TEXT_M }}>{item.notes}</Typography>
+                      )}
+                    </Box>
+                  </Stack>
                   <Typography sx={{ fontWeight: 600, color: TEXT_S, fontSize: "0.9rem" }}>
                     {formatCurrency(item.price * item.quantity, currency)}
                   </Typography>
@@ -470,6 +480,22 @@ export default function OrdersPage() {
                   Customer note
                 </Typography>
                 <Typography sx={{ color: TEXT_S, fontSize: "0.85rem" }}>{selected.notes}</Typography>
+              </Box>
+            )}
+
+            {selected.customer_rating && (
+              <Box sx={{ p: 2, borderRadius: "14px", background: alpha(BRAND, 0.06), border: `1px solid ${alpha(BRAND, 0.15)}` }}>
+                <Typography sx={{ fontWeight: 600, color: BRAND, fontSize: "0.75rem", mb: 0.5 }}>
+                  Customer rating · {selected.customer_rating}/5
+                </Typography>
+                <Typography sx={{ color: "#F5C842", letterSpacing: 1 }}>
+                  {"★".repeat(selected.customer_rating)}{"☆".repeat(5 - selected.customer_rating)}
+                </Typography>
+                {selected.customer_review && (
+                  <Typography sx={{ mt: 0.5, color: TEXT_S, fontSize: "0.85rem" }}>
+                    {selected.customer_review}
+                  </Typography>
+                )}
               </Box>
             )}
 

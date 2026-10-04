@@ -241,6 +241,13 @@ export const orderApi = {
   getBusinessOrders: (payload) =>
     callStrapi("custom-functions/getBusinessOrders", payload),
 
+  submitOrderReview: (orderId, customerInstallationId, rating, review) =>
+    callStrapi(
+      "custom-functions/submitOrderReview",
+      { orderId, customerInstallationId, rating, review },
+      { auth: false }
+    ),
+
   placeOrder: (payload) =>
     callStrapi("custom-functions/placeOrder", payload, { auth: false }),
 

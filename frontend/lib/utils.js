@@ -40,6 +40,13 @@ export function getMediaUrl(path) {
     return `${root}/${String(path).replace(/^\/+/, "")}`;
 }
 
+export function getBusinessWord(business, word, fallback) {
+    const businessType = String(business?.business_type || "").toLocaleLowerCase();
+    const override = business?.terminology?.[word] ??
+        business?.business_terminology?.[businessType]?.[word];
+    return typeof override === "string" && override.trim() ? override.trim() : fallback;
+}
+
 /** Format a date string */
 export function formatDate(
     date,

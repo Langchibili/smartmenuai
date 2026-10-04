@@ -43,12 +43,23 @@ class BackgroundService {
   }
 
   async showOrderAlert(orderData: any): Promise<void> {
-    const [audio, notification] = await Promise.allSettled([
+    const [audio, notification, overlay] = await Promise.allSettled([
       AudioService.playAlert('order_alert'),
       NotificationService.showOrderNotification(orderData),
+      import('./DrawOverModule').then(({ default: DrawOverModule }) => DrawOverModule.show({
+        orderId: orderData?.orderId ?? orderData?.id,
+        orderNumber: orderData?.orderNumber ?? orderData?.numeric_order_number ?? orderData?.order_number,
+        tableNumber: orderData?.tableNumber ?? orderData?.table_number,
+        itemCount: orderData?.itemCount ?? orderData?.item_count ?? 0,
+        total: orderData?.total ?? 0,
+        requesterName: orderData?.requesterName ?? 'Customer',
+        message: `You have a new order on table ${orderData?.tableNumber ?? orderData?.table_number ?? '—'}`,
+        autoTimeout: 30000,
+      })),
     ]);
     if (audio.status === 'rejected') logger.error('Unable to play order alert:', audio.reason);
     if (notification.status === 'rejected') logger.error('Unable to show order notification:', notification.reason);
+    if (overlay.status === 'rejected') logger.error('Unable to show order draw-over:', overlay.reason);
   }
 
   async showWaiterCallAlert(callData: any): Promise<void> {

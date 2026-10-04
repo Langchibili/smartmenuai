@@ -190,3 +190,5 @@ smaiapp/dev-eas.txt
 smaiapp/ios
 smaiapp/android
 smaiapp/.env
+smaiapp/modules/**/android/.gradle/
+smaiapp/modules/**/android/build/

@@ -63,6 +63,7 @@ export default factories.createCoreController('api::customer.customer', ({ strap
       const orders = await strapi.db.query('api::order.order').findMany({
         where: { customer_installation_id: customerInstallationId },
         populate: {
+          items: true,
           business: { populate: ['country_record', 'city_record'] },
           table: { populate: { branch: { populate: ['country_record', 'city_record'] } } },
         },
@@ -94,6 +95,7 @@ export default factories.createCoreController('api::customer.customer', ({ strap
           orderStatus: { $notIn: ['completed', 'cancelled'] },
         },
         populate: {
+          items: true,
           business: { populate: ['country_record', 'city_record'] },
           table: { populate: { branch: { populate: ['country_record', 'city_record'] } } },
         },
@@ -122,7 +124,8 @@ export default factories.createCoreController('api::customer.customer', ({ strap
         }),
         strapi.db.query('api::order.order').findMany({
           where: { customer_installation_id: customerInstallationId },
-          select: ['items'],
+          select: ['id', 'createdAt'],
+          populate: { items: true },
           orderBy: { createdAt: 'desc' },
           limit: 100,
         }),
@@ -233,7 +236,8 @@ export default factories.createCoreController('api::customer.customer', ({ strap
 
       const orders = await strapi.db.query('api::order.order').findMany({
         where,
-        select: ['customer_installation_id', 'items'],
+        select: ['id', 'customer_installation_id'],
+        populate: { items: true },
       });
       const customers = new Map();
       const itemCounts = new Map();

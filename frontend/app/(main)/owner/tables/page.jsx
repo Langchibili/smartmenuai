@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box, Typography, Button, Paper, Stack, Grid, Chip, Select, MenuItem,
   FormControl, InputLabel, TextField, IconButton, CircularProgress,
-  Divider, alpha,
+  Divider, alpha, Pagination,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { subscribeBusinessActivity } from "@/lib/socket";
 import QRCode from "qrcode";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -62,6 +63,8 @@ export default function TablesPage() {
   const [tables, setTables] = useState([]);
   const [waiters, setWaiters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
   const [addModal, setAddModal] = useState(false);
   const [qrModal, setQrModal] = useState(null);
   const qrCanvasRef = useRef(null);
@@ -73,6 +76,7 @@ export default function TablesPage() {
 
   const load = useCallback(async () => {
     if (!business?.id) return;
+    setRefreshing(true);
     try {
       const [tablesRes, waitersRes] = await Promise.all([
         tableApi.getBusinessTables(business.id),
@@ -82,7 +86,7 @@ export default function TablesPage() {
       const emps = flattenStrapiResponse(waitersRes) ?? [];
       setWaiters((Array.isArray(emps) ? emps : [emps]).filter((e) => e.role === "waiter"));
     } catch { toast("Failed to load tables", "error"); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [business?.id, toast]);
 
   useEffect(() => { load(); }, [load]);
@@ -170,6 +174,22 @@ export default function TablesPage() {
     );
   };
 
+  const stats = {
+    total: tables.length,
+    available: tables.filter(t => t.status === "available").length,
+    occupied: tables.filter(t => !["available"].includes(t.status)).length,
+    alerts: tables.filter(t => t.status === "needs_waiter").length,
+  };
+  const orderedTables = [...tables].sort(
+    (a, b) => Number(b.status === "needs_waiter") - Number(a.status === "needs_waiter")
+  );
+  const pageCount = Math.max(1, Math.ceil(orderedTables.length / 10));
+  const pagedTables = orderedTables.slice((page - 1) * 10, page * 10);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
   if (loading) {
     return (
       <Box sx={{ p: { xs: 2, lg: 4 } }}>
@@ -185,13 +205,6 @@ export default function TablesPage() {
     );
   }
 
-  const stats = {
-    total: tables.length,
-    available: tables.filter(t => t.status === "available").length,
-    occupied: tables.filter(t => !["available"].includes(t.status)).length,
-    alerts: tables.filter(t => t.status === "needs_waiter").length,
-  };
-
   return (
     <Box sx={{ px: { xs: 2, lg: 4 }, py: 3, maxWidth: "1440px", mx: "auto" }}>
       <PageHeader
@@ -199,21 +212,32 @@ export default function TablesPage() {
         icon="🪑"
         subtitle={`${stats.total} tables · ${stats.occupied} occupied · ${stats.alerts} alerts`}
         actions={
-          <Button
-            variant="contained"
-            onClick={() => setAddModal(true)}
-            sx={{
-              borderRadius: "14px",
-              background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`,
-              color: "#FFF8ED",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-              boxShadow: `0 4px 16px ${alpha(BRAND, 0.3)}`,
-              "&:hover": { boxShadow: `0 8px 24px ${alpha(BRAND, 0.45)}` },
-            }}
-          >
-            + Add table
-          </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              variant="outlined"
+              onClick={load}
+              disabled={refreshing}
+              startIcon={<RefreshIcon sx={{ animation: refreshing ? "spin 1s linear infinite" : "none", "@keyframes spin": { to: { transform: "rotate(360deg)" } } }} />}
+              sx={{ borderRadius: "14px", color: TEXT_S, borderColor: "rgba(212,133,10,0.3)" }}
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => setAddModal(true)}
+              sx={{
+                borderRadius: "14px",
+                background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`,
+                color: "#FFF8ED",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                boxShadow: `0 4px 16px ${alpha(BRAND, 0.3)}`,
+                "&:hover": { boxShadow: `0 8px 24px ${alpha(BRAND, 0.45)}` },
+              }}
+            >
+              + Add table
+            </Button>
+          </Stack>
         }
       />
 
@@ -268,7 +292,7 @@ export default function TablesPage() {
         />
       ) : (
         <Grid container spacing={2}>
-          {tables.map(table => {
+          {pagedTables.map(table => {
             const sc = STATUS_COLORS[table.status] ?? STATUS_COLORS.available;
             return (
               <Grid size={{ xs: 6, sm: 4, md: 3, xl: 2 }} key={table.id}>
@@ -411,6 +435,17 @@ export default function TablesPage() {
             );
           })}
         </Grid>
+      )}
+      {!loading && orderedTables.length > 0 && (
+        <Stack alignItems="center" sx={{ mt: 3 }}>
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            aria-label="Tables pages"
+          />
+        </Stack>
       )}
 
       {/* Add table modal */}

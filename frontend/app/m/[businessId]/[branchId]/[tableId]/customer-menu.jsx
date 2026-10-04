@@ -19,10 +19,16 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { menuApi, orderApi, waiterCallApi } from "@/lib/api";
-import { formatCurrency, getCustomerSessionId, getOrCreateCustomerInstallationId } from "@/lib/utils";
+import {
+  formatCurrency,
+  getCustomerSessionId,
+  getMediaUrl,
+  getOrCreateCustomerInstallationId,
+} from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
 import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
+import AppDownloadPrompt from "@/components/customer/AppDownloadPrompt";
 
 export default function CustomerMenu({ businessId, branchId, tableId }) {
   const router = useRouter();
@@ -38,6 +44,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
+  const [lastPlacedOrder, setLastPlacedOrder] = useState(null);
 
   useEffect(() => {
     try {
@@ -117,14 +124,16 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
     setSubmitting(true);
     setError("");
     try {
-      await orderApi.placeOrder({
+      const orderedItems = cartItems.map((item) => ({ ...item }));
+      const response = await orderApi.placeOrder({
         businessId,
         tableId,
         customerSessionId: sessionId,
         customerInstallationId: installationId,
-        items: cartItems,
+        items: orderedItems,
         notes,
       });
+      setLastPlacedOrder({ ...response.order, items: orderedItems });
       setCart({});
       setNotes("");
       setNotice("Your order has been sent to the restaurant.");
@@ -175,15 +184,9 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
             position: "sticky",
             top: 0,
             zIndex: 10,
-            px: 2,
-            py: 1,
-            textAlign: "center",
-            bgcolor: "#D4850A",
-            color: "#1C0A00",
-            fontWeight: 700,
           }}
         >
-          Download the app for a better experience
+          <AppDownloadPrompt />
         </Box>
       )}
       <Box sx={{ maxWidth: 900, mx: "auto", px: { xs: 2, sm: 3 }, pt: 4 }}>
@@ -201,6 +204,30 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
 
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
         {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice("")}>{notice}</Alert>}
+        {lastPlacedOrder && (
+          <Card sx={{ mb: 3, bgcolor: "#21150D", color: "inherit", border: "1px solid #D4850A" }}>
+            <CardContent>
+              <Typography variant="h6" fontWeight={700}>
+                Items ordered
+              </Typography>
+              <Typography variant="caption" color="#D4A872" sx={{ display: "block", mb: 1.5 }}>
+                Order #{lastPlacedOrder.numeric_order_number || lastPlacedOrder.order_number}
+              </Typography>
+              <Stack spacing={0.75}>
+                {lastPlacedOrder.items.map((item) => (
+                  <Stack key={item.id} direction="row" justifyContent="space-between" spacing={2}>
+                    <Typography variant="body2">
+                      {item.quantity} × {item.name}
+                    </Typography>
+                    <Typography variant="body2" color="#D4A872">
+                      {formatPrice(item.price * item.quantity)}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
 
         {pendingOrder && (
           <Alert
@@ -259,7 +286,14 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
         <Stack spacing={1.5}>
           {visibleItems.map((item) => (
             <Card key={item.id} sx={{ display: "flex", bgcolor: "#21150D", color: "inherit", border: "1px solid #49301B" }}>
-              {item.image && <CardMedia component="img" image={item.image} alt="" sx={{ width: 112, objectFit: "cover" }} />}
+              {item.image && (
+                <CardMedia
+                  component="img"
+                  image={getMediaUrl(item.image)}
+                  alt={item.name}
+                  sx={{ width: 112, objectFit: "cover" }}
+                />
+              )}
               <CardContent sx={{ flex: 1, minWidth: 0 }}>
                 <Typography fontWeight={700}>{item.name}</Typography>
                 {item.description && <Typography variant="body2" color="#D4A872" sx={{ my: 0.5 }}>{item.description}</Typography>}

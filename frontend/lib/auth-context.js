@@ -91,6 +91,7 @@ export function AuthProvider({ children }) {
         loading: false,
         error: null,
       });
+      return ctx;
     } catch (err) {
       const token = getToken();
       if (token) {

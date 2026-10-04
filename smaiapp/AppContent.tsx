@@ -84,6 +84,20 @@ export default function AppContent() {
     webViewRef.current?.postMessage(JSON.stringify({ type: data.type, payload: data.payload ?? {} }));
   }, []);
 
+  const openCustomerScanner = async () => {
+    setQrError('');
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        setQrError('Camera permission is required to scan a table QR code.');
+        return false;
+      }
+    }
+    qrScanLocked.current = false;
+    setShowQrScanner(true);
+    return true;
+  };
+
   const handleAcceptOrder = async (orderId: string | number) => {
     setShowOrderModal(false);
     try {
@@ -193,6 +207,11 @@ export default function AppContent() {
         case 'GET_CURRENT_LOCATION': response = await LocationService.getCurrentLocation() || { error: 'Could not get location' }; break;
         case 'SHOW_NOTIFICATION': await NotificationService.show(payload); response = { success: true }; break;
         case 'PLAY_AUDIO': await AudioService.playAlert(payload.soundFile); response = { success: true }; break;
+        case 'OPEN_CUSTOMER_QR_SCANNER':
+          response = await openCustomerScanner()
+            ? { success: true }
+            : { error: 'Camera permission is required to scan a table QR code.' };
+          break;
         case 'LOG_DATA': console.log('Log from webview', payload); response = { success: true }; break;
         default: response = { error: 'Unknown message type' };
       }
@@ -205,19 +224,6 @@ export default function AppContent() {
   if (!isConnected) {
     return <OfflineScreen onRetry={() => webViewRef.current?.injectJavaScript(`window.location = ""`)} />;
   }
-
-  const openCustomerScanner = async () => {
-    setQrError('');
-    if (!cameraPermission?.granted) {
-      const permission = await requestCameraPermission();
-      if (!permission.granted) {
-        setQrError('Camera permission is required to scan a table QR code.');
-        return;
-      }
-    }
-    qrScanLocked.current = false;
-    setShowQrScanner(true);
-  };
 
   const handleQrScanned = ({ data }: { data: string }) => {
     if (qrScanLocked.current) return;
@@ -233,6 +239,30 @@ export default function AppContent() {
     setWebViewUrl(menuUrl);
     setEntryMode('web');
   };
+
+  const qrScannerOverlay = showQrScanner ? (
+    <View style={styles.scannerOverlay}>
+      <CameraView
+        style={styles.camera}
+        facing="back"
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        onBarcodeScanned={handleQrScanned}
+      />
+      <View style={styles.scannerActions}>
+        <Text style={styles.scannerHint}>Point your camera at the table QR code.</Text>
+        {qrError ? <Text accessibilityRole="alert" style={styles.entryError}>{qrError}</Text> : null}
+        <Pressable
+          style={styles.entrySecondaryButton}
+          onPress={() => {
+            setShowQrScanner(false);
+            qrScanLocked.current = false;
+          }}
+        >
+          <Text style={styles.entrySecondaryText}>Cancel scanning</Text>
+        </Pressable>
+      </View>
+    </View>
+  ) : null;
 
   if (entryMode === 'choice') {
     return (
@@ -255,29 +285,7 @@ export default function AppContent() {
           </Pressable>
           {qrError ? <Text accessibilityRole="alert" style={styles.entryError}>{qrError}</Text> : null}
         </SafeAreaView>
-        {showQrScanner && (
-          <View style={styles.scannerOverlay}>
-            <CameraView
-              style={styles.camera}
-              facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-              onBarcodeScanned={handleQrScanned}
-            />
-            <View style={styles.scannerActions}>
-              <Text style={styles.scannerHint}>Point your camera at the table QR code.</Text>
-              {qrError ? <Text accessibilityRole="alert" style={styles.entryError}>{qrError}</Text> : null}
-              <Pressable
-                style={styles.entrySecondaryButton}
-                onPress={() => {
-                  setShowQrScanner(false);
-                  qrScanLocked.current = false;
-                }}
-              >
-                <Text style={styles.entrySecondaryText}>Cancel scanning</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
+        {qrScannerOverlay}
       </LinearGradient>
     );
   }
@@ -310,6 +318,7 @@ export default function AppContent() {
       </SafeAreaView>
       <OrderAlertModal open={showOrderModal} order={currentOrder} onAccept={handleAcceptOrder} onDismiss={handleDismissOrder} />
       <WaiterCallAlertModal open={showCallModal} call={currentCall} onAcknowledge={handleAcknowledgeCall} onDismiss={handleDismissCall} />
+      {qrScannerOverlay}
     </LinearGradient>
   );
 }

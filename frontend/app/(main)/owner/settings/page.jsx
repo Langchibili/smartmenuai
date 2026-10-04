@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { branchApi, businessApi, flattenStrapiResponse, locationApi } from "@/lib/api";
 import { PageHeader } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ export default function SettingsPage() {
   const [branches, setBranches] = useState([]);
   const [branchModal, setBranchModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
+  const [branchToDelete, setBranchToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editingLocation, setEditingLocation] = useState(false);
   const [savingLocation, setSavingLocation] = useState(false);
@@ -179,12 +181,17 @@ export default function SettingsPage() {
   };
 
   const deleteBranch = async (id) => {
-    if (!confirm("Delete this branch? All associated tables will also be removed.")) return;
+    setBranchToDelete(id);
+  };
+
+  const confirmDeleteBranch = async () => {
+    if (branchToDelete === null) return;
     try {
-      await branchApi.deleteBranch(id);
+      await branchApi.deleteBranch(branchToDelete);
       toast("Branch deleted", "success");
-      setBranches(prev => prev.filter(b => b.id !== id));
+      setBranches(prev => prev.filter(b => b.id !== branchToDelete));
     } catch (e) { toast(e.message, "error"); }
+    finally { setBranchToDelete(null); }
   };
 
   return (
@@ -566,6 +573,15 @@ export default function SettingsPage() {
           />
         </Stack>
       </Modal>
+      <ConfirmModal
+        open={branchToDelete !== null}
+        onClose={() => setBranchToDelete(null)}
+        onConfirm={confirmDeleteBranch}
+        title="Delete this branch?"
+        message="All associated tables will also be removed."
+        confirmLabel="Delete branch"
+        danger
+      />
     </Box>
   );
 }

@@ -1,17 +1,19 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import {
-  Box, Typography, Button, Paper, Card, CardMedia, CardContent, CardActions, Grid,
+  Alert, Box, Typography, Button, Paper, Card, CardMedia, CardContent, CardActions, Grid,
   Chip, Stack, TextField, Switch, FormControlLabel, CircularProgress,
   IconButton, Divider,
   alpha,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
-import { menuApi, flattenStrapiResponse } from "@/lib/api";
+import { menuApi } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
+import MenuItemImageUpload from "@/components/menu/MenuItemImageUpload";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getMediaUrl } from "@/lib/utils";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -24,8 +26,6 @@ const TEXT_D = "#5F3E22";
 const GREEN = "#22c55e";
 const BLUE = "#3b82f6";
 const ERROR = "#ef4444";
-
-const STRAPI = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
 
 // ─── Reusable input sx ───────────────────────────────────────────────────────
 const inputSx = {
@@ -60,11 +60,13 @@ export default function MenuPage() {
   const [items, setItems] = useState([]);
   const [activeCat, setActiveCat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   // Modal state
   const [catModal, setCatModal] = useState(false);
   const [itemModal, setItemModal] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const [catForm, setCatForm] = useState({ name: "", icon: "" });
   const [itemForm, setItemForm] = useState({
@@ -76,24 +78,26 @@ export default function MenuPage() {
 
   const load = useCallback(async () => {
     if (!business?.id) return;
+    setLoadError("");
     try {
-      const [catsRes, itemsRes] = await Promise.all([
-        menuApi.getCategories(business.id),
-        menuApi.getMenuItems(business.id),
-      ]);
-      const cats = flattenStrapiResponse(catsRes) ?? [];
-      const its = flattenStrapiResponse(itemsRes) ?? [];
+      const result = await menuApi.getBusinessMenu(business.id);
+      const cats = Array.isArray(result.categories) ? result.categories : [];
+      const its = Array.isArray(result.items) ? result.items : [];
       setCategories(Array.isArray(cats) ? cats : [cats]);
       setItems(Array.isArray(its) ? its : [its]);
       if (!activeCat && cats.length > 0) setActiveCat(cats[0]?.id ?? null);
-    } catch { toast("Failed to load menu", "error"); }
+    } catch (error) {
+      const message = error.message || "The menu could not be loaded.";
+      setLoadError(message);
+      toast(message, "error");
+    }
     finally { setLoading(false); }
   }, [business?.id, activeCat, toast]);
 
   useEffect(() => { load(); }, [load]);
 
   const visibleItems = activeCat
-    ? items.filter(i => (i.menu_category?.id ?? i.menu_category_id) === activeCat)
+    ? items.filter(i => String(i.menu_category?.id ?? i.menu_category_id) === String(activeCat))
     : items;
 
   // ── Category CRUD ────────────────────────────────────────────────
@@ -121,9 +125,19 @@ export default function MenuPage() {
   };
 
   const deleteCategory = async (id) => {
-    if (!confirm("Delete this category? Items will become uncategorised.")) return;
-    try { await menuApi.deleteCategory(id); toast("Deleted", "success"); load(); }
-    catch (e) { toast(e.message, "error"); }
+    setConfirmAction({
+      title: "Delete this category?",
+      message: "Items in this category will become uncategorised.",
+      confirmLabel: "Delete category",
+      onConfirm: async () => {
+        try {
+          await menuApi.deleteCategory(id, business.id);
+          toast("Category deleted", "success");
+          await load();
+        } catch (e) { toast(e.message, "error"); }
+        finally { setConfirmAction(null); }
+      },
+    });
   };
 
   // ── Item CRUD ────────────────────────────────────────────────────
@@ -150,30 +164,52 @@ export default function MenuPage() {
         ...itemForm,
         price: parseFloat(itemForm.price),
         business: business.id,
-        menu_category: activeCat,
+        menu_category: editing
+          ? (editing.menu_category?.id ?? editing.menu_category_id ?? null)
+          : activeCat,
       };
       if (editing) {
         await menuApi.updateMenuItem(editing.id, payload);
         toast("Item updated", "success");
+        setItemModal(false);
+        await load();
       } else {
-        await menuApi.createMenuItem(payload);
-        toast("Item created", "success");
+        const result = await menuApi.createMenuItem(payload);
+        if (!result.item?.id) {
+          throw new Error("The menu item was created without returning its ID.");
+        }
+        setEditing(result.item);
+        setItems((current) => [...current, result.item]);
+        toast("Item created. You can now attach an image.", "success");
+        await load();
+        return;
       }
-      setItemModal(false);
-      load();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
   };
 
   const deleteItem = async (id) => {
-    if (!confirm("Delete this menu item?")) return;
-    try { await menuApi.deleteMenuItem(id); toast("Deleted", "success"); load(); }
-    catch (e) { toast(e.message, "error"); }
+    setConfirmAction({
+      title: "Delete this menu item?",
+      message: "This menu item will be permanently removed.",
+      confirmLabel: "Delete item",
+      onConfirm: async () => {
+        try {
+          await menuApi.deleteMenuItem(id, business.id);
+          toast("Menu item deleted", "success");
+          await load();
+        } catch (e) { toast(e.message, "error"); }
+        finally { setConfirmAction(null); }
+      },
+    });
   };
 
   const toggleField = async (item, field) => {
     try {
-      await menuApi.updateMenuItem(item.id, { [field]: !item[field] });
+      await menuApi.updateMenuItem(item.id, {
+        business: business.id,
+        [field]: !item[field],
+      });
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, [field]: !i[field] } : i));
     } catch (e) { toast(e.message, "error"); }
   };
@@ -232,6 +268,16 @@ export default function MenuPage() {
           </Stack>
         }
       />
+
+      {loadError && (
+        <Alert
+          severity="error"
+          action={<Button color="inherit" size="small" onClick={load}>Retry</Button>}
+          sx={{ mb: 2 }}
+        >
+          Could not load this business&apos;s menu: {loadError}
+        </Alert>
+      )}
 
       {/* Content */}
       <Grid container spacing={3}>
@@ -381,7 +427,7 @@ export default function MenuPage() {
                   {item.image && (
                     <CardMedia
                       component="img"
-                      image={item.image?.url ? `${STRAPI}${item.image.url}` : item.image}
+                      image={getMediaUrl(item.image?.url ?? item.image)}
                       alt={item.name}
                       sx={{ height: 140, objectFit: "cover" }}
                     />
@@ -429,6 +475,8 @@ export default function MenuPage() {
                     <IconButton
                       size="small"
                       onClick={() => openItemModal(item)}
+                      aria-label={`Edit ${item.name}`}
+                      title={`Edit ${item.name}`}
                       sx={{
                         width: 30,
                         height: 30,
@@ -443,6 +491,8 @@ export default function MenuPage() {
                     <IconButton
                       size="small"
                       onClick={() => deleteItem(item.id)}
+                      aria-label={`Delete ${item.name}`}
+                      title={`Delete ${item.name}`}
                       sx={{
                         width: 30,
                         height: 30,
@@ -655,8 +705,31 @@ export default function MenuPage() {
               ))}
             </Grid>
           </Box>
+          <MenuItemImageUpload
+            menuItemId={editing?.id}
+            image={editing?.image}
+            disabled={!editing?.id || saving}
+            onImageChange={(image) => {
+              setEditing((current) => current ? { ...current, image } : current);
+              setItems((current) =>
+                current.map((item) =>
+                  item.id === editing?.id ? { ...item, image } : item
+                )
+              );
+            }}
+          />
         </Stack>
       </Modal>
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction?.onConfirm()}
+        title={confirmAction?.title}
+        message={confirmAction?.message}
+        confirmLabel={confirmAction?.confirmLabel}
+        danger
+      />
     </Box>
   );
 }

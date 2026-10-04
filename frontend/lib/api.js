@@ -147,36 +147,83 @@ export const menuApi = {
   getPublicMenu: (businessId, tableId, branchId) =>
     callStrapi("custom-functions/getPublicMenu", { businessId, tableId, branchId }, { auth: false }),
 
-  // Standard CRUD via Strapi REST
+  getBusinessMenu: (businessId) =>
+    callStrapi("custom-functions/getBusinessMenu", { businessId }),
+
   getCategories: (businessId) =>
-    callStrapi(`menu-categories?filters[business][id][$eq]=${businessId}&sort=sort_order:asc&populate=*`, undefined, {
-      method: "GET",
-    }),
+    callStrapi("custom-functions/getBusinessMenu", { businessId }).then((result) => result.categories || []),
 
-  createCategory: (payload) =>
-    callStrapi("menu-categories", { data: payload }),
+  createCategory: (payload) => callStrapi("custom-functions/manageBusinessMenu", {
+    ...payload,
+    businessId: payload.business,
+    entity: "category",
+    operation: "create",
+  }),
 
-  updateCategory: (id, payload) =>
-    callStrapi(`menu-categories/${id}`, { data: payload }, { method: "PUT" }),
+  updateCategory: (id, payload) => callStrapi("custom-functions/manageBusinessMenu", {
+    ...payload,
+    businessId: payload.business,
+    entity: "category",
+    operation: "update",
+    entityId: id,
+  }),
 
-  deleteCategory: (id) =>
-    callStrapi(`menu-categories/${id}`, undefined, { method: "DELETE" }),
+  deleteCategory: (id, businessId) => callStrapi("custom-functions/manageBusinessMenu", {
+    entity: "category",
+    operation: "delete",
+    entityId: id,
+    businessId,
+  }),
 
   getMenuItems: (businessId) =>
-    callStrapi(
-      `menu-items?filters[business][id][$eq]=${businessId}&populate[image]=true&populate[menu_category]=true&populate[variants]=true&populate[modifiers]=true&sort=name:asc`,
-      undefined,
-      { method: "GET" }
-    ),
+    callStrapi("custom-functions/getBusinessMenu", { businessId }).then((result) => result.items || []),
 
-  createMenuItem: (payload) =>
-    callStrapi("menu-items", { data: payload }),
+  createMenuItem: (payload) => callStrapi("custom-functions/manageBusinessMenu", {
+    ...payload,
+    businessId: payload.business,
+    entity: "item",
+    operation: "create",
+  }),
 
-  updateMenuItem: (id, payload) =>
-    callStrapi(`menu-items/${id}`, { data: payload }, { method: "PUT" }),
+  updateMenuItem: (id, payload) => callStrapi("custom-functions/manageBusinessMenu", {
+    ...payload,
+    businessId: payload.business,
+    entity: "item",
+    operation: "update",
+    entityId: id,
+  }),
 
-  deleteMenuItem: (id) =>
-    callStrapi(`menu-items/${id}`, undefined, { method: "DELETE" }),
+  deleteMenuItem: (id, businessId) => callStrapi("custom-functions/manageBusinessMenu", {
+    entity: "item",
+    operation: "delete",
+    entityId: id,
+    businessId,
+  }),
+
+  uploadMenuItemImage: async (menuItemId, file) => {
+    const form = new FormData();
+    form.append("menuItemId", String(menuItemId));
+    form.append("files", file);
+
+    const headers = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await fetch(
+      `${STRAPI_URL.replace(/\/+$/, "")}/api/custom-functions/uploadMenuItemImage`,
+      { method: "POST", headers, body: form }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || data?.message || `Image upload failed (${response.status})`
+      );
+    }
+    return data.media;
+  },
+
+  removeMenuItemImage: (menuItemId) =>
+    callStrapi("custom-functions/uploadMenuItemImage", { menuItemId, remove: true }),
 
   getMenuSettings: (businessId) =>
     callStrapi(
@@ -271,6 +318,10 @@ export const employeeApi = {
 export const platformApi = {
   setupPlatformMaster: (payload) =>
     callStrapi("custom-functions/setupPlatformMaster", payload, { auth: false }),
+  getAppLinks: () =>
+    callStrapi("custom-functions/getAppLinks", {}, { auth: false }),
+  updateAppLinks: (payload) =>
+    callStrapi("custom-functions/updateAppLinks", payload),
 
   getDashboard: () =>
     callStrapi("custom-functions/platformGetDashboard", {}),

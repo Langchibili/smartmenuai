@@ -9,6 +9,7 @@ import {
   Chip,
   Grid,
   CircularProgress,
+  Pagination,
   alpha,
 } from "@mui/material";
 import { motion } from "framer-motion";
@@ -19,6 +20,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { subscribeBusinessActivity } from "@/lib/socket";
 import TablePreviewDrawer from "@/components/tables/TablePreviewDrawer";
 import { useRouter } from "next/navigation";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -47,12 +49,15 @@ export default function WaiterDashboard() {
   const { toast } = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [tablePage, setTablePage] = useState(1);
   const [loadError, setLoadError] = useState("");
   const [available, setAvailable] = useState(true);
   const [selectedTable, setSelectedTable] = useState(null);
 
   const load = useCallback(async () => {
     if (!employee?.id || !business?.id) return;
+    setRefreshing(true);
     try {
       const res = await waiterCallApi.getWaiterDashboard(employee.id, business.id);
       setData(res);
@@ -60,7 +65,7 @@ export default function WaiterDashboard() {
     } catch (error) {
       setLoadError(error.message || "Failed to load your service dashboard.");
     }
-    finally { setLoading(false); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [employee?.id, business?.id]);
 
   useEffect(() => { load(); }, [load]);
@@ -105,6 +110,19 @@ export default function WaiterDashboard() {
     router.push(`/waiter/orders?tableId=${table.id}`);
   };
 
+  const currency = business?.currency ?? "USD";
+  const activeCalls = (data?.activeCalls ?? []).filter((c) => c.status === "pending");
+  const myOrders = data?.activeOrders ?? [];
+  const tables = [...(data?.assignedTables ?? [])].sort(
+    (a, b) => Number(b.status === "needs_waiter") - Number(a.status === "needs_waiter")
+  );
+  const tablePageCount = Math.max(1, Math.ceil(tables.length / 10));
+  const pagedTables = tables.slice((tablePage - 1) * 10, tablePage * 10);
+
+  useEffect(() => {
+    if (tablePage > tablePageCount) setTablePage(tablePageCount);
+  }, [tablePage, tablePageCount]);
+
   if (loading) {
     return (
       <Box sx={{ p: 2 }}>
@@ -116,13 +134,6 @@ export default function WaiterDashboard() {
       </Box>
     );
   }
-
-  const currency = business?.currency ?? "USD";
-  const activeCalls = (data?.activeCalls ?? []).filter((c) => c.status === "pending");
-  const myOrders = data?.activeOrders ?? [];
-  const tables = [...(data?.assignedTables ?? [])].sort(
-    (a, b) => Number(b.status === "needs_waiter") - Number(a.status === "needs_waiter")
-  );
 
   return (
     <Box sx={{ pb: 10, maxWidth: "640px", mx: "auto" }}>
@@ -157,11 +168,22 @@ export default function WaiterDashboard() {
             </Typography>
           </Box>
 
-          {/* Availability toggle */}
-          <Button
-            onClick={toggleAvailability}
-            size="small"
-            sx={{
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              onClick={load}
+              disabled={refreshing}
+              size="small"
+              aria-label="Refresh dashboard"
+              startIcon={<RefreshIcon sx={{ animation: refreshing ? "spin 1s linear infinite" : "none", "@keyframes spin": { to: { transform: "rotate(360deg)" } } }} />}
+              sx={{ color: TEXT_S, minWidth: 0, px: 1, "&:hover": { background: alpha(BRAND, 0.1) } }}
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+            {/* Availability toggle */}
+            <Button
+              onClick={toggleAvailability}
+              size="small"
+              sx={{
               display: "flex",
               alignItems: "center",
               gap: 1,
@@ -179,18 +201,19 @@ export default function WaiterDashboard() {
                 background: available ? alpha(GREEN, 0.15) : alpha(ERROR, 0.12),
               },
             }}
-          >
-            <Box
-              sx={{
+            >
+              <Box
+                sx={{
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
                 bgcolor: available ? GREEN : ERROR,
                 boxShadow: available ? `0 0 6px ${GREEN}` : "none",
               }}
-            />
-            {available ? "Available" : "Off shift"}
-          </Button>
+              />
+              {available ? "Available" : "Off shift"}
+            </Button>
+          </Stack>
         </Stack>
       </Box>
 
@@ -382,7 +405,7 @@ export default function WaiterDashboard() {
             </Box>
           ) : (
             <Grid container spacing={1.5}>
-              {tables.map((table) => {
+              {pagedTables.map((table) => {
                 const sc = TABLE_STATUS_STYLE[table.status] ?? TABLE_STATUS_STYLE.available;
                 return (
                   <Grid size={{ xs: 4 }} key={table.id}>
@@ -422,6 +445,17 @@ export default function WaiterDashboard() {
                 );
               })}
             </Grid>
+          )}
+          {tables.length > 0 && (
+            <Stack alignItems="center" sx={{ mt: 2 }}>
+              <Pagination
+                count={tablePageCount}
+                page={tablePage}
+                onChange={(_, value) => setTablePage(value)}
+                color="primary"
+                aria-label="Assigned table pages"
+              />
+            </Stack>
           )}
         </Box>
 

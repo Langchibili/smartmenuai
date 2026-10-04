@@ -1,9 +1,46 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE: smartmenuai/frontend/app/(main)/page.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-import { Box, Button, Paper, Stack, Typography, alpha } from "@mui/material";
+"use client";
+
+import {
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Paper,
+    Stack,
+    Typography,
+    alpha,
+} from "@mui/material";
+import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import { useState } from "react";
+import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
+import AppDownloadPrompt from "@/components/customer/AppDownloadPrompt";
 
 export default function MainPage() {
+    const { isNative, openCustomerQrScanner } = useReactNative();
+    const [scanDialogOpen, setScanDialogOpen] = useState(false);
+    const [scanError, setScanError] = useState("");
+
+    const handleScanQrCode = async () => {
+        setScanError("");
+        if (!isNative && !window.ReactNativeWebView) {
+            setScanDialogOpen(true);
+            return;
+        }
+
+        try {
+            await openCustomerQrScanner();
+        } catch (error) {
+            setScanError(error.message || "Unable to open the QR scanner.");
+            setScanDialogOpen(true);
+        }
+    };
+
     return (
         <Box
             sx={{
@@ -48,6 +85,24 @@ export default function MainPage() {
                         </Typography>
                     </Stack>
                 </Paper>
+                <AppDownloadPrompt hidden={isNative} />
+                <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<QrCodeScannerIcon />}
+                    onClick={handleScanQrCode}
+                    sx={{
+                        alignSelf: "center",
+                        color: "#1C0A00",
+                        bgcolor: "#D4850A",
+                        borderRadius: 3,
+                        px: 3,
+                        fontWeight: 700,
+                        "&:hover": { bgcolor: "#E8970F" },
+                    }}
+                >
+                    Scan QR code
+                </Button>
                 <Button
                     component="a"
                     href="/business-landing"
@@ -68,6 +123,26 @@ export default function MainPage() {
                     Manage Business Instead
                 </Button>
             </Stack>
+            <Dialog
+                open={scanDialogOpen}
+                onClose={() => setScanDialogOpen(false)}
+                aria-labelledby="scan-qr-dialog-title"
+            >
+                <DialogTitle id="scan-qr-dialog-title">
+                    {scanError ? "QR scanner unavailable" : "Scan a table QR code"}
+                </DialogTitle>
+                <DialogContent>
+                    <Alert severity={scanError ? "error" : "info"}>
+                        {scanError ||
+                            "Open your phone's camera app, scan the QR code at your table, and follow the link displayed to open the menu."}
+                    </Alert>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setScanDialogOpen(false)} autoFocus>
+                        Got it
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

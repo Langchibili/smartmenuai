@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { getAuthenticatedDashboardPath } from "@/lib/utils";
 import {
   Alert, Box, Typography, TextField, Button, InputAdornment,
   IconButton, Link as MuiLink, CircularProgress, alpha,
@@ -52,8 +53,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      await login(form.identifier, form.password);
-      router.replace("/");
+      const session = await login(form.identifier, form.password);
+      router.replace(
+        session.profile?.is_platform_admin
+          ? "/platform/settings"
+          : getAuthenticatedDashboardPath(session.employee)
+      );
     } catch (err) {
       setError(err.message || "Invalid credentials. Please try again.");
     }

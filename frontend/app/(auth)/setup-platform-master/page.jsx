@@ -77,8 +77,8 @@ export default function SetupPlatformMasterPage() {
             <Typography sx={{ fontSize: 48, mb: 2 }}>🛡️</Typography>
             <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", serif', color: TEXT_P, mb: 1 }}>Platform master created!</Typography>
             <Typography variant="body2" sx={{ color: TEXT_M, mb: 4 }}>You now have full platform admin access.</Typography>
-            <Button fullWidth variant="contained" onClick={() => router.replace("/platform/dashboard")} sx={{ height: 48, borderRadius: "14px", background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`, fontWeight: 700, boxShadow: `0 4px 20px ${alpha(BRAND, 0.4)}` }}>
-              Go to platform dashboard →
+            <Button fullWidth variant="contained" onClick={() => router.replace("/login")} sx={{ height: 48, borderRadius: "14px", background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`, fontWeight: 700, boxShadow: `0 4px 20px ${alpha(BRAND, 0.4)}` }}>
+              Sign in to configure settings →
             </Button>
           </Box>
         ) : (
@@ -115,4 +115,3 @@ export default function SetupPlatformMasterPage() {
     </Box>
   );
 }
-

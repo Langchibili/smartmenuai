@@ -216,8 +216,8 @@ class FloatingBubbleService : Service() {
         val pi = PendingIntent.getActivity(this, 0, launchIntent, piFlags)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("You're Online")
-            .setContentText("Tap to open OkraRides")
+            .setContentTitle("SmartMenu AI")
+            .setContentText("Tap to open the order")
             .setSmallIcon(applicationInfo.icon)
             .setContentIntent(pi)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -397,7 +397,7 @@ class FloatingBubbleService : Service() {
         card.addView(topFrame)
 
         // ── Orange header badge ────────────────────────────────────────────────
-        val headerText = if (isDelivery) "📦  NEW DELIVERY REQUEST" else "🚗  NEW RIDE REQUEST"
+        val headerText = "📦  NEW ORDER REQUEST"
         TextView(this).apply {
             text      = headerText
             textSize  = 13f
@@ -513,7 +513,7 @@ class FloatingBubbleService : Service() {
         card.addView(divider(d))
 
         // ── Single CTA — opens the app so the in-app modal handles accept/decline ─
-        val ctaLabel = if (isDelivery) "Tap to Accept or Decline Delivery" else "Tap to Accept or Decline Ride"
+        val ctaLabel = "Tap to view the order"
         TextView(this).apply {
             text     = ctaLabel
             textSize = 14f

@@ -20,6 +20,12 @@
       "type": "boolean",
       "default": true
     },
+    "android_app_link": {
+      "type": "string"
+    },
+    "ios_app_link": {
+      "type": "string"
+    },
     "user": {
       "type": "relation",
       "relation": "oneToOne",

@@ -1,9 +1,9 @@
 
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Alert, Box, Typography, Chip, Stack, IconButton, Skeleton,
-  Tabs, Tab, Tooltip, Button, Collapse, alpha,
+  Tabs, Tab, Tooltip, Button, Collapse, alpha, Pagination,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -17,7 +17,7 @@ import { orderApi } from "@/lib/api";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
 import { SmartCard, OrderRowCard } from "@/components/ui/smart-card";
-import SmartModal from "@/components/ui/smart-modal";
+import SmartModal, { ConfirmModal } from "@/components/ui/smart-modal";
 import { tokens } from "@/lib/mui-theme";
 import { subscribeBusinessActivity } from "@/lib/socket";
 
@@ -31,9 +31,14 @@ const STATUS_CFG = {
 };
 
 const TABS = [
+  { value: "all",       label: "All" },
   { value: "active",    label: "Active" },
   { value: "pending",   label: "Pending" },
+  { value: "accepted",  label: "Accepted" },
+  { value: "preparing", label: "Preparing" },
+  { value: "served",    label: "Served" },
   { value: "completed", label: "Done" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 function PulseDot({ color, pulse = false }) {
@@ -100,6 +105,13 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
               </Typography>
             )}
           </Stack>
+          <Button
+            size="small"
+            onClick={e => { e.stopPropagation(); onSelect(order); }}
+            sx={{ mt: 0.5, px: 0, minWidth: 0, color: tokens.brand, fontSize: "0.72rem", fontWeight: 700 }}
+          >
+            View more
+          </Button>
         </Box>
 
         <Stack alignItems="flex-end" spacing={1} sx={{ flexShrink: 0 }}>
@@ -257,7 +269,16 @@ function OrderDetailModal({ order, open, onClose, currency, onAdvance, advancing
 }
 
 function EmptyOrders({ tab }) {
-  const msgs = { active: { icon: "☕", text: "No active orders right now" }, pending: { icon: "🕐", text: "No orders waiting" }, completed: { icon: "✓", text: "No completed orders yet" } };
+  const msgs = {
+    all: { icon: "☕", text: "No orders yet" },
+    active: { icon: "☕", text: "No active orders right now" },
+    pending: { icon: "🕐", text: "No orders waiting" },
+    accepted: { icon: "✓", text: "No accepted orders" },
+    preparing: { icon: "🍳", text: "No orders being prepared" },
+    served: { icon: "🍽", text: "No served orders" },
+    completed: { icon: "✓", text: "No completed orders yet" },
+    cancelled: { icon: "↩", text: "No cancelled orders" },
+  };
   const { icon, text } = msgs[tab] ?? msgs.active;
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}>
@@ -275,20 +296,25 @@ export default function WaiterOrdersPage() {
   const { employee, business } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState([]);
-  const [tab, setTab] = useState("active");
+  const [tab, setTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(null);
   const [selected, setSelected] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+  const swipeStart = useRef(null);
   const currency = business?.currency ?? "USD";
 
   const load = useCallback(async () => {
     if (!business?.id) return;
+    setRefreshing(true);
     try {
-      const res = await orderApi.getBusinessOrders({ businessId: business.id, limit: 80 });
+      const res = await orderApi.getBusinessOrders({ businessId: business.id, limit: 200 });
       setOrders(res.orders ?? []);
     } catch { toast("Failed to load orders", "error"); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [business?.id, toast]);
 
   useEffect(() => { load(); }, [load]);
@@ -306,17 +332,44 @@ export default function WaiterOrdersPage() {
   };
 
   const cancelOrder = async (orderId) => {
+    setAdvancing(orderId);
     try {
       await orderApi.updateOrderStatus(orderId, "cancelled");
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "cancelled" } : o));
       toast("Order cancelled", "success");
     } catch (e) { toast(e.message, "error"); }
+    finally { setAdvancing(null); setCancelTarget(null); }
   };
 
   const openDetail = (order) => { setSelected(order); setDetailOpen(true); };
   const activeStatuses = ["pending", "accepted", "preparing", "served"];
-  const filteredOrders = tab === "active" ? orders.filter(o => activeStatuses.includes(o.status)) : orders.filter(o => o.status === (tab === "completed" ? "completed" : tab));
+  const filteredOrders = tab === "all"
+    ? orders
+    : tab === "active"
+      ? orders.filter(o => activeStatuses.includes(o.status))
+      : orders.filter(o => o.status === tab);
   const pendingCount = orders.filter(o => o.status === "pending").length;
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / 10));
+  const pagedOrders = filteredOrders.slice((page - 1) * 10, page * 10);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  const changeTabBySwipe = (event) => {
+    if (!swipeStart.current) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - swipeStart.current.x;
+    const dy = touch.clientY - swipeStart.current.y;
+    swipeStart.current = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    const currentIndex = TABS.findIndex(item => item.value === tab);
+    const nextIndex = Math.min(TABS.length - 1, Math.max(0, currentIndex + (dx < 0 ? 1 : -1)));
+    if (nextIndex !== currentIndex) {
+      setTab(TABS[nextIndex].value);
+      setPage(1);
+    }
+  };
 
   return (
     <Box sx={{ pb: 10, maxWidth: 640, mx: "auto", minHeight: "100dvh" }}>
@@ -338,19 +391,36 @@ export default function WaiterOrdersPage() {
               </motion.div>
             )}
             <Tooltip title="Refresh" arrow>
-              <IconButton onClick={load} size="small" sx={{
+              <IconButton onClick={load} disabled={refreshing} aria-label="Refresh orders" size="small" sx={{
                 background: alpha(tokens.surface, 0.9), border: `1px solid ${tokens.borderBase}`, color: tokens.textMuted,
                 width: 36, height: 36, "&:hover": { color: tokens.brand, borderColor: tokens.borderStrong },
-              }}><RefreshIcon sx={{ fontSize: 18 }} /></IconButton>
+              }}><RefreshIcon sx={{ fontSize: 18, animation: refreshing ? "spin 1s linear infinite" : "none", "@keyframes spin": { to: { transform: "rotate(360deg)" } } }} /></IconButton>
             </Tooltip>
           </Stack>
         </Stack>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ minHeight: 38, background: alpha(tokens.surface, 0.6), borderRadius: "10px", p: "3px", "& .MuiTabs-indicator": { height: 2, borderRadius: 99 } }}>
-          {TABS.map(t => <Tab key={t.value} value={t.value} label={t.label} sx={{ minHeight: 32, py: 0.5, px: 2, fontSize: "0.82rem", flex: 1 }} />)}
+        <Tabs
+          value={tab}
+          onChange={(_, v) => { setTab(v); setPage(1); }}
+          onTouchStart={event => { const touch = event.touches[0]; swipeStart.current = { x: touch.clientX, y: touch.clientY }; }}
+          onTouchEnd={changeTabBySwipe}
+          onPointerDown={event => { if (event.pointerType === "touch") swipeStart.current = { x: event.clientX, y: event.clientY }; }}
+          onPointerUp={event => { if (event.pointerType === "touch") changeTabBySwipe({ changedTouches: [{ clientX: event.clientX, clientY: event.clientY }] }); }}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ minHeight: 38, background: alpha(tokens.surface, 0.6), borderRadius: "10px", p: "3px", "& .MuiTabs-indicator": { height: 2, borderRadius: 99 }, "& .MuiTab-root": { minWidth: "auto", px: 1.4, whiteSpace: "nowrap" } }}
+        >
+          {TABS.map(t => <Tab key={t.value} value={t.value} label={t.label} sx={{ minHeight: 32, py: 0.5, px: 2, fontSize: "0.82rem" }} />)}
         </Tabs>
       </Box>
 
-      <Box sx={{ p: 2, pt: 2.5 }}>
+      <Box
+        sx={{ p: 2, pt: 2.5, touchAction: "pan-y" }}
+        onTouchStart={event => { const touch = event.touches[0]; swipeStart.current = { x: touch.clientX, y: touch.clientY }; }}
+        onTouchEnd={changeTabBySwipe}
+        onPointerDown={event => { if (event.pointerType === "touch") swipeStart.current = { x: event.clientX, y: event.clientY }; }}
+        onPointerUp={event => { if (event.pointerType === "touch") changeTabBySwipe({ changedTouches: [{ clientX: event.clientX, clientY: event.clientY }] }); }}
+      >
         {loading ? (
           <Stack spacing={2}>{[...Array(4)].map((_, i) => <Box key={i} sx={{ borderRadius: "14px", overflow: "hidden", border: `1px solid ${tokens.borderBase}` }}><Skeleton variant="rectangular" height={88} animation="wave" /></Box>)}</Stack>
         ) : filteredOrders.length === 0 ? (
@@ -358,15 +428,36 @@ export default function WaiterOrdersPage() {
         ) : (
           <AnimatePresence mode="popLayout">
             <Stack spacing={1.5}>
-              {filteredOrders.map(order => (
-                <OrderCard key={order.id} order={order} currency={currency} advancing={advancing} onAdvance={advanceOrder} onCancel={cancelOrder} onSelect={openDetail} />
+              {pagedOrders.map(order => (
+                <OrderCard key={order.id} order={order} currency={currency} advancing={advancing} onAdvance={advanceOrder} onCancel={() => setCancelTarget(order)} onSelect={openDetail} />
               ))}
             </Stack>
           </AnimatePresence>
         )}
+        {!loading && filteredOrders.length > 0 && (
+          <Stack alignItems="center" sx={{ mt: 3 }}>
+            <Pagination
+              count={pageCount}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+              aria-label="Orders pages"
+            />
+          </Stack>
+        )}
       </Box>
 
       <OrderDetailModal order={selected} open={detailOpen} onClose={() => setDetailOpen(false)} currency={currency} onAdvance={advanceOrder} advancing={advancing} />
+      <ConfirmModal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={() => cancelOrder(cancelTarget.id)}
+        title="Cancel this order?"
+        message={`Order ${cancelTarget?.numeric_order_number || cancelTarget?.order_number} will be marked as cancelled.`}
+        confirmLabel="Cancel order"
+        danger
+        loading={advancing === cancelTarget?.id}
+      />
     </Box>
   );
 }

@@ -177,6 +177,15 @@ AUTHENTICATED ONBOARDING AND BUSINESS ROUTES
     Owner or manager in the requested business; managers are branch-scoped.
   x POST /api/custom-functions/getBusinessReports
     Waiter, public customer, non-member, or manager without an assigned branch.
+  ! POST /api/custom-functions/getBusinessMenu
+    Authenticated active owner or manager of the requested business; returns
+    that business's categories and menu items, including images.
+  ! POST /api/custom-functions/manageBusinessMenu
+    Authenticated active owner or manager of the requested business; creates,
+    updates, and deletes only categories/items belonging to that business.
+  ! POST /api/custom-functions/uploadMenuItemImage
+    Authenticated active owner or manager of the menu item's business; image
+    attach/remove is scoped to that item and accepts image files up to 5 MB.
 
 TABLE ROUTES
   ✓ POST /api/custom-functions/createBusinessTable
@@ -242,7 +251,13 @@ PLATFORM ADMIN ROUTES
   ✓ POST /api/custom-functions/platformGetAllBusinesses
   ✓ POST /api/custom-functions/platformToggleBusiness
   ✓ POST /api/custom-functions/platformUpdateBusinessPlan
-    Each route requires a valid JWT linked to an active platform-admin record.
+  ✓ POST /api/custom-functions/getAppLinks
+    Public read of the two configured app store URLs only.
+  ! POST /api/custom-functions/updateAppLinks
+    Active platform admin only; authenticated action grant must be reviewed
+    and enabled manually in Strapi Admin before use.
+    Other protected platform routes require a valid JWT linked to an active
+    platform-admin record.
   x These routes for owner, manager, waiter, public customer, or API token
     without a platform-admin user identity.
 
@@ -344,9 +359,10 @@ SAFE GRANT BOUNDARIES
 6. The two employee-management actions marked `!` above are new and are not
    included in the current 37 Authenticated grants. Add them manually before
    using the owner Employees screen.
-7. The two business/customer analytics and business-location actions marked
-   `!` above also need their route actions reviewed and, if approved, granted
-   manually in Strapi Admin. Do not change those grants through code or API.
+7. The business/customer analytics, business-location, and three menu actions
+   marked `!` above also need their route actions reviewed and, if approved,
+   granted manually in Strapi Admin. Do not change those grants through code
+   or API.
 
 VERIFICATION LIMITS
 -------------------

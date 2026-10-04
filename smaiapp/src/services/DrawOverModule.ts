@@ -4,14 +4,14 @@ import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
 
 interface DrawOverData {
-  rideId: number | string;
-  rideCode: string;
-  pickupAddress: string;
-  dropoffAddress: string;
-  estimatedFare: number;
-  distance: number;
-  riderName: string;
-  autoTimeout: number;
+  orderId?: number | string;
+  orderNumber?: string;
+  tableNumber?: number | string;
+  itemCount?: number;
+  total?: number;
+  requesterName?: string;
+  message?: string;
+  autoTimeout?: number;
 }
 
 class DrawOverModule {
@@ -29,8 +29,8 @@ class DrawOverModule {
   }
 
   private validateData(data: DrawOverData): boolean {
-    const required = ['rideId', 'rideCode', 'pickupAddress', 'dropoffAddress', 'estimatedFare', 'distance', 'riderName', 'autoTimeout'];
-    
+    const required = ['orderId', 'orderNumber', 'tableNumber'];
+
     for (const field of required) {
       if (data[field as keyof DrawOverData] === undefined || data[field as keyof DrawOverData] === null) {
         logger.error(`❌ Missing field: ${field}`);
@@ -47,9 +47,6 @@ class DrawOverModule {
     }
 
     try {
-      logger.info('📱 Showing draw-over...');
-      logger.info('📊 Data:', JSON.stringify(data, null, 2));
-
       if (!this.isModuleAvailable()) {
         logger.error('❌ Module not available');
         return;
@@ -60,18 +57,45 @@ class DrawOverModule {
         return;
       }
 
-      logger.info('✅ Validated, calling native...');
-      await DrawOverNativeModule.showOverlay(data);
-      logger.info('✅ Overlay shown!');
+      const payload = JSON.stringify({
+        type: 'order_request',
+        orderId: data.orderId,
+        orderNumber: data.orderNumber ?? String(data.orderId),
+        tableNumber: data.tableNumber,
+        itemCount: data.itemCount ?? 0,
+        total: data.total ?? 0,
+        requesterName: data.requesterName ?? 'Customer',
+        message: data.message ?? 'You have a new order on table',
+        autoTimeout: data.autoTimeout ?? 30000,
+      });
+
+      if (typeof (DrawOverNativeModule as any).showRideCard === 'function') {
+        await (DrawOverNativeModule as any).showRideCard(payload);
+      } else if (typeof (DrawOverNativeModule as any).showOverlay === 'function') {
+        await (DrawOverNativeModule as any).showOverlay({
+          orderId: data.orderId,
+          orderNumber: data.orderNumber ?? String(data.orderId),
+          tableNumber: data.tableNumber,
+          itemCount: data.itemCount ?? 0,
+          total: data.total ?? 0,
+          autoTimeout: data.autoTimeout ?? 30000,
+        });
+      } else {
+        logger.warn('⚠️ No overlay API available on native module');
+      }
+
+      logger.info('✅ Order overlay shown');
     } catch (error) {
-      logger.error('❌ Error:', error);
+      logger.error('❌ Error showing order overlay:', error);
     }
   }
 
   async hide(): Promise<void> {
     if (!this.isModuleAvailable()) return;
     try {
-      await DrawOverNativeModule.hideOverlay();
+      if (typeof (DrawOverNativeModule as any).hideOverlay === 'function') {
+        await DrawOverNativeModule.hideOverlay();
+      }
       logger.info('✅ Hidden');
     } catch (error) {
       logger.error('❌ Hide error:', error);
@@ -81,7 +105,7 @@ class DrawOverModule {
   async isShowing(): Promise<boolean> {
     if (!this.isModuleAvailable()) return false;
     try {
-      return await DrawOverNativeModule.isOverlayShowing();
+      return Boolean(await DrawOverNativeModule.isOverlayShowing?.());
     } catch (error) {
       logger.error('❌ Status error:', error);
       return false;

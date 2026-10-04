@@ -18,6 +18,28 @@ export function formatCurrency(
     }).format(amount);
 }
 
+/** Select the staff dashboard, or onboarding for a newly registered owner. */
+export function getAuthenticatedDashboardPath(employee) {
+    if (employee?.role === "waiter") return "/waiter";
+    if (employee?.role === "owner" || employee?.role === "manager") {
+        return "/owner/dashboard";
+    }
+    return "/onboarding";
+}
+
+/** Resolve Strapi media paths against the configured API host. */
+export function getMediaUrl(path) {
+    if (!path) return null;
+    if (/^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(path) || /^data:/i.test(path)) return path;
+
+    const apiUrl =
+        process.env.NEXT_PUBLIC_MEDIA_URL ||
+        process.env.NEXT_PUBLIC_STRAPI_URL ||
+        "http://localhost:1357";
+    const root = apiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+    return `${root}/${String(path).replace(/^\/+/, "")}`;
+}
+
 /** Format a date string */
 export function formatDate(
     date,

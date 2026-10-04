@@ -8,6 +8,17 @@ export default {
     },
     {
       method: 'POST',
+      path: '/custom-functions/getAppLinks',
+      handler: 'platform-admin.getAppLinks',
+      config: { auth: false },
+    },
+    {
+      method: 'POST',
+      path: '/custom-functions/updateAppLinks',
+      handler: 'platform-admin.updateAppLinks',
+    },
+    {
+      method: 'POST',
       path: '/custom-functions/platformCreateBusiness',
       handler: 'platform-admin.platformCreateBusiness',
     },

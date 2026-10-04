@@ -1,17 +1,19 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box, Typography, Button, Paper, Chip, Stack, Grid, CircularProgress,
-  Divider, alpha,
+  Divider, alpha, Pagination,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { orderApi } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCurrency, formatRelativeTime, orderStatusLabel } from "@/lib/utils";
 import { subscribeBusinessActivity } from "@/lib/socket";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const BRAND = "#D4850A";
@@ -53,19 +55,23 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [updating, setUpdating] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+  const swipeStart = useRef(null);
 
   const load = useCallback(async () => {
     if (!business?.id) return;
+    setRefreshing(true);
     try {
       const res = await orderApi.getBusinessOrders({
         businessId: business.id,
-        status: filter === "all" ? undefined : filter,
-        limit: 100,
+        limit: 200,
       });
       setOrders(res.orders ?? []);
     } catch { toast("Failed to load orders", "error"); }
-    finally { setLoading(false); }
-  }, [business?.id, filter, toast]);
+    finally { setLoading(false); setRefreshing(false); }
+  }, [business?.id, toast]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
@@ -84,7 +90,28 @@ export default function OrdersPage() {
 
   const currency = business?.currency ?? "USD";
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 10));
+  const pagedOrders = filtered.slice((page - 1) * 10, page * 10);
   const activeCount = orders.filter(o => !["completed", "cancelled"].includes(o.status)).length;
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  const changeFilterBySwipe = (event) => {
+    if (!swipeStart.current) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - swipeStart.current.x;
+    const dy = touch.clientY - swipeStart.current.y;
+    swipeStart.current = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    const currentIndex = STATUSES.indexOf(filter);
+    const nextIndex = Math.min(STATUSES.length - 1, Math.max(0, currentIndex + (dx < 0 ? 1 : -1)));
+    if (nextIndex !== currentIndex) {
+      setFilter(STATUSES[nextIndex]);
+      setPage(1);
+    }
+  };
 
   return (
     <Box sx={{ px: { xs: 2, lg: 4 }, py: 3, maxWidth: "1440px", mx: "auto" }}>
@@ -94,9 +121,11 @@ export default function OrdersPage() {
         icon="🧾"
         subtitle={`${activeCount} active`}
         actions={
-          <Box
+          <Button
+            type="button"
             component="button"
             onClick={load}
+            disabled={refreshing}
             sx={{
               background: "rgba(45,18,0,0.8)",
               border: "1px solid rgba(212,133,10,0.3)",
@@ -114,8 +143,9 @@ export default function OrdersPage() {
               transition: "all 0.2s",
             }}
           >
-            ↺ Refresh
-          </Box>
+            <RefreshIcon sx={{ fontSize: 16, animation: refreshing ? "spin 1s linear infinite" : "none", "@keyframes spin": { to: { transform: "rotate(360deg)" } } }} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
         }
       />
 
@@ -123,6 +153,10 @@ export default function OrdersPage() {
       <Stack
         direction="row"
         spacing={0.8}
+        onTouchStart={event => { const touch = event.touches[0]; swipeStart.current = { x: touch.clientX, y: touch.clientY }; }}
+        onTouchEnd={changeFilterBySwipe}
+        onPointerDown={event => { if (event.pointerType === "touch") swipeStart.current = { x: event.clientX, y: event.clientY }; }}
+        onPointerUp={event => { if (event.pointerType === "touch") changeFilterBySwipe({ changedTouches: [{ clientX: event.clientX, clientY: event.clientY }] }); }}
         sx={{ mb: 4, overflowX: "auto", pb: 1, "&::-webkit-scrollbar": { display: "none" } }}
       >
         {STATUSES.map(s => {
@@ -132,7 +166,7 @@ export default function OrdersPage() {
             <Chip
               key={s}
               label={s === "all" ? "All" : orderStatusLabel(s)}
-              onClick={() => setFilter(s)}
+              onClick={() => { setFilter(s); setPage(1); }}
               icon={
                 count > 0 ? (
                   <Typography
@@ -162,6 +196,13 @@ export default function OrdersPage() {
         })}
       </Stack>
 
+      <Box
+        onTouchStart={event => { const touch = event.touches[0]; swipeStart.current = { x: touch.clientX, y: touch.clientY }; }}
+        onTouchEnd={changeFilterBySwipe}
+        onPointerDown={event => { if (event.pointerType === "touch") swipeStart.current = { x: event.clientX, y: event.clientY }; }}
+        onPointerUp={event => { if (event.pointerType === "touch") changeFilterBySwipe({ changedTouches: [{ clientX: event.clientX, clientY: event.clientY }] }); }}
+        sx={{ touchAction: "pan-y" }}
+      >
       {loading ? (
         <Stack spacing={1.5}>
           {[...Array(5)].map((_, i) => (
@@ -176,7 +217,7 @@ export default function OrdersPage() {
         />
       ) : (
         <Stack spacing={1.5}>
-          {filtered.map(order => {
+          {pagedOrders.map(order => {
             const statusColor = STATUS_COLORS[order.status] || "default";
             return (
               <Paper
@@ -260,6 +301,13 @@ export default function OrdersPage() {
                     {formatRelativeTime(order.created_date)}
                     {order.notes && ` · Note: ${order.notes}`}
                   </Typography>
+                  <Button
+                    size="small"
+                    onClick={e => { e.stopPropagation(); setSelected(order); }}
+                    sx={{ mt: 0.5, px: 0, minWidth: 0, color: BRAND, fontSize: "0.72rem", fontWeight: 700 }}
+                  >
+                    View more
+                  </Button>
                 </Box>
 
                 {/* Total + quick actions */}
@@ -291,7 +339,7 @@ export default function OrdersPage() {
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={e => { e.stopPropagation(); updateStatus(order.id, "cancelled"); }}
+                        onClick={e => { e.stopPropagation(); setCancelTarget(order); }}
                         disabled={updating === order.id}
                         sx={{
                           borderRadius: "10px",
@@ -313,6 +361,18 @@ export default function OrdersPage() {
           })}
         </Stack>
       )}
+      {!loading && filtered.length > 0 && (
+        <Stack alignItems="center" sx={{ mt: 3 }}>
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            aria-label="Orders pages"
+          />
+        </Stack>
+      )}
+      </Box>
 
       {/* Order detail modal */}
       <Modal
@@ -410,7 +470,7 @@ export default function OrdersPage() {
                   <Button
                     fullWidth
                     variant="outlined"
-                    onClick={() => updateStatus(selected.id, "cancelled")}
+                    onClick={() => setCancelTarget(selected)}
                     sx={{
                       borderRadius: "14px",
                       color: ERROR,
@@ -443,6 +503,19 @@ export default function OrdersPage() {
           </Stack>
         )}
       </Modal>
+      <ConfirmModal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={async () => {
+          await updateStatus(cancelTarget.id, "cancelled");
+          setCancelTarget(null);
+        }}
+        title="Cancel this order?"
+        message={`Order ${cancelTarget?.numeric_order_number || cancelTarget?.order_number} will be marked as cancelled.`}
+        confirmLabel="Cancel order"
+        danger
+        loading={updating === cancelTarget?.id}
+      />
     </Box>
   );
 }

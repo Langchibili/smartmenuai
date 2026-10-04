@@ -61,6 +61,7 @@ const NATIVE_MESSAGES = {
     PLAY_AUDIO: 'PLAY_AUDIO',
     LOG_DATA: 'LOG_DATA',
     THEME_MODE_CHANGE: 'THEME_MODE_CHANGE',
+    OPEN_CUSTOMER_QR_SCANNER: 'OPEN_CUSTOMER_QR_SCANNER',
 };
 
 // ─── Per-request timeouts ─────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ export function ReactNativeWrapper({ children }) {
     // Core: post a message to native and await its response
     // ─────────────────────────────────────────────────────────────────────
     const sendToNative = useCallback((type, payload = {}) => {
-        if (!isNative || !window.ReactNativeWebView) {
+        if (typeof window === 'undefined' || !window.ReactNativeWebView) {
             return Promise.reject(new Error('Not running in React Native environment'));
         }
 
@@ -156,7 +157,7 @@ export function ReactNativeWrapper({ children }) {
                 reject(err);
             }
         });
-    }, [isNative]);
+    }, []);
 
     // ─────────────────────────────────────────────────────────────────────
     // Subscribe to events pushed FROM native (no requestId)
@@ -287,6 +288,11 @@ export function ReactNativeWrapper({ children }) {
             return { success: false, error: err.message };
         }
     }, [isNative, sendToNative]);
+
+    const openCustomerQrScanner = useCallback(
+        () => sendToNative(NATIVE_MESSAGES.OPEN_CUSTOMER_QR_SCANNER),
+        [sendToNative],
+    );
 
     // ─────────────────────────────────────────────────────────────────────
     // Permissions
@@ -577,6 +583,7 @@ export function ReactNativeWrapper({ children }) {
 
         // Core bridge
         sendToNative,
+        openCustomerQrScanner,
         on,
 
         // Services

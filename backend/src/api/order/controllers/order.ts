@@ -197,6 +197,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
       const orders = await strapi.db.query('api::order.order').findMany({
         where: { customer_session_id: customerSessionId },
+        populate: { items: true },
         orderBy: { createdAt: 'desc' },
         limit: 50,
       });

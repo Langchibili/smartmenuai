@@ -120,6 +120,57 @@ export default factories.createCoreController(
       }
     },
 
+    async getAppLinks(ctx) {
+      try {
+        const admin = await strapi.db.query('api::platform-admin.platform-admin').findOne({
+          where: { role: 'platform_master', is_active: true },
+          select: ['android_app_link', 'ios_app_link'],
+        });
+        ctx.send({
+          appLinks: {
+            android: admin?.android_app_link || '',
+            ios: admin?.ios_app_link || '',
+          },
+        });
+      } catch (err) {
+        strapi.log.error(`[getAppLinks] ${err?.stack || err?.message || err}`);
+        ctx.throw(500, 'Unable to load app download links');
+      }
+    },
+
+    async updateAppLinks(ctx) {
+      try {
+        const admin = await requirePlatformAdmin(ctx, strapi);
+        if (!admin) return;
+
+        const { android, ios } = ctx.request.body || {};
+        const isValidLink = (value) => {
+          if (typeof value !== 'string' || value.length > 2048) return false;
+          if (!value.trim()) return true;
+          try {
+            return new URL(value).protocol === 'https:';
+          } catch {
+            return false;
+          }
+        };
+        if (!isValidLink(android) || !isValidLink(ios)) {
+          return ctx.badRequest('App links must be valid HTTPS URLs (or blank)');
+        }
+
+        await strapi.db.query('api::platform-admin.platform-admin').update({
+          where: { id: admin.id },
+          data: {
+            android_app_link: android.trim() || null,
+            ios_app_link: ios.trim() || null,
+          },
+        });
+        ctx.send({ success: true });
+      } catch (err) {
+        strapi.log.error(`[updateAppLinks] ${err?.stack || err?.message || err}`);
+        ctx.throw(500, 'Unable to save app download links');
+      }
+    },
+
     // ─────────────────────────────────────────────────────────────────────────
     // POST /custom-functions/platformCreateBusiness   (auth required)
     // { businessName, businessType, ownerEmail, ownerFullName,

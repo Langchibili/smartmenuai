@@ -226,6 +226,21 @@ export function ReactNativeWrapper({ children }) {
                     }
                     break;
 
+                case 'ORDER_NOTIFICATION_TAPPED':
+                    window.location.assign(
+                        window.location.pathname.startsWith('/waiter')
+                            ? '/waiter/orders'
+                            : '/owner/orders'
+                    );
+                    break;
+                case 'WAITER_CALL_NOTIFICATION_TAPPED':
+                    window.location.assign(
+                        window.location.pathname.startsWith('/waiter')
+                            ? '/waiter/alerts'
+                            : '/owner/dashboard'
+                    );
+                    break;
+
                 default:
                     break;
             }

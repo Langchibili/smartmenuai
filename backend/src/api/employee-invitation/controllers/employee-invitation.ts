@@ -153,8 +153,26 @@ export default factories.createCoreController('api::employee-invitation.employee
       if (invitation.status === 'accepted') {
         const acceptedEmployee = await strapi.db.query('api::employee.employee').findOne({
           where: { user: user.id, business: invitation.business.id },
+          populate: ['owner_profile'],
         });
         if (acceptedEmployee) {
+          if (!acceptedEmployee.owner_profile) {
+            const ownerEmployee = await strapi.db.query('api::employee.employee').findOne({
+              where: { business: invitation.business.id, role: 'owner' },
+              populate: ['user'],
+            });
+            const ownerProfile = ownerEmployee?.user
+              ? await strapi.db.query('api::user-profile.user-profile').findOne({
+                  where: { user: ownerEmployee.user.id },
+                })
+              : null;
+            if (ownerProfile) {
+              await strapi.db.query('api::employee.employee').update({
+                where: { id: acceptedEmployee.id },
+                data: { owner_profile: ownerProfile.id },
+              });
+            }
+          }
           return ctx.send({
             success: true,
             employeeId: acceptedEmployee.id,

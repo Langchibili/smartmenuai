@@ -3,10 +3,12 @@
 import { Box } from "@mui/material";
 import MainNavigation from "@/components/navigation/MainNavigation";
 import { useAuth } from "@/lib/auth-context";
+import { usePathname } from "next/navigation";
 
 export default function MainLayout({ children }) {
   const { user } = useAuth();
-  if (!user) return children;
+  const pathname = usePathname();
+  if (!user || pathname === "/") return children;
 
   return (
     <>

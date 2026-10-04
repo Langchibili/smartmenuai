@@ -132,6 +132,44 @@ export default function TablesPage() {
     a.click();
   };
 
+  const copyQrUrl = async () => {
+    const url = qrModal?.qr_code_url;
+    if (!url) {
+      toast("QR code URL is unavailable", "error");
+      return;
+    }
+
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      }
+    } catch {}
+
+    if (!copied) {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      try {
+        textarea.select();
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        textarea.remove();
+      }
+    }
+
+    toast(
+      copied ? "Copied!" : "Unable to copy the URL. Please select and copy it manually.",
+      copied ? "success" : "error"
+    );
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: { xs: 2, lg: 4 } }}>
@@ -330,6 +368,7 @@ export default function TablesPage() {
                     <Select
                       value={table.status}
                       onChange={e => changeStatus(table.id, e.target.value)}
+                      inputProps={{ "aria-label": `Status for ${table.table_name}` }}
                       sx={{
                         fontSize: "0.7rem",
                         borderRadius: "8px",
@@ -486,11 +525,7 @@ export default function TablesPage() {
             <Button
               variant="outlined"
               fullWidth
-              onClick={() =>
-                navigator.clipboard
-                  .writeText(qrModal?.qr_code_url)
-                  .then(() => toast("Copied!", "success"))
-              }
+              onClick={copyQrUrl}
               sx={{
                 borderRadius: "14px",
                 color: TEXT_S,

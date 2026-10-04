@@ -229,7 +229,7 @@ export default function OrdersPage() {
                         fontWeight: 500,
                       }}
                     >
-                      {order.order_number}
+                      {order.numeric_order_number || order.order_number}
                     </Typography>
                     <Chip
                       label={orderStatusLabel(order.status)}
@@ -318,7 +318,7 @@ export default function OrdersPage() {
       <Modal
         open={!!selected}
         onClose={() => setSelected(null)}
-        title={`Order ${selected?.order_number}`}
+        title={`Order ${selected?.numeric_order_number || selected?.order_number}`}
         size="md"
       >
         {selected && (

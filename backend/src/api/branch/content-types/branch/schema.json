@@ -11,6 +11,18 @@
     "location": { "type": "string" },
     "address": { "type": "string" },
     "city": { "type": "string" },
+    "country_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::country.country",
+      "inversedBy": "branches"
+    },
+    "city_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::city.city",
+      "inversedBy": "branches"
+    },
     "phone": { "type": "string" },
     "is_active": { "type": "boolean", "default": true },
     "business": {

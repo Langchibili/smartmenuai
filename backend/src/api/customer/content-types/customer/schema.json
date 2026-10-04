@@ -1,0 +1,13 @@
+{
+  "kind": "collectionType",
+  "collectionName": "customer_analytics",
+  "info": {
+    "singularName": "customer",
+    "pluralName": "customers",
+    "displayName": "Customer analytics query"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {}
+}

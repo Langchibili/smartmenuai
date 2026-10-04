@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { businessApi } from "@/lib/api";
+import { businessApi, locationApi } from "@/lib/api";
 import {
+  Autocomplete,
   Box,
   Typography,
   TextField,
@@ -88,6 +89,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [countries, setCountries] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [citySearch, setCitySearch] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   const [form, setForm] = useState({
     businessType: "",
@@ -96,6 +101,8 @@ export default function OnboardingPage() {
     address: "",
     city: "",
     country: "",
+    countryId: "",
+    cityId: "",
     currency: "USD",
     serviceCharge: "",
     branchName: "Main Branch",
@@ -104,6 +111,24 @@ export default function OnboardingPage() {
 
   const set = (field, value) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  useEffect(() => {
+    let active = true;
+    setCatalogLoading(true);
+    locationApi.getLocationCatalog(form.countryId || undefined, citySearch)
+      .then(({ countries: countryOptions = [], cities: cityOptions = [] }) => {
+        if (!active) return;
+        setCountries(countryOptions);
+        setCities(cityOptions);
+      })
+      .catch((err) => {
+        if (active) setError(err.message || "Unable to load country and city options.");
+      })
+      .finally(() => {
+        if (active) setCatalogLoading(false);
+      });
+    return () => { active = false; };
+  }, [form.countryId, citySearch]);
 
   const handleFinish = async () => {
     setError("");
@@ -114,8 +139,8 @@ export default function OnboardingPage() {
         businessType: form.businessType,
         phone: form.phone,
         address: form.address,
-        city: form.city,
-        country: form.country,
+        countryId: form.countryId,
+        cityId: form.cityId,
         currency: form.currency,
         branchName: form.branchName,
         numberOfTables: parseInt(form.numberOfTables) || 5,
@@ -410,25 +435,47 @@ export default function OnboardingPage() {
               />
 
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }} >
-                <TextField
-                  label="City"
-                  placeholder="Lusaka"
-                  value={form.city}
-                  onChange={(e) => set("city", e.target.value)}
-                  fullWidth
-                  sx={inputSx}
-                />
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Autocomplete
+                    options={countries}
+                    value={countries.find((country) => String(country.id) === String(form.countryId)) || null}
+                    getOptionLabel={(country) => country.name || ""}
+                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                    onChange={(_, country) => {
+                      setForm((current) => ({
+                        ...current,
+                        countryId: country?.id || "",
+                        country: country?.name || "",
+                        cityId: "",
+                        city: "",
+                      }));
+                      setCitySearch("");
+                    }}
+                    loading={catalogLoading}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Country" required sx={inputSx} />
+                    )}
+                  />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6 }} >
-                <TextField
-                  label="Country"
-                  placeholder="Zambia"
-                  value={form.country}
-                  onChange={(e) => set("country", e.target.value)}
-                  fullWidth
-                  sx={inputSx}
-                />
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Autocomplete
+                    options={cities}
+                    value={cities.find((city) => String(city.id) === String(form.cityId)) || null}
+                    getOptionLabel={(city) => city.name || ""}
+                    isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                    onInputChange={(_, value, reason) => {
+                      if (reason === "input") setCitySearch(value);
+                    }}
+                    onChange={(_, city) => {
+                      set("cityId", city?.id || "");
+                      set("city", city?.name || "");
+                    }}
+                    disabled={!form.countryId}
+                    loading={catalogLoading}
+                    renderInput={(params) => (
+                      <TextField {...params} label="City" required sx={inputSx} />
+                    )}
+                  />
                 </Grid>
               </Grid>
 
@@ -473,7 +520,7 @@ export default function OnboardingPage() {
               <Button
                 variant="contained"
                 fullWidth
-                disabled={!form.businessName}
+                disabled={!form.businessName || !form.countryId || !form.cityId}
                 onClick={() => setStep(3)}
                 sx={{
                   flex: 1,

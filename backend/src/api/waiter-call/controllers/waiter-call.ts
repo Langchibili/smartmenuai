@@ -262,8 +262,11 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
       if (employee.role === 'waiter') {
         where.$or = [{ waiter: employee.id }, { waiter: { id: { $null: true } } }];
       }
-      if (employee.role !== 'owner') {
-        where.table = { branch: employee.branch?.id };
+      if (employee.role === 'manager') {
+        if (!employee.branch?.id) return ctx.forbidden();
+        where.table = { branch: employee.branch.id };
+      } else if (employee.role === 'waiter' && employee.branch?.id) {
+        where.table = { branch: employee.branch.id };
       }
       const calls = await strapi.db.query('api::waiter-call.waiter-call').findMany({
         where,
@@ -352,7 +355,7 @@ export default factories.createCoreController('api::waiter-call.waiter-call', ({
             business: businessId,
             status: { $in: ['pending', 'acknowledged'] },
             $or: [{ waiter: employee.id }, { waiter: { id: { $null: true } } }],
-            table: { branch: employee.branch?.id },
+            ...(employee.branch?.id ? { table: { branch: employee.branch.id } } : {}),
           },
           populate: ['table'],
           orderBy: { createdAt: 'asc' },

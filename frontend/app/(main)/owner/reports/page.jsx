@@ -89,24 +89,42 @@ export default function ReportsPage() {
   const { business } = useAuth();
   const [range, setRange] = useState(7);
   const [data, setData] = useState(null);
+  const [customerAnalytics, setCustomerAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [requestError, setRequestError] = useState("");
 
   const load = useCallback(async () => {
     if (!business?.id) return;
     setLoading(true);
+    setRequestError("");
     const now = new Date();
     const from = range > 0
       ? new Date(Date.now() - range * 86400000).toISOString()
       : new Date(now.setHours(0, 0, 0, 0)).toISOString();
-    try {
-      const res = await businessApi.getBusinessReports({
-        businessId: business.id,
-        dateFrom: from,
-        dateTo: new Date().toISOString(),
-      });
-      setData(res);
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+    const payload = {
+      businessId: business.id,
+      dateFrom: from,
+      dateTo: new Date().toISOString(),
+    };
+    const [reportsResult, analyticsResult] = await Promise.allSettled([
+      businessApi.getBusinessReports(payload),
+      businessApi.getBusinessCustomerAnalytics(payload),
+    ]);
+    if (reportsResult.status === "fulfilled") {
+      setData(reportsResult.value);
+    } else {
+      setRequestError(reportsResult.reason?.message || "Unable to load business reports.");
+    }
+    if (analyticsResult.status === "fulfilled") {
+      setCustomerAnalytics(analyticsResult.value);
+    } else {
+      setCustomerAnalytics(null);
+      setRequestError((current) => [
+        current,
+        `Customer analytics: ${analyticsResult.reason?.message || "Unable to load customer analytics."}`,
+      ].filter(Boolean).join(" "));
+    }
+    setLoading(false);
   }, [business?.id, range]);
 
   useEffect(() => { load(); }, [load]);
@@ -136,7 +154,11 @@ export default function ReportsPage() {
     return (
       <Box sx={{ px: { xs: 2, lg: 4 }, py: 3, maxWidth: "1440px", mx: "auto" }}>
         <PageHeader title="Reports" icon="📊" subtitle="Revenue, orders, and top-selling items" />
-        <Typography sx={{ color: TEXT_M, mt: 4, textAlign: "center" }}>No data available.</Typography>
+        {requestError ? (
+          <Typography role="alert" sx={{ color: "#f87171", mt: 4, textAlign: "center" }}>{requestError}</Typography>
+        ) : (
+          <Typography sx={{ color: TEXT_M, mt: 4, textAlign: "center" }}>No data available.</Typography>
+        )}
       </Box>
     );
   }
@@ -322,6 +344,68 @@ export default function ReportsPage() {
           </Stack>
         </Paper>
       )}
+
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 3,
+          p: 3,
+          borderRadius: "16px",
+          background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
+          border: "1px solid rgba(107,51,24,0.25)",
+        }}
+      >
+        <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 600, color: TEXT_P, mb: 2, fontSize: "1rem" }}>
+          Customer insights
+        </Typography>
+        {customerAnalytics ? (
+          <>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="body2" sx={{ color: TEXT_M }}>Known customers</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: TEXT_P }}>
+                  {customerAnalytics.knownCustomers}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="body2" sx={{ color: TEXT_M }}>Repeat customers</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: TEXT_P }}>
+                  {customerAnalytics.repeatCustomers}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="body2" sx={{ color: TEXT_M }}>Repeat rate</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: TEXT_P }}>
+                  {Math.round(customerAnalytics.repeatCustomerRate * 100)}%
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="body2" sx={{ color: TEXT_M }}>Orders from known customers</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: TEXT_P }}>
+                  {customerAnalytics.totalOrders}
+                </Typography>
+              </Grid>
+            </Grid>
+            {customerAnalytics.topItems?.length > 0 && (
+              <Stack spacing={0.75}>
+                <Typography variant="body2" fontWeight={600} sx={{ color: TEXT_S }}>Most ordered items</Typography>
+                {customerAnalytics.topItems.map((item) => (
+                  <Box key={item.name} sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: TEXT_P }}>{item.name}</Typography>
+                    <Typography sx={{ color: TEXT_M, flexShrink: 0 }}>{item.quantity} ordered</Typography>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </>
+        ) : (
+          <Typography role={requestError ? "alert" : undefined} sx={{ color: requestError ? "#f87171" : TEXT_M }}>
+            {requestError
+              ? "Customer insights are currently unavailable. Check the authenticated customer analytics permission."
+              : "No customer insight data is available for this period."}
+          </Typography>
+        )}
+      </Paper>
     </Box>
   );
 }

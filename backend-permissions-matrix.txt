@@ -137,6 +137,17 @@ PUBLIC CUSTOMER ROUTES
     Public; controller verifies the business, branch, and table relationship.
   ✓ POST /api/custom-functions/getClientOrders
     Public; order results are limited to the supplied customer session.
+  ✓ POST /api/custom-functions/getCustomerHistory
+    Public; history is limited to the high-entropy installation ID supplied
+    by the customer client.
+  ✓ POST /api/custom-functions/getCustomerOrder
+    Public; pending-order lookup is limited to the installation ID and number.
+  ✓ POST /api/custom-functions/getDealAndPromos
+    Public; returns active promotions in the current business's country and
+    ranks applicable items against that installation's order history.
+  ✓ POST /api/custom-functions/getLocationCatalog
+    Public; returns only active country/city catalog fields. The location
+    catalog must be seeded before onboarding can select a location.
   ✓ POST /api/custom-functions/placeOrder
     Public; controller verifies the table and live menu item availability/prices.
   ✓ POST /api/custom-functions/callWaiter
@@ -156,6 +167,12 @@ AUTHENTICATED ONBOARDING AND BUSINESS ROUTES
     Authenticated user; reads the caller's own employee/business/profile.
   ✓ POST /api/custom-functions/updateOnboardingStep
     Authenticated user; updates only the caller's profile.
+  ! POST /api/custom-functions/updateBusinessLocation
+    Authenticated active owner of the requested business; city must belong to
+    the selected country. Its Authenticated action grant is not yet verified.
+  ! POST /api/custom-functions/getBusinessCustomerAnalytics
+    Authenticated active owner or manager; managers are branch-scoped. Its
+    Authenticated action grant is not yet verified.
   ✓ POST /api/custom-functions/getBusinessReports
     Owner or manager in the requested business; managers are branch-scoped.
   x POST /api/custom-functions/getBusinessReports
@@ -327,6 +344,9 @@ SAFE GRANT BOUNDARIES
 6. The two employee-management actions marked `!` above are new and are not
    included in the current 37 Authenticated grants. Add them manually before
    using the owner Employees screen.
+7. The two business/customer analytics and business-location actions marked
+   `!` above also need their route actions reviewed and, if approved, granted
+   manually in Strapi Admin. Do not change those grants through code or API.
 
 VERIFICATION LIMITS
 -------------------

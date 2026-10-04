@@ -302,7 +302,7 @@ export default function DashboardPage() {
                               fontWeight: 500,
                             }}
                           >
-                            {order.order_number}
+                            {order.numeric_order_number || order.order_number}
                           </Typography>
                           <Chip
                             label={statusCfg.label}

@@ -8,7 +8,19 @@ import { useEffect } from "react";
 import { useReactNative, ReactNativeWrapper } from '@/lib/contexts/ReactNativeWrapper';
 
 // Public routes that never redirect to login
-const PUBLIC_ROUTES = ["/login", "/register", "/onboarding", "/accept-invite", "/setup-platform-master", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = [
+    "/login",
+    "/register",
+    "/onboarding",
+    "/accept-invite",
+    "/setup-platform-master",
+    "/forgot-password",
+    "/reset-password",
+    "/business-landing",
+    "/m/",
+    "/customer",
+    "/deal-and-promos",
+];
 
 export default function RootLayout({ children }) {
     return (

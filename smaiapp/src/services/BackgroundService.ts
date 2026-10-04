@@ -75,7 +75,7 @@ class BackgroundService {
             : 0);
         void this.showOrderAlert({
           orderId,
-          orderNumber: data.orderNumber ?? data.order_number,
+          orderNumber: data.numeric_order_number ?? data.orderNumber ?? data.order_number,
           tableNumber: data.tableNumber ?? data.table_number,
           itemCount,
           total: Number(data.total) || 0,

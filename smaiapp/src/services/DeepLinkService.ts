@@ -1,5 +1,5 @@
 //OkraApp\src\services\DeepLinkService.ts
-import { CONSTANTS } from '@utils/constants';
+import { CONSTANTS } from '../utils/constants';
 import { logger } from '../utils/logger';
 
 type WebViewSender = ((data: any) => void) | null;
@@ -18,37 +18,17 @@ class DeepLinkService {
       }
 
       let url = '';
-      const baseUrls = {
-        driver: CONSTANTS.FRONTEND_URLS.driver,
-        rider: CONSTANTS.FRONTEND_URLS.rider,
-        conductor: CONSTANTS.FRONTEND_URLS.conductor,
-        delivery: CONSTANTS.FRONTEND_URLS.delivery,
-      };
+      const baseUrl = CONSTANTS.FRONTEND_URLS.owner;
 
-      // Route based on notification type
       switch (data.type) {
-        case 'ride_request':
-          url = `${baseUrls.driver}/rides/${data.rideId}`;
+        case 'order_new':
+        case 'order_status_updated':
+          url = `${baseUrl}/owner/orders`;
           break;
-
-        case 'ride_started':
-          url = `${baseUrls.driver}/active-ride/${data.rideId}`;
+        case 'waiter_call':
+          url = `${baseUrl}/waiter/alerts`;
           break;
-
-        case 'ride_completed':
-          url = `${baseUrls.driver}/history/${data.rideId}`;
-          break;
-
-        case 'message':
-          url = `${baseUrls.driver}/messages/${data.conversationId}`;
-          break;
-
-        case 'payment_received':
-          url = `${baseUrls.driver}/earnings`;
-          break;
-
         case 'reconnect':
-          // Just refresh current page
           url = 'refresh';
           break;
 

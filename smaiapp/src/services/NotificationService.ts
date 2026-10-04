@@ -15,7 +15,7 @@ Notifications.setNotificationHandler({
 type WebViewSender = (data: any) => void;
 
 interface OrderNotifData {
-  orderId: number | string; orderNumber?: string; tableNumber?: number | string;
+  orderId: number | string; orderNumber?: string; numeric_order_number?: number; tableNumber?: number | string;
   itemCount?: number; total?: number;
 }
 interface WaiterCallNotifData {

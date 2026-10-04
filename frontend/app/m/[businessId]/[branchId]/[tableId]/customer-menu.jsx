@@ -19,12 +19,18 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { menuApi, orderApi, waiterCallApi } from "@/lib/api";
-import { formatCurrency, getOrCreateSessionId } from "@/lib/utils";
+import { formatCurrency, getCustomerSessionId, getOrCreateCustomerInstallationId } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
+import CustomerBottomNav from "@/components/customer/CustomerBottomNav";
 
 export default function CustomerMenu({ businessId, branchId, tableId }) {
+  const router = useRouter();
+  const { isNative } = useReactNative();
   const [menu, setMenu] = useState(null);
   const [cart, setCart] = useState({});
   const [customerOrders, setCustomerOrders] = useState([]);
+  const [installationId, setInstallationId] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [categoryId, setCategoryId] = useState("all");
   const [notes, setNotes] = useState("");
@@ -34,8 +40,18 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    setSessionId(getOrCreateSessionId());
-  }, []);
+    try {
+      const customerId = getOrCreateCustomerInstallationId();
+      setInstallationId(customerId);
+      setSessionId(getCustomerSessionId(businessId, customerId));
+      window.localStorage.setItem(
+        "smartmenu_last_customer_menu_url",
+        `/m/${businessId}/${branchId}/${tableId}`
+      );
+    } catch (identityError) {
+      setError(identityError.message || "Unable to create customer history for this device.");
+    }
+  }, [businessId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -105,6 +121,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
         businessId,
         tableId,
         customerSessionId: sessionId,
+        customerInstallationId: installationId,
         items: cartItems,
         notes,
       });
@@ -148,9 +165,27 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
 
   const currency = menu.business.currency || "USD";
   const formatPrice = (value) => formatCurrency(Number(value) || 0, currency);
+  const pendingOrder = customerOrders.find((order) => !["completed", "cancelled"].includes(order.status));
 
   return (
-    <Box sx={{ minHeight: "100dvh", bgcolor: "#100904", color: "#F9EDD8", pb: 14 }}>
+    <Box sx={{ minHeight: "100dvh", bgcolor: "#100904", color: "#F9EDD8", pb: 18 }}>
+      {!isNative && (
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            px: 2,
+            py: 1,
+            textAlign: "center",
+            bgcolor: "#D4850A",
+            color: "#1C0A00",
+            fontWeight: 700,
+          }}
+        >
+          Download the app for a better experience
+        </Box>
+      )}
       <Box sx={{ maxWidth: 900, mx: "auto", px: { xs: 2, sm: 3 }, pt: 4 }}>
         <Stack spacing={1} sx={{ mb: 3 }}>
           <Typography variant="h4" fontWeight={800}>{menu.menuSettings?.display_name || menu.business.business_name}</Typography>
@@ -167,6 +202,21 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
         {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice("")}>{notice}</Alert>}
 
+        {pendingOrder && (
+          <Alert
+            severity="info"
+            action={
+              <Button color="inherit" size="small" onClick={() => router.push("/customer/orders")}>
+                View order
+              </Button>
+            }
+            sx={{ mb: 2 }}
+          >
+            You have an active order #{pendingOrder.numeric_order_number || pendingOrder.order_number}.
+            You can view it or place another order below.
+          </Alert>
+        )}
+
         {customerOrders.length > 0 && (
           <Card sx={{ mb: 3, bgcolor: "#21150D", color: "inherit", border: "1px solid #49301B" }}>
             <CardContent>
@@ -175,7 +225,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
                 {customerOrders.map((order) => (
                   <Box key={order.id}>
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Typography fontWeight={600}>{order.order_number}</Typography>
+                      <Typography fontWeight={600}>Order #{order.numeric_order_number || order.order_number}</Typography>
                       <Chip size="small" label={order.status} color={order.status === "completed" ? "success" : "warning"} />
                     </Stack>
                     <Typography variant="body2" color="#D4A872">
@@ -228,7 +278,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
         </Stack>
 
         {cartItems.length > 0 && (
-          <Card sx={{ position: "fixed", zIndex: 5, bottom: 12, left: "50%", transform: "translateX(-50%)", width: "min(860px, calc(100% - 24px))", bgcolor: "#21150D", color: "inherit", border: "1px solid #D4850A" }}>
+          <Card sx={{ position: "fixed", zIndex: 5, bottom: 78, left: "50%", transform: "translateX(-50%)", width: "min(860px, calc(100% - 24px))", bgcolor: "#21150D", color: "inherit", border: "1px solid #D4850A" }}>
             <CardContent>
               <Stack spacing={1}>
                 {cartItems.map((item) => (
@@ -250,6 +300,30 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           </Card>
         )}
       </Box>
+      <CustomerBottomNav
+        selected="menu"
+        menuHref={`/m/${businessId}/${branchId}/${tableId}`}
+      />
+      {customerOrders.length > 0 && cartItems.length === 0 && (
+        <Button
+          variant="contained"
+          onClick={() => router.push(`/deal-and-promos?businessId=${encodeURIComponent(businessId)}`)}
+          sx={{
+            position: "fixed",
+            zIndex: 7,
+            left: "50%",
+            transform: "translateX(-50%)",
+            bottom: 84,
+            borderRadius: 999,
+            bgcolor: "#D4850A",
+            color: "#1C0A00",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}
+        >
+          What deals are out there?
+        </Button>
+      )}
     </Box>
   );
 }

@@ -38,6 +38,18 @@
     "country": {
       "type": "string"
     },
+    "country_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::country.country",
+      "inversedBy": "businesses"
+    },
+    "city_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::city.city",
+      "inversedBy": "businesses"
+    },
     "phone": {
       "type": "string"
     },

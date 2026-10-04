@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  Box, Typography, Button, Paper, Chip, Divider, Grid, Stack, TextField,
+  Autocomplete, Box, Typography, Button, Paper, Chip, Divider, Grid, Stack, TextField,
   alpha,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
-import { branchApi, flattenStrapiResponse } from "@/lib/api";
+import { branchApi, businessApi, flattenStrapiResponse, locationApi } from "@/lib/api";
 import { PageHeader } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
@@ -61,18 +61,73 @@ export default function SettingsPage() {
   const [branchModal, setBranchModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
+  const [locationForm, setLocationForm] = useState({ countryId: "", cityId: "", address: "" });
+  const [catalogCountryId, setCatalogCountryId] = useState("");
+  const [locationCountries, setLocationCountries] = useState([]);
+  const [locationCities, setLocationCities] = useState([]);
+  const [locationCitySearch, setLocationCitySearch] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState("");
 
   const [branchForm, setBranchForm] = useState({
     branch_name: "", location: "", address: "", city: "", phone: "",
+    countryId: "", cityId: "",
   });
 
   useEffect(() => {
     if (!business?.id) return;
+    setLocationForm({
+      countryId: business.country_record?.id || "",
+      cityId: business.city_record?.id || "",
+      address: business.address || "",
+    });
+    setCatalogCountryId(business.country_record?.id || "");
     branchApi.getBranches(business.id).then(res => {
       const brs = flattenStrapiResponse(res);
       setBranches(Array.isArray(brs) ? brs : brs ? [brs] : []);
     });
-  }, [business?.id]);
+  }, [business]);
+
+  useEffect(() => {
+    let active = true;
+    setLocationLoading(true);
+    locationApi.getLocationCatalog(catalogCountryId || undefined, locationCitySearch)
+      .then(({ countries = [], cities = [] }) => {
+        if (!active) return;
+        setLocationCountries(countries);
+        setLocationCities(cities);
+      })
+      .catch((error) => {
+        if (active) setLocationError(error.message || "Unable to load country and city options.");
+      })
+      .finally(() => {
+        if (active) setLocationLoading(false);
+      });
+    return () => { active = false; };
+  }, [catalogCountryId, locationCitySearch]);
+
+  const saveBusinessLocation = async () => {
+    if (!business?.id || !locationForm.countryId || !locationForm.cityId) return;
+    setSavingLocation(true);
+    setLocationError("");
+    try {
+      await businessApi.updateBusinessLocation({
+        businessId: business.id,
+        countryId: locationForm.countryId,
+        cityId: locationForm.cityId,
+        address: locationForm.address,
+      });
+      await refreshBusiness();
+      setEditingLocation(false);
+      toast("Business location updated", "success");
+    } catch (error) {
+      setLocationError(error.message || "Unable to update business location.");
+    } finally {
+      setSavingLocation(false);
+    }
+  };
 
   const openBranchModal = (branch) => {
     setEditingBranch(branch ?? null);
@@ -82,19 +137,36 @@ export default function SettingsPage() {
       address: branch.address ?? "",
       city: branch.city ?? "",
       phone: branch.phone ?? "",
-    } : { branch_name: "", location: "", address: "", city: "", phone: "" });
+      countryId: branch.country_record?.id || "",
+      cityId: branch.city_record?.id || "",
+    } : {
+      branch_name: "", location: "", address: "", city: "", phone: "",
+      countryId: "", cityId: "",
+    });
+    setCatalogCountryId(branch?.country_record?.id || "");
+    setLocationCitySearch(branch?.city_record?.name || "");
     setBranchModal(true);
   };
 
   const saveBranch = async () => {
-    if (!branchForm.branch_name) return;
+    if (!branchForm.branch_name || !branchForm.countryId || !branchForm.cityId) return;
     setSaving(true);
     try {
-      if (editingBranch) {
-        await branchApi.updateBranch(editingBranch.id, { ...branchForm, business: business.id });
-        toast("Branch updated", "success");
-      } else {
-        await branchApi.createBranch({ ...branchForm, business: business.id });
+    const selectedCity = locationCities.find((city) => String(city.id) === String(branchForm.cityId));
+    const payload = {
+      ...branchForm,
+      city: selectedCity?.name || branchForm.city,
+      country_record: branchForm.countryId,
+      city_record: branchForm.cityId,
+      business: business.id,
+    };
+    delete payload.countryId;
+    delete payload.cityId;
+    if (editingBranch) {
+      await branchApi.updateBranch(editingBranch.id, payload);
+      toast("Branch updated", "success");
+    } else {
+      await branchApi.createBranch(payload);
         toast("Branch created", "success");
       }
       setBranchModal(false);
@@ -122,9 +194,18 @@ export default function SettingsPage() {
       <Stack spacing={3}>
         {/* Business profile */}
         <Paper elevation={0} sx={sectionSx}>
-          <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 600, color: TEXT_P, mb: 3, fontSize: "1rem" }}>
-            Business profile
-          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, mb: 3 }}>
+            <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 600, color: TEXT_P, fontSize: "1rem" }}>
+              Business profile
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setEditingLocation((editing) => !editing)}
+              sx={{ color: TEXT_S, flexShrink: 0 }}
+            >
+              {editingLocation ? "Cancel location edit" : "Edit location"}
+            </Button>
+          </Box>
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12 }} >
               <TextField
@@ -158,26 +239,73 @@ export default function SettingsPage() {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }} >
-              <TextField
-                label="City"
-                value={business?.city ?? ""}
-                InputProps={{ readOnly: true }}
-                fullWidth
-                sx={inputSx}
-                InputLabelProps={{ shrink: true }}
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              {editingLocation ? (
+                <Autocomplete
+                  options={locationCountries}
+                  value={locationCountries.find((country) => String(country.id) === String(locationForm.countryId)) || null}
+                  getOptionLabel={(country) => country.name || ""}
+                  isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                  onChange={(_, country) => {
+                    setLocationForm((current) => ({
+                      ...current,
+                      countryId: country?.id || "",
+                      cityId: "",
+                    }));
+                    setCatalogCountryId(country?.id || "");
+                    setLocationCitySearch("");
+                  }}
+                  loading={locationLoading}
+                  renderInput={(params) => <TextField {...params} label="Country" required sx={inputSx} />}
+                />
+              ) : (
+                <TextField label="Country" value={business?.country ?? ""} InputProps={{ readOnly: true }} fullWidth sx={inputSx} InputLabelProps={{ shrink: true }} />
+              )}
             </Grid>
-            <Grid size={{ xs: 6 }} >
-              <TextField
-                label="Country"
-                value={business?.country ?? ""}
-                InputProps={{ readOnly: true }}
-                fullWidth
-                sx={inputSx}
-                InputLabelProps={{ shrink: true }}
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              {editingLocation ? (
+                <Autocomplete
+                  options={locationCities}
+                  value={locationCities.find((city) => String(city.id) === String(locationForm.cityId)) || null}
+                  getOptionLabel={(city) => city.name || ""}
+                  isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                  onInputChange={(_, value, reason) => {
+                    if (reason === "input") setLocationCitySearch(value);
+                  }}
+                  onChange={(_, city) => setLocationForm((current) => ({ ...current, cityId: city?.id || "" }))}
+                  disabled={!locationForm.countryId}
+                  loading={locationLoading}
+                  renderInput={(params) => <TextField {...params} label="City" required sx={inputSx} />}
+                />
+              ) : (
+                <TextField label="City" value={business?.city ?? ""} InputProps={{ readOnly: true }} fullWidth sx={inputSx} InputLabelProps={{ shrink: true }} />
+              )}
             </Grid>
+            {editingLocation && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    label="Business address"
+                    value={locationForm.address}
+                    onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))}
+                    inputProps={{ maxLength: 500 }}
+                    fullWidth
+                    sx={inputSx}
+                  />
+                </Grid>
+                {locationError && <Grid size={{ xs: 12 }}><Typography role="alert" color="error">{locationError}</Typography></Grid>}
+                <Grid size={{ xs: 12 }}>
+                  <Button
+                    variant="contained"
+                    onClick={saveBusinessLocation}
+                    disabled={savingLocation || !locationForm.countryId || !locationForm.cityId}
+                    sx={{ bgcolor: BRAND, color: "#1C0A00" }}
+                  >
+                    {savingLocation ? "Saving…" : "Save business location"}
+                  </Button>
+                </Grid>
+              </>
+            )}
           </Grid>
         </Paper>
 
@@ -351,7 +479,7 @@ export default function SettingsPage() {
             <Button
               variant="contained"
               onClick={saveBranch}
-              disabled={saving || !branchForm.branch_name}
+              disabled={saving || !branchForm.branch_name || !branchForm.countryId || !branchForm.cityId}
               sx={{
                 borderRadius: "14px",
                 background: `linear-gradient(135deg, ${BRAND}, ${BRAND_DARK})`,
@@ -378,17 +506,46 @@ export default function SettingsPage() {
             InputLabelProps={{ shrink: !!branchForm.branch_name || undefined }}
           />
           <Grid container spacing={2}>
-            <Grid size={{ xs: 6 }} >
-              <TextField
-                label="City"
-                placeholder="Lusaka"
-                value={branchForm.city}
-                onChange={e => setBranchForm(f => ({ ...f, city: e.target.value }))}
-                fullWidth
-                sx={inputSx}
+            <Grid size={{ xs: 12 }}>
+              <Autocomplete
+                options={locationCountries}
+                value={locationCountries.find((country) => String(country.id) === String(branchForm.countryId)) || null}
+                getOptionLabel={(country) => country.name || ""}
+                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                onChange={(_, country) => {
+                  setBranchForm((current) => ({
+                    ...current,
+                    countryId: country?.id || "",
+                    cityId: "",
+                    city: "",
+                  }));
+                  setCatalogCountryId(country?.id || "");
+                  setLocationCitySearch("");
+                }}
+                loading={locationLoading}
+                renderInput={(params) => <TextField {...params} label="Country" required sx={inputSx} />}
               />
             </Grid>
-            <Grid size={{ xs: 6 }} >
+            <Grid size={{ xs: 12 }}>
+              <Autocomplete
+                options={locationCities}
+                value={locationCities.find((city) => String(city.id) === String(branchForm.cityId)) || null}
+                getOptionLabel={(city) => city.name || ""}
+                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                onInputChange={(_, value, reason) => {
+                  if (reason === "input") setLocationCitySearch(value);
+                }}
+                onChange={(_, city) => setBranchForm((current) => ({
+                  ...current,
+                  cityId: city?.id || "",
+                  city: city?.name || "",
+                }))}
+                disabled={!branchForm.countryId}
+                loading={locationLoading}
+                renderInput={(params) => <TextField {...params} label="City" required sx={inputSx} />}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Phone"
                 placeholder="+260…"

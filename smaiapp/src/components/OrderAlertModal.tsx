@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width, height } = Dimensions.get('window');
 
 interface OrderAlertData {
-    orderId: string | number; orderNumber?: string; tableNumber?: string | number;
+    orderId: string | number; orderNumber?: string; numeric_order_number?: number; tableNumber?: string | number;
     items?: { name: string; quantity: number; price: number }[];
     total?: number; subtotal?: number; notes?: string;
 }
@@ -58,7 +58,9 @@ export const OrderAlertModal: React.FC<Props> = ({ open, order, onAccept, onDism
                         <View style={styles.tableRow}>
                             <Text style={styles.tableLabel}>TABLE</Text>
                             <Text style={styles.tableNumber}>{order.tableNumber ?? '-'}</Text>
-                            {order.orderNumber && <Text style={styles.orderNumber}>#{order.orderNumber}</Text>}
+                            {(order.numeric_order_number ?? order.orderNumber) && (
+                                <Text style={styles.orderNumber}>#{order.numeric_order_number ?? order.orderNumber}</Text>
+                            )}
                         </View>
 
                         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>

@@ -781,6 +781,11 @@ export interface ApiBranchBranch extends Struct.CollectionTypeSchema {
     branch_name: Schema.Attribute.String & Schema.Attribute.Required;
     business: Schema.Attribute.Relation<'manyToOne', 'api::business.business'>;
     city: Schema.Attribute.String;
+    city_record: Schema.Attribute.Relation<'manyToOne', 'api::city.city'>;
+    country_record: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::country.country'
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -925,7 +930,12 @@ export interface ApiBusinessBusiness extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.DefaultTo<'restaurant'>;
     city: Schema.Attribute.String;
+    city_record: Schema.Attribute.Relation<'manyToOne', 'api::city.city'>;
     country: Schema.Attribute.String;
+    country_record: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::country.country'
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -955,6 +965,41 @@ export interface ApiBusinessBusiness extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiCityCity extends Struct.CollectionTypeSchema {
+  collectionName: 'cities';
+  info: {
+    displayName: 'City';
+    pluralName: 'cities';
+    singularName: 'city';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    branches: Schema.Attribute.Relation<'oneToMany', 'api::branch.branch'>;
+    businesses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::business.business'
+    >;
+    country: Schema.Attribute.Relation<'manyToOne', 'api::country.country'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    latitude: Schema.Attribute.Decimal;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::city.city'> &
+      Schema.Attribute.Private;
+    longitude: Schema.Attribute.Decimal;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    population: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCountryCountry extends Struct.CollectionTypeSchema {
   collectionName: 'countries';
   info: {
@@ -976,6 +1021,12 @@ export interface ApiCountryCountry extends Struct.CollectionTypeSchema {
   };
   attributes: {
     acceptedMobileMoneyPayments: Schema.Attribute.JSON;
+    branches: Schema.Attribute.Relation<'oneToMany', 'api::branch.branch'>;
+    businesses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::business.business'
+    >;
+    cities: Schema.Attribute.Relation<'oneToMany', 'api::city.city'>;
     code: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique &
@@ -1072,6 +1123,33 @@ export interface ApiCustomControllerCustomController
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::custom-controller.custom-controller'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiCustomerCustomer extends Struct.CollectionTypeSchema {
+  collectionName: 'customer_analytics';
+  info: {
+    displayName: 'Customer analytics query';
+    pluralName: 'customers';
+    singularName: 'customer';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::customer.customer'
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
@@ -1408,12 +1486,15 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    customer_installation_id: Schema.Attribute.String;
     customer_session_id: Schema.Attribute.String;
     items: Schema.Attribute.Component<'order.order-item', true>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
+    menu_snapshot: Schema.Attribute.JSON;
     notes: Schema.Attribute.Text;
+    numeric_order_number: Schema.Attribute.Integer;
     order_number: Schema.Attribute.String & Schema.Attribute.Unique;
     orderStatus: Schema.Attribute.Enumeration<
       ['pending', 'accepted', 'preparing', 'served', 'completed', 'cancelled']
@@ -2160,9 +2241,11 @@ declare module '@strapi/strapi' {
       'api::business-ad-setting.business-ad-setting': ApiBusinessAdSettingBusinessAdSetting;
       'api::business-menu-setting.business-menu-setting': ApiBusinessMenuSettingBusinessMenuSetting;
       'api::business.business': ApiBusinessBusiness;
+      'api::city.city': ApiCityCity;
       'api::country.country': ApiCountryCountry;
       'api::currency.currency': ApiCurrencyCurrency;
       'api::custom-controller.custom-controller': ApiCustomControllerCustomController;
+      'api::customer.customer': ApiCustomerCustomer;
       'api::device.device': ApiDeviceDevice;
       'api::employee-invitation.employee-invitation': ApiEmployeeInvitationEmployeeInvitation;
       'api::employee.employee': ApiEmployeeEmployee;

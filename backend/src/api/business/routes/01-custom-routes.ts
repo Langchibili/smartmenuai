@@ -17,6 +17,11 @@ export default {
         },
         {
             method: 'POST',
+            path: '/custom-functions/updateBusinessLocation',
+            handler: 'business.updateBusinessLocation',
+        },
+        {
+            method: 'POST',
             path: '/custom-functions/getBusinessReports',
             handler: 'business.getBusinessReports',
         },

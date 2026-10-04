@@ -119,6 +119,12 @@ export const businessApi = {
 
   getBusinessReports: (payload) =>
     callStrapi("custom-functions/getBusinessReports", payload),
+
+  updateBusinessLocation: (payload) =>
+    callStrapi("custom-functions/updateBusinessLocation", payload),
+
+  getBusinessCustomerAnalytics: (payload) =>
+    callStrapi("custom-functions/getBusinessCustomerAnalytics", payload),
 };
 
 // ─── Tables ──────────────────────────────────────────────────────────────────
@@ -193,6 +199,23 @@ export const orderApi = {
 
   getClientOrders: (customerSessionId) =>
     callStrapi("custom-functions/getClientOrders", { customerSessionId }, { auth: false }),
+
+  getCustomerHistory: (customerInstallationId) =>
+    callStrapi("custom-functions/getCustomerHistory", { customerInstallationId }, { auth: false }),
+
+  getCustomerOrder: (customerInstallationId, numericOrderNumber) =>
+    callStrapi(
+      "custom-functions/getCustomerOrder",
+      { customerInstallationId, numericOrderNumber },
+      { auth: false }
+    ),
+
+  getDealAndPromos: (businessId, customerInstallationId) =>
+    callStrapi(
+      "custom-functions/getDealAndPromos",
+      { businessId, customerInstallationId },
+      { auth: false }
+    ),
 
   updateOrderStatus: (orderId, status, waiterId) =>
     callStrapi("custom-functions/updateOrderStatus", { orderId, status, waiterId }),
@@ -301,6 +324,15 @@ export const branchApi = {
 
   deleteBranch: (id) =>
     callStrapi(`branches/${id}`, undefined, { method: "DELETE" }),
+};
+
+export const locationApi = {
+  getLocationCatalog: (countryId, search) =>
+    callStrapi(
+      "custom-functions/getLocationCatalog",
+      { countryId, search },
+      { auth: false }
+    ),
 };
 
 // ─── Ads ─────────────────────────────────────────────────────────────────────

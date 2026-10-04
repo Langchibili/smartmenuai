@@ -23,7 +23,7 @@ export function ToastProvider({ children }) {
       toast(
         payload?.type === "create"
           ? `New order received${payload.data?.table_number ? ` for Table ${payload.data.table_number}` : ""}`
-          : `Order ${payload.data?.order_number || ""} ${payload.data?.status || "updated"}`.trim(),
+          : `Order ${payload.data?.numeric_order_number || payload.data?.order_number || ""} ${payload.data?.status || "updated"}`.trim(),
         "info"
       );
     } else if (event === "waiter_calls_event") {

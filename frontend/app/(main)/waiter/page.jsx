@@ -120,7 +120,9 @@ export default function WaiterDashboard() {
   const currency = business?.currency ?? "USD";
   const activeCalls = (data?.activeCalls ?? []).filter((c) => c.status === "pending");
   const myOrders = data?.activeOrders ?? [];
-  const tables = data?.assignedTables ?? [];
+  const tables = [...(data?.assignedTables ?? [])].sort(
+    (a, b) => Number(b.status === "needs_waiter") - Number(a.status === "needs_waiter")
+  );
 
   return (
     <Box sx={{ pb: 10, maxWidth: "640px", mx: "auto" }}>

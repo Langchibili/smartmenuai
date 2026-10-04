@@ -73,6 +73,36 @@ export function getOrCreateSessionId() {
     return id;
 }
 
+/** Get the opaque, persistent identity used for anonymous customer history. */
+export function getOrCreateCustomerInstallationId() {
+    if (typeof window === "undefined") return "";
+    const key = "smartmenu_customer_installation_id";
+    let id = window.localStorage.getItem(key);
+    if (!id) {
+        if (globalThis.crypto?.randomUUID) {
+            id = globalThis.crypto.randomUUID();
+        } else if (globalThis.crypto?.getRandomValues) {
+            const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+            id = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+        } else {
+            throw new Error("Secure browser storage is unavailable for customer history.");
+        }
+        window.localStorage.setItem(key, id);
+    }
+    return id;
+}
+
+/** Build a business-scoped customer session without using browser fingerprinting. */
+export function getCustomerSessionId(businessId, installationId) {
+    if (!businessId || !installationId) return "";
+    return `customer-${businessId}-${installationId}`;
+}
+
+export function getLastCustomerMenuUrl() {
+    if (typeof window === "undefined") return "/";
+    return window.localStorage.getItem("smartmenu_last_customer_menu_url") || "/";
+}
+
 /** Order status label */
 export function orderStatusLabel(status) {
     const map = {

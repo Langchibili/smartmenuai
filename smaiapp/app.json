@@ -23,6 +23,12 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SmartMenu AI to scan table QR codes."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",

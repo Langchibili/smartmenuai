@@ -11,6 +11,9 @@
       "type": "string",
       "unique": true
     },
+    "numeric_order_number": {
+      "type": "integer"
+    },
     "orderStatus": {
       "type": "enumeration",
       "enum": [
@@ -45,6 +48,12 @@
     },
     "customer_session_id": {
       "type": "string"
+    },
+    "customer_installation_id": {
+      "type": "string"
+    },
+    "menu_snapshot": {
+      "type": "json"
     },
     "items": {
       "type": "component",

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { StatusBar, Platform, AppState, StyleSheet, View, BackHandler, Image, Linking } from 'react-native';
+import { StatusBar, Platform, AppState, StyleSheet, View, BackHandler, Image, Linking, Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
@@ -18,9 +18,32 @@ import { WaiterCallAlertModal } from './src/components/WaiterCallAlertModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ConnectionLostBanner } from './src/components/ConnectionLostBanner';
 import OfflineScreen from './src/components/OfflineScreen';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 const API_URL = CONSTANTS.BACKEND_URL;
 const FRONTEND_URL = CONSTANTS.FRONTEND_URLS.owner;
+const FRONTEND_ORIGIN = new URL(FRONTEND_URL).origin;
+
+function getValidatedCustomerMenuUrl(rawUrl: string): string | null {
+  try {
+    const scanned = new URL(rawUrl);
+    const frontend = new URL(FRONTEND_URL);
+    if (!/^\/m\/[^/]+\/[^/]+\/[^/]+\/?$/.test(scanned.pathname)) return null;
+    if (scanned.origin === FRONTEND_ORIGIN) return scanned.toString();
+    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(scanned.hostname);
+    if (
+      isLocalhost &&
+      scanned.protocol === 'http:' &&
+      frontend.protocol === 'http:' &&
+      scanned.port === frontend.port
+    ) {
+      return `${FRONTEND_ORIGIN}${scanned.pathname}${scanned.search}${scanned.hash}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export default function AppContent() {
   const webViewRef = useRef<WebView>(null);
@@ -39,6 +62,12 @@ export default function AppContent() {
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [showCallModal, setShowCallModal] = useState(false);
   const [currentCall, setCurrentCall] = useState<any>(null);
+  const [entryMode, setEntryMode] = useState<'choice' | 'web'>('choice');
+  const [webViewUrl, setWebViewUrl] = useState(FRONTEND_URL);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const qrScanLocked = useRef(false);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -107,7 +136,7 @@ export default function AppContent() {
     });
 
     DeviceSocketService.on(SOCKET_EVENTS.WAITER_CALL.RESOLVED, (data: any) => {
-      setCurrentCall((call) => call?.callId === data.callId ? null : call);
+      setCurrentCall((call: any) => call?.callId === data.callId ? null : call);
       setShowCallModal(false);
       sendToWebView({ type: WEBVIEW_EVENTS.WAITER_CALL_RESOLVED, payload: data });
     });
@@ -177,6 +206,82 @@ export default function AppContent() {
     return <OfflineScreen onRetry={() => webViewRef.current?.injectJavaScript(`window.location = ""`)} />;
   }
 
+  const openCustomerScanner = async () => {
+    setQrError('');
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        setQrError('Camera permission is required to scan a table QR code.');
+        return;
+      }
+    }
+    qrScanLocked.current = false;
+    setShowQrScanner(true);
+  };
+
+  const handleQrScanned = ({ data }: { data: string }) => {
+    if (qrScanLocked.current) return;
+    qrScanLocked.current = true;
+    const menuUrl = getValidatedCustomerMenuUrl(data);
+    if (!menuUrl) {
+      setQrError('This QR code is not a valid SmartMenuAI table menu.');
+      qrScanLocked.current = false;
+      return;
+    }
+    setQrError('');
+    setShowQrScanner(false);
+    setWebViewUrl(menuUrl);
+    setEntryMode('web');
+  };
+
+  if (entryMode === 'choice') {
+    return (
+      <LinearGradient colors={['#1C0A00', '#100904']} style={styles.entryContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#100904" />
+        <SafeAreaView style={styles.entryContent}>
+          <Text style={styles.entryTitle}>SmartMenu AI</Text>
+          <Text style={styles.entrySubtitle}>Choose how you would like to continue.</Text>
+          <Pressable style={styles.entryPrimaryButton} onPress={openCustomerScanner}>
+            <Text style={styles.entryPrimaryText}>Are you a customer? Scan QR code</Text>
+          </Pressable>
+          <Pressable
+            style={styles.entrySecondaryButton}
+            onPress={() => {
+              setWebViewUrl(`${FRONTEND_URL.replace(/\/$/, '')}/business-landing`);
+              setEntryMode('web');
+            }}
+          >
+            <Text style={styles.entrySecondaryText}>Manage Business Instead</Text>
+          </Pressable>
+          {qrError ? <Text accessibilityRole="alert" style={styles.entryError}>{qrError}</Text> : null}
+        </SafeAreaView>
+        {showQrScanner && (
+          <View style={styles.scannerOverlay}>
+            <CameraView
+              style={styles.camera}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={handleQrScanned}
+            />
+            <View style={styles.scannerActions}>
+              <Text style={styles.scannerHint}>Point your camera at the table QR code.</Text>
+              {qrError ? <Text accessibilityRole="alert" style={styles.entryError}>{qrError}</Text> : null}
+              <Pressable
+                style={styles.entrySecondaryButton}
+                onPress={() => {
+                  setShowQrScanner(false);
+                  qrScanLocked.current = false;
+                }}
+              >
+                <Text style={styles.entrySecondaryText}>Cancel scanning</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={['#FFFFFF', '#FFFFFF']} style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -184,10 +289,15 @@ export default function AppContent() {
       <SafeAreaView style={styles.container}>
         <WebView
           ref={webViewRef}
-          source={{ uri: FRONTEND_URL }}
+          source={{ uri: webViewUrl }}
           onShouldStartLoadWithRequest={(request) => {
             if (request.url.startsWith('tel:') || request.url.startsWith('mailto:')) { Linking.openURL(request.url); return false; }
-            return true;
+            if (request.url === 'about:blank') return true;
+            try {
+              return new URL(request.url).origin === FRONTEND_ORIGIN;
+            } catch {
+              return false;
+            }
           }}
           onMessage={onMessage}
           javaScriptEnabled domStorageEnabled startInLoadingState
@@ -207,4 +317,17 @@ export default function AppContent() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   webview: { flex: 1 },
+  entryContainer: { flex: 1 },
+  entryContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
+  entryTitle: { color: '#F9EDD8', fontSize: 32, fontWeight: '800', textAlign: 'center' },
+  entrySubtitle: { color: '#D4A872', fontSize: 16, textAlign: 'center', marginTop: 10, marginBottom: 36 },
+  entryPrimaryButton: { minHeight: 56, borderRadius: 14, backgroundColor: '#D4850A', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, marginBottom: 14 },
+  entryPrimaryText: { color: '#1C0A00', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  entrySecondaryButton: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: '#D4850A', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  entrySecondaryText: { color: '#F9EDD8', fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  entryError: { color: '#FCA5A5', fontSize: 14, textAlign: 'center', marginTop: 16 },
+  scannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#100904' },
+  camera: { flex: 1 },
+  scannerActions: { padding: 20, backgroundColor: '#100904' },
+  scannerHint: { color: '#F9EDD8', textAlign: 'center', marginBottom: 14 },
 });

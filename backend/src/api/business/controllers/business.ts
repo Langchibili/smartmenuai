@@ -16,8 +16,8 @@ export default factories.createCoreController('api::business.business', ({ strap
         logo,
         phone,
         address,
-        city,
-        country,
+        countryId,
+        cityId,
         currency,
         planType,
         branchName,
@@ -29,6 +29,15 @@ export default factories.createCoreController('api::business.business', ({ strap
       const user = ctx.state.user;
       if (!user) return ctx.unauthorized();
 
+      const countryRecord = await strapi.db.query('api::country.country').findOne({
+        where: { id: countryId, isActive: true },
+      });
+      if (!countryRecord) return ctx.badRequest('Select a valid country');
+      const cityRecord = await strapi.db.query('api::city.city').findOne({
+        where: { id: cityId, country: countryRecord.id, isActive: true },
+      });
+      if (!cityRecord) return ctx.badRequest('Select a city in the chosen country');
+
       // 1. Create business
       const business = await strapi.db.query('api::business.business').create({
         data: {
@@ -37,8 +46,10 @@ export default factories.createCoreController('api::business.business', ({ strap
           logo: logo || null,
           phone: phone || '',
           address: address || '',
-          city: city || '',
-          country: country || '',
+          city: cityRecord.name,
+          country: countryRecord.name,
+          city_record: cityRecord.id,
+          country_record: countryRecord.id,
           currency: currency || 'USD',
           plan_type: planType || 'basic',
           is_active: true,
@@ -53,6 +64,10 @@ export default factories.createCoreController('api::business.business', ({ strap
         data: {
           branch_name: branchName || 'Main Branch',
           business: business.id,
+          city: cityRecord.name,
+          country_record: countryRecord.id,
+          city_record: cityRecord.id,
+          address: address || '',
           is_active: true,
           publishedAt: new Date(),
         },
@@ -164,9 +179,13 @@ export default factories.createCoreController('api::business.business', ({ strap
       const { fullName, accountType } = ctx.request.body || {};
       const validAccountTypes = ['business_owner', 'employee'];
 
-      const employee = await strapi.db.query('api::employee.employee').findOne({
+      let employee = await strapi.db.query('api::employee.employee').findOne({
         where: { user: user.id },
-        populate: ['business', 'branch'],
+        populate: {
+          business: { populate: ['country_record', 'city_record'] },
+          branch: { populate: ['country_record', 'city_record'] },
+          owner_profile: true,
+        },
       });
 
       const profiles = strapi.db.query('api::user-profile.user-profile');
@@ -226,8 +245,29 @@ export default factories.createCoreController('api::business.business', ({ strap
 
       const business = await strapi.db.query('api::business.business').findOne({
         where: { id: employee.business?.id },
-        populate: ['logo', 'branches'],
+        populate: {
+          logo: true,
+          country_record: true,
+          city_record: true,
+          branches: { populate: ['country_record', 'city_record'] },
+        },
       });
+
+      if (employee.role !== 'owner' && business?.id && !employee.owner_profile) {
+        const ownerEmployee = await strapi.db.query('api::employee.employee').findOne({
+          where: { business: business.id, role: 'owner' },
+          populate: ['user'],
+        });
+        const ownerProfile = ownerEmployee?.user
+          ? await profiles.findOne({ where: { user: ownerEmployee.user.id } })
+          : null;
+        if (ownerProfile) {
+          await strapi.db.query('api::employee.employee').update({
+            where: { id: employee.id },
+            data: { owner_profile: ownerProfile.id },
+          });
+        }
+      }
 
       if (employee.role === 'owner' && business?.id) {
         const businessEmployees = await strapi.db.query('api::employee.employee').findMany({
@@ -256,6 +296,12 @@ export default factories.createCoreController('api::business.business', ({ strap
               currency: business.currency,
               city: business.city,
               country: business.country,
+              country_record: business.country_record
+                ? { id: business.country_record.id, name: business.country_record.name, code: business.country_record.code }
+                : null,
+              city_record: business.city_record
+                ? { id: business.city_record.id, name: business.city_record.name }
+                : null,
               service_charge_percent: business.service_charge_percent,
               is_active: business.is_active,
               is_published: business.is_published,
@@ -263,6 +309,15 @@ export default factories.createCoreController('api::business.business', ({ strap
               branches: (business.branches || []).map((b) => ({
                 id: b.id,
                 branch_name: b.branch_name,
+                address: b.address,
+                city: b.city_record?.name || b.city || null,
+                country: b.country_record?.name || null,
+                country_record: b.country_record
+                  ? { id: b.country_record.id, name: b.country_record.name, code: b.country_record.code }
+                  : null,
+                city_record: b.city_record
+                  ? { id: b.city_record.id, name: b.city_record.name }
+                  : null,
               })),
             }
           : null,
@@ -317,6 +372,52 @@ export default factories.createCoreController('api::business.business', ({ strap
       ctx.send({ success: true });
     } catch (err) {
       ctx.throw(500, err.message);
+    }
+  },
+
+  async updateBusinessLocation(ctx) {
+    try {
+      const { businessId, countryId, cityId, address = '' } = ctx.request.body || {};
+      if (!businessId || !countryId || !cityId) {
+        return ctx.badRequest('businessId, countryId and cityId are required');
+      }
+      if (typeof address !== 'string' || address.length > 500) {
+        return ctx.badRequest('address must be a string no longer than 500 characters');
+      }
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized('Not authenticated');
+      const owner = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: businessId, role: 'owner', is_active: true },
+      });
+      if (!owner) return ctx.forbidden();
+      const country = await strapi.db.query('api::country.country').findOne({
+        where: { id: countryId, isActive: true },
+      });
+      if (!country) return ctx.badRequest('Select a valid country');
+      const city = await strapi.db.query('api::city.city').findOne({
+        where: { id: cityId, country: country.id, isActive: true },
+      });
+      if (!city) return ctx.badRequest('Select a city in the chosen country');
+
+      await strapi.db.query('api::business.business').update({
+        where: { id: businessId },
+        data: {
+          country: country.name,
+          city: city.name,
+          country_record: country.id,
+          city_record: city.id,
+          address: address.trim(),
+        },
+      });
+      ctx.send({
+        success: true,
+        country: { id: country.id, name: country.name, code: country.code },
+        city: { id: city.id, name: city.name },
+        address: address.trim(),
+      });
+    } catch (err) {
+      strapi.log.error(`[updateBusinessLocation] ${err?.stack || err?.message || err}`);
+      ctx.throw(500, 'Unable to update business location');
     }
   },
 

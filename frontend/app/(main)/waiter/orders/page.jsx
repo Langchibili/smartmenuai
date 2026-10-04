@@ -77,7 +77,7 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
             <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: tokens.textSecondary, fontWeight: 600, letterSpacing: "0.05em" }}>
-              {order.order_number}
+              {order.numeric_order_number || order.order_number}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.6}>
               <PulseDot color={cfg.dot} pulse={isPulse} />
@@ -203,7 +203,7 @@ function OrderDetailModal({ order, open, onClose, currency, onAdvance, advancing
   if (!order) return null;
   const cfg = STATUS_CFG[order.status] ?? STATUS_CFG.pending;
   return (
-    <SmartModal open={open} onClose={onClose} title={`Order ${order.order_number}`}
+    <SmartModal open={open} onClose={onClose} title={`Order ${order.numeric_order_number || order.order_number}`}
       subtitle={`Table ${order.table?.table_number ?? "–"} · ${formatRelativeTime(order.created_date)}`}
       icon={<LocalDiningIcon />} size="md">
       <SmartModal.Body>

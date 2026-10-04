@@ -1,4 +1,36 @@
 import { factories } from '@strapi/strapi';
+import { randomBytes } from 'crypto';
+
+async function createOrderWithDisplayNumber(strapi, businessId, data) {
+  return strapi.db.transaction(async ({ trx }) => {
+    await trx('businesses')
+      .select('id')
+      .where({ id: businessId })
+      .forUpdate()
+      .first();
+
+    const recentOrders = await strapi.db.query('api::order.order').findMany({
+      where: {
+        business: businessId,
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+      select: ['numeric_order_number'],
+    });
+    const usedNumbers = new Set(recentOrders.map((order) => Number(order.numeric_order_number)));
+    const baseNumber = 10000 + (Date.now() % 90000);
+    let numericOrderNumber = baseNumber;
+    for (let offset = 0; offset < 90000 && usedNumbers.has(numericOrderNumber); offset += 1) {
+      numericOrderNumber = 10000 + ((baseNumber - 10000 + offset + 1) % 90000);
+    }
+    if (usedNumbers.has(numericOrderNumber)) {
+      throw new Error('No available customer order numbers remain for this business.');
+    }
+
+    return strapi.entityService.create('api::order.order', {
+      data: { ...data, numeric_order_number: numericOrderNumber },
+    });
+  });
+}
 
 export default factories.createCoreController('api::order.order', ({ strapi }) => ({
 
@@ -17,7 +49,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       const [business, table, menuSettings, categories, items, promotions] = await Promise.all([
         strapi.db.query('api::business.business').findOne({
           where: { id: businessId },
-          populate: ['logo'],
+          populate: ['logo', 'country_record', 'city_record'],
         }),
         tableId
           ? strapi.db.query('api::table.table').findOne({
@@ -59,8 +91,11 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           business_type: business.business_type,
           plan_type: business.plan_type,
           currency: business.currency,
-          city: business.city,
-          country: business.country,
+          address: business.address,
+          city: business.city_record?.name || business.city,
+          country: business.country_record?.name || business.country,
+          country_code: business.country_record?.code || null,
+          country_id: business.country_record?.id || null,
           service_charge_percent: business.service_charge_percent || 0,
           logo: business.logo?.url || null,
         },
@@ -170,6 +205,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         orders: orders.map((o) => ({
           id: o.id,
           order_number: o.order_number,
+          numeric_order_number: o.numeric_order_number,
           status: o.orderStatus,
           payment_status: o.payment_status,
           items: o.items,
@@ -197,12 +233,27 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         businessId,
         tableId,
         customerSessionId,
+        customerInstallationId,
         items = [],
         notes = '',
       } = ctx.request.body;
 
       if (!businessId || !tableId || !items.length) {
         return ctx.badRequest('businessId, tableId and items are required');
+      }
+      if (
+        typeof customerSessionId !== 'string' ||
+        !customerSessionId ||
+        customerSessionId.length > 255
+      ) {
+        return ctx.badRequest('A valid customer session is required');
+      }
+      if (customerInstallationId !== undefined && (
+        typeof customerInstallationId !== 'string' ||
+        !/^[a-zA-Z0-9_-]{16,128}$/.test(customerInstallationId) ||
+        customerSessionId !== `customer-${businessId}-${customerInstallationId}`
+      )) {
+        return ctx.badRequest('Customer identity does not match this business session');
       }
 
       const table = await strapi.db.query('api::table.table').findOne({
@@ -239,31 +290,67 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       const serviceChargePercent = business?.service_charge_percent || 0;
       const serviceCharge = +(subtotal * (serviceChargePercent / 100)).toFixed(2);
       const total = +(subtotal + serviceCharge).toFixed(2);
-      const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
-
-      const order = await strapi.entityService.create('api::order.order', {
-        data: {
-          order_number: orderNumber,
-          orderStatus: 'pending',
-          payment_status: 'unpaid',
-          subtotal,
-          service_charge: serviceCharge,
-          total,
-          notes,
-          customer_session_id: customerSessionId,
-          items: normalizedItems.map((item) => ({
-            menu_item: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            notes: item.notes,
-            status: 'pending' as const,
-          })),
-          table: tableId,
-          business: businessId,
-          waiter: table.assigned_waiter?.id || null,
-          publishedAt: new Date(),
-        },
+      const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+      const [menuSettings, categories, menuItems] = await Promise.all([
+        strapi.db.query('api::business-menu-setting.business-menu-setting').findOne({
+          where: { business: businessId },
+        }),
+        strapi.db.query('api::menu-category.menu-category').findMany({
+          where: { business: businessId, is_active: true },
+          orderBy: { sort_order: 'asc' },
+        }),
+        strapi.db.query('api::menu-item.menu-item').findMany({
+          where: { business: businessId, is_available: true },
+          populate: ['image', 'menu_category', 'variants', 'modifiers'],
+        }),
+      ]);
+      const menuSnapshot = {
+        display_name: menuSettings?.display_name || business.business_name,
+        tagline: menuSettings?.tagline || menuSettings?.welcome_message || '',
+        currency: business.currency,
+        categories: categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          icon: category.icon,
+        })),
+        items: menuItems.map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          price: Number(item.price),
+          image: item.image?.url || null,
+          category: item.menu_category?.name || null,
+          variants: (item.variants || [])
+            .filter((variant) => variant.is_active)
+            .map((variant) => ({ name: variant.name, price: Number(variant.price) })),
+          modifiers: (item.modifiers || [])
+            .filter((modifier) => modifier.is_active)
+            .map((modifier) => ({ name: modifier.name, price: Number(modifier.price) })),
+        })),
+      };
+      const order = await createOrderWithDisplayNumber(strapi, businessId, {
+        order_number: orderNumber,
+        orderStatus: 'pending',
+        payment_status: 'unpaid',
+        subtotal,
+        service_charge: serviceCharge,
+        total,
+        notes,
+        customer_session_id: customerSessionId,
+        customer_installation_id: customerInstallationId || null,
+        menu_snapshot: menuSnapshot,
+        items: normalizedItems.map((item) => ({
+          menu_item: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          notes: item.notes,
+          status: 'pending' as const,
+        })),
+        table: tableId,
+        business: businessId,
+        waiter: table.assigned_waiter?.id || null,
+        publishedAt: new Date(),
       });
 
       // Move table into 'ordering' state
@@ -281,7 +368,14 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         status: 'ordering',
       });
 
-      ctx.send({ success: true, order: { id: order.id, order_number: order.order_number } });
+      ctx.send({
+        success: true,
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          numeric_order_number: order.numeric_order_number,
+        },
+      });
     } catch (err) {
       strapi.log.error(`[placeOrder] ${err?.stack || err?.message || err}`);
       ctx.throw(500, err.message);
@@ -428,6 +522,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
         orders: orders.map((o) => ({
           id: o.id,
           order_number: o.order_number,
+          numeric_order_number: o.numeric_order_number,
           status: o.orderStatus,
           payment_status: o.payment_status,
           items: o.items,
@@ -435,7 +530,6 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           service_charge: o.service_charge,
           total: o.total,
           notes: o.notes,
-          customer_session_id: o.customer_session_id,
           table: o.table
             ? {
                 id: o.table.id,

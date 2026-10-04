@@ -66,7 +66,13 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
 
   return (
     <OrderRowCard active={isPulse} onClick={() => onSelect(order)}>
-      <Stack direction="row" alignItems="flex-start" spacing={2}>
+      <Stack
+        direction="row"
+        alignItems="flex-start"
+        spacing={{ xs: 1, sm: 2 }}
+        useFlexGap
+        sx={{ flexWrap: "wrap" }}
+      >
         <motion.div whileHover={{ scale: 1.1, rotate: -3 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
           <Box sx={{
             width: 48, height: 48, borderRadius: "13px", display: "flex", alignItems: "center", justifyContent: "center",
@@ -79,8 +85,8 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
           </Box>
         </motion.div>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+        <Box sx={{ flex: { xs: "1 1 calc(100% - 64px)", sm: "1 1 auto" }, minWidth: 0 }}>
+          <Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 0.5 }}>
             <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: tokens.textSecondary, fontWeight: 600, letterSpacing: "0.05em" }}>
               {order.numeric_order_number || order.order_number}
             </Typography>
@@ -114,7 +120,13 @@ function OrderCard({ order, currency, onAdvance, onCancel, onSelect, advancing }
           </Button>
         </Box>
 
-        <Stack alignItems="flex-end" spacing={1} sx={{ flexShrink: 0 }}>
+        <Stack
+          direction={{ xs: "row", sm: "column" }}
+          alignItems={{ xs: "center", sm: "flex-end" }}
+          justifyContent={{ xs: "space-between", sm: "initial" }}
+          spacing={1}
+          sx={{ flex: { xs: "1 0 100%", sm: "0 0 auto" } }}
+        >
           <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: "1.05rem", color: tokens.textPrimary }}>
             {formatCurrency(order.total ?? 0, currency)}
           </Typography>

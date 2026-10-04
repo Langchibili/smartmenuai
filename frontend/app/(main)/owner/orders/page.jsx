@@ -225,8 +225,8 @@ export default function OrdersPage() {
                 elevation={0}
                 onClick={() => setSelected(order)}
                 sx={{
-                  px: 3,
-                  py: 2.5,
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 2, sm: 2.5 },
                   borderRadius: "16px",
                   background: "linear-gradient(145deg, rgba(45,18,0,0.6) 0%, rgba(28,10,0,0.7) 100%)",
                   border: "1px solid rgba(107,51,24,0.25)",
@@ -235,8 +235,9 @@ export default function OrdersPage() {
                   transition: "all 0.15s",
                   "&:hover": { borderColor: alpha(BRAND, 0.3) },
                   display: "flex",
-                  alignItems: "center",
-                  gap: 2,
+                  alignItems: { xs: "flex-start", sm: "center" },
+                  gap: { xs: 1, sm: 2 },
+                  flexWrap: { xs: "wrap", sm: "nowrap" },
                 }}
               >
                 {/* Table badge */}
@@ -260,8 +261,8 @@ export default function OrdersPage() {
                 </Box>
 
                 {/* Info */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <Box sx={{ flex: { xs: "1 1 calc(100% - 52px)", sm: "1 1 auto" }, minWidth: 0 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 0.5 }}>
                     <Typography
                       variant="caption"
                       sx={{
@@ -297,7 +298,7 @@ export default function OrdersPage() {
                   >
                     {(order.items ?? []).map((i) => `${i.quantity}× ${i.name}`).join(", ")}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: TEXT_D }}>
+                  <Typography variant="caption" sx={{ display: "block", color: TEXT_D }}>
                     {formatRelativeTime(order.created_date)}
                     {order.notes && ` · Note: ${order.notes}`}
                   </Typography>
@@ -311,7 +312,16 @@ export default function OrdersPage() {
                 </Box>
 
                 {/* Total + quick actions */}
-                <Box sx={{ textAlign: "right", flexShrink: 0 }}>
+                <Box
+                  sx={{
+                    textAlign: { xs: "left", sm: "right" },
+                    flex: { xs: "1 0 100%", sm: "0 0 auto" },
+                    display: { xs: "flex", sm: "block" },
+                    alignItems: "center",
+                    justifyContent: { xs: "space-between", sm: "initial" },
+                    gap: 1,
+                  }}
+                >
                   <Typography sx={{ fontWeight: 700, fontSize: "1rem", color: TEXT_P, mb: 1 }}>
                     {formatCurrency(order.total ?? 0, currency)}
                   </Typography>

@@ -6,21 +6,29 @@ work only in SmartMenuAI, and do not run an app in development mode.
 
 ## Current verified state
 
-- Port 3007 is still serving the previously deployed customer-first frontend.
-  The latest QR/menu changes passed an isolated production build and preview,
-  but have not been deployed to port 3007.
-- Those public pages were checked at 390px and 1440px for horizontal overflow,
-  unnamed controls, and browser console/network errors; none were found.
-- The new customer-home QR button and camera-instructions modal were checked
-  at 390px in the isolated production preview: no overflow or console/network
-  errors were found.
-- Focused frontend ESLint passed with 0 errors (6 warnings), the latest
-  frontend production build passed, and Strapi/native TypeScript checks passed.
-  Strapi's production build has not been rerun for the new menu actions.
+- The final frontend production build passed, was temporarily served on port
+  3007 for browser checks, and returned HTTP 200. The frontend and Strapi
+  processes started for testing have since been stopped; existing socket
+  listeners on ports 4000 and 3008 were left untouched. No development server
+  was started.
+- Owner Tables, Menu, Reports, Settings, and Employees, plus Waiter Orders and
+  Alerts, were reviewed at 390px and 1440px. No page-level horizontal overflow
+  was found. A narrow table status selector and overlapping order-card details
+  were corrected and rechecked in the production build.
+- The public QR menu `/m/16/17/31` loaded its four menu items; customer Orders
+  and Deals/Promos also loaded without browser console or network errors. No
+  customer order or other MySQL write was made.
+- The authenticated owner browser session showed the two expected branches.
+  Settings no longer makes the ungranted generic `/api/branches` request; it
+  now displays branches from the authenticated, business-scoped payload.
+- Focused frontend ESLint passed with 0 errors (18 existing unused-variable
+  warnings), and the final frontend production build passed. No backend source
+  changed during this pass, so the previously passing Strapi build remains the
+  latest backend build.
 - The country/city catalog contains 252 countries and 954 cities; rerunning the
   insert-only seeder added no duplicate catalog entries.
-- No order was submitted during the latest customer-page checks. MySQL data
-  must be preserved.
+- MySQL data was preserved; all persistent writes (table creation/assignment,
+  invitations, order placement, location edits, image upload) remain untested.
 
 ## Latest tables and orders UI changes (2026-10-04)
 
@@ -37,20 +45,34 @@ work only in SmartMenuAI, and do not run an app in development mode.
 - [x] Focused ESLint passed with 0 errors (24 existing unused-variable
   warnings); the isolated production build passed. The build output was removed
   afterward and did not overwrite the frontend currently listening on port 3007.
-- [ ] Verify the updated owner and waiter UI in the browser at desktop/mobile
-  widths, including swipe gestures, page changes, refresh behavior, and cancel
-  confirmation. Use the existing frontend process; do not start dev mode.
+- [x] Review responsive owner/waiter pages at 390px and 1440px. Owner order
+  right-to-left swipe changed All to Pending; waiter order swipe changed All
+  to Active. Owner order refresh returned HTTP 200; View more opened details;
+  cancel opened and dismissed its confirmation without changing the order.
+- [x] Confirm tables needing a waiter appear first, mobile table status labels
+  are no longer clipped, the QR dialog opens, and Copy URL writes the expected
+  menu URL to the clipboard.
+- [ ] Use a real waiter account to verify assigned-table visibility, waiter
+  Alerts and Orders data, waiter refresh, and order actions. The current browser
+  session is an owner; a direct owner visit to `/waiter/alerts` produced 403
+  responses, but the denied endpoint(s) still need to be identified and
+  classified with an actual waiter identity.
+- [ ] Page 2 pagination could not be exercised: this business has 8 tables and
+  3 orders. The UI showed one page and stayed within its 10-item limit.
 
 ## Pending browser and owner/waiter verification
 
-- [ ] Sign in using suitable owner and waiter accounts, then review at desktop
-  and mobile widths:
-  - Owner: Tables, Menu, Reports, Settings, Employees.
-  - Waiter: Orders, Alerts, assigned-table dashboard.
-- [ ] For each page, check clipped content, responsive MUI Grid/layout,
-  horizontal overflow, keyboard/accessibility labels, console errors, failed
-  network requests, and unexpected 401/403 responses. Fix only reproducible
-  regressions; rerun frontend ESLint and production build after any fix.
+- [x] Review owner Tables, Menu, Reports, Settings, Employees, and the waiter
+  Orders/Alerts pages at desktop and mobile widths; no horizontal overflow was
+  found. The Menu edit form and image picker, employee invitation role/branch
+  options, and table priority order were visible.
+- [x] Resolve the observed owner Settings 403 by reading branches from the
+  owner-scoped `getMyBusiness` payload instead of the denied generic Branch
+  collection route; the rebuilt page now shows Harbour Main and Harbour Garden
+  with no failed request.
+- [ ] Complete role-specific waiter browser verification with a waiter
+  account; investigate the 403 responses recorded during the owner-session
+  visit to the waiter Alerts route before classifying them.
 - [ ] After manually granting the three new menu actions in Strapi Admin,
   verify owner menu categories/items load, edit/update/toggle/delete work, and
   business scoping denies other tenants. Then rebuild/restart the production
@@ -64,9 +86,9 @@ work only in SmartMenuAI, and do not run an app in development mode.
   browser fallback modal was smoke-tested; native camera behavior remains
   device-dependent.
 - [ ] As an owner, create a test table and verify its branch, number, status,
-  QR code, and table details persist after refresh. Verify the QR URL copy
-  action. Use an agreed test record and do not delete or overwrite existing
-  MySQL data.
+  QR code, and table details persist after refresh. Use an agreed test record
+  and do not delete or overwrite existing MySQL data. The existing table's QR
+  dialog and clipboard URL were already verified without changing table data.
 - [ ] Assign the test table to an active waiter; verify the waiter sees it and
   that tables needing a waiter are prioritized. Exercise table-preview drawer
   actions and View More navigation for both owner and waiter.
@@ -76,9 +98,15 @@ work only in SmartMenuAI, and do not run an app in development mode.
   delivery or content is demonstrably incorrect.
 - [ ] Review branch management and business-location editing using the owner
   account; verify saved country/city/branch values after refresh.
+- [ ] Review any branch create/update/delete permissions in Strapi Admin before
+  using those actions. Do not enable generic Branch CRUD: its standard REST
+  actions have no business/branch row-level scope.
 
 ## Pending customer/order verification
 
+- [x] Loaded the public QR menu for business 16 / branch 17 / table 31 and
+  confirmed four menu items render. The customer Deals/Promos page returned its
+  expected empty-offers state without an API or browser error.
 - [ ] Use a safe test business or an explicitly approved test record to place an
   order. Verify the text order ID remains intact, `numeric_order_number` is a
   five-digit display number, and the saved menu snapshot/order details persist.
@@ -131,18 +159,27 @@ work only in SmartMenuAI, and do not run an app in development mode.
   and `getBusinessCustomerAnalytics`. Grant only actions approved after
   reviewing their controller scope. Do not change permissions through script
   or API.
+- [ ] As a platform administrator, manually review and grant the
+  `updateAppLinks` action if its authorization is appropriate, configure the
+  Android and iOS store URLs, then verify both links in the customer download
+  prompt. Neither store URL is configured yet.
 - [ ] Resolve any mismatch between verified route inventory, Strapi grants,
   and `backend-permissions-matrix.txt`; update the matrix with verified
   behavior. Do not treat an expected 403 for a denied role as a defect.
 
 ## Final runtime checks
 
-- [ ] Before using any service, check configured ports 3007 (frontend), 1357
-  (Strapi), 4000 (main socket), and 3008 (device socket), plus 8081 before
-  native work. Reuse healthy processes; do not leave duplicates running.
-- [ ] After final smoke tests or fixes, review browser console/network output
-  and service logs. Rerun focused frontend lint/build and Strapi build if
-  relevant code changed. Leave existing MySQL data intact.
+- [x] Checked configured service ports 3007 (frontend), 1357 (Strapi), 4000
+  (main socket), and 3008 (device socket). Reused the existing socket listeners
+  and stopped only the SmartMenu frontend/Strapi processes started for browser
+  checks.
+- [x] Focused frontend ESLint and production build passed after the final
+  frontend changes. Browser network checks confirmed the owner order refresh
+  and the final Settings page returned successfully.
+- [ ] Review backend/socket service logs during the remaining end-to-end
+  notification tests. No backend source changed in this pass, so the earlier
+  passing Strapi build was not rerun.
+- [ ] Check port 8081 before any future native-app verification.
 
 ## Access and safety constraints
 
@@ -161,8 +198,9 @@ work only in SmartMenuAI, and do not run an app in development mode.
   TypeScript build passes without starting a dev server.
 - [x] Authenticated business users are routed to the dashboard after login via
   the existing dashboard-path helper and login logic.
-- [x] No additional code changes were required beyond verified fixes and the
-  project-level tracking file. Remaining items are manual verification only.
+- [x] Verified responsive layout regressions were fixed; the frontend passed
+  focused ESLint (0 errors) and a production build, then was temporarily
+  started only with `npm start` for browser checks and stopped afterward.
 - [ ] Complete any remaining live browser/device/socket verification using the
   approved ports and a safe test record, without starting duplicate dev-mode
   processes or altering existing MySQL data.

@@ -86,10 +86,7 @@ export default function SettingsPage() {
       address: business.address || "",
     });
     setCatalogCountryId(business.country_record?.id || "");
-    branchApi.getBranches(business.id).then(res => {
-      const brs = flattenStrapiResponse(res);
-      setBranches(Array.isArray(brs) ? brs : brs ? [brs] : []);
-    });
+    setBranches(Array.isArray(business.branches) ? business.branches : []);
   }, [business]);
 
   useEffect(() => {

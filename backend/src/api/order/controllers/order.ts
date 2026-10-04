@@ -61,7 +61,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       ] = await Promise.all([
         strapi.db.query('api::business.business').findOne({
           where: { id: businessId },
-          populate: ['logo', 'country_record', 'city_record'],
+          populate: ['logo', 'country_record', 'city_record', 'currency_record'],
         }),
         tableId
           ? strapi.db.query('api::table.table').findOne({
@@ -156,7 +156,13 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
             String(business.business_type || '').toLocaleLowerCase()
           ] || {},
           plan_type: business.plan_type,
-          currency: business.currency,
+          currency: business.currency_record?.code ||
+            business.currency ||
+            adminSettings.default_currency?.code ||
+            'ZMW',
+          currency_symbol: business.currency_record?.symbol ||
+            adminSettings.default_currency?.symbol ||
+            'K',
           address: business.address,
           city: business.city_record?.name || business.city,
           country: business.country_record?.name || business.country,
@@ -258,11 +264,22 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
   // ─────────────────────────────────────────────────────────────────────────────
   async getClientOrders(ctx) {
     try {
-      const { customerSessionId } = ctx.request.body;
-      if (!customerSessionId) return ctx.send({ orders: [] });
+      const { customerInstallationId, customerSessionId } = ctx.request.body || {};
+      if (
+        customerInstallationId !== undefined &&
+        (typeof customerInstallationId !== 'string' ||
+          !/^[a-zA-Z0-9_-]{16,128}$/.test(customerInstallationId))
+      ) {
+        return ctx.badRequest('A valid customer installation ID is required');
+      }
+      if (!customerInstallationId && !customerSessionId) {
+        return ctx.send({ orders: [] });
+      }
 
       const orders = await strapi.db.query('api::order.order').findMany({
-        where: { customer_session_id: customerSessionId },
+        where: customerInstallationId
+          ? { customer_installation_id: customerInstallationId }
+          : { customer_session_id: customerSessionId },
         populate: { items: true, business: true },
         orderBy: { createdAt: 'desc' },
         limit: 50,
@@ -328,11 +345,11 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       ) {
         return ctx.badRequest('A valid customer session is required');
       }
-      if (customerInstallationId !== undefined && (
+      if (
         typeof customerInstallationId !== 'string' ||
         !/^[a-zA-Z0-9_-]{16,128}$/.test(customerInstallationId) ||
-        customerSessionId !== `customer-${businessId}-${customerInstallationId}`
-      )) {
+        customerSessionId !== `customer-${customerInstallationId}`
+      ) {
         return ctx.badRequest('Customer identity does not match this business session');
       }
 
@@ -343,7 +360,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       if (!table) return ctx.badRequest('Table does not belong to this business');
       const business = await strapi.db.query('api::business.business').findOne({
         where: { id: businessId },
-        populate: ['owner'],
+        populate: ['owner', 'currency_record'],
       });
       if (!business) return ctx.notFound('Business not found');
 
@@ -373,7 +390,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       const serviceCharge = +(subtotal * (serviceChargePercent / 100)).toFixed(2);
       const total = +(subtotal + serviceCharge).toFixed(2);
       const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
-      const [menuSettings, categories, menuItems] = await Promise.all([
+      const [menuSettings, categories, menuItems, adminSettings] = await Promise.all([
         strapi.db.query('api::business-menu-setting.business-menu-setting').findOne({
           where: { business: businessId },
         }),
@@ -385,11 +402,15 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
           where: { business: businessId, is_available: true },
           populate: ['image', 'menu_category', 'variants', 'modifiers'],
         }),
+        getAdminSettings(strapi),
       ]);
       const menuSnapshot = {
         display_name: menuSettings?.display_name || business.business_name,
         tagline: menuSettings?.tagline || menuSettings?.welcome_message || '',
-        currency: business.currency,
+        currency: business.currency_record?.code ||
+          business.currency ||
+          adminSettings.default_currency?.code ||
+          'ZMW',
         categories: categories.map((category) => ({
           id: category.id,
           name: category.name,

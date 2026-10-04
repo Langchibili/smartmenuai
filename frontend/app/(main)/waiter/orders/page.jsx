@@ -317,7 +317,7 @@ export default function WaiterOrdersPage() {
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const swipeStart = useRef(null);
-  const currency = business?.currency ?? "USD";
+  const currency = business?.currency ?? "ZMW";
 
   const load = useCallback(async () => {
     if (!business?.id) return;

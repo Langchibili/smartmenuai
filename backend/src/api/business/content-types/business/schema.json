@@ -54,8 +54,12 @@
       "type": "string"
     },
     "currency": {
-      "type": "string",
-      "default": "USD"
+      "type": "string"
+    },
+    "currency_record": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::currency.currency"
     },
     "plan_type": {
       "type": "enumeration",

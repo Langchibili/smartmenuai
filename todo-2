@@ -260,3 +260,26 @@ work only in SmartMenuAI, and do not run an app in development mode.
   served stale build chunks and the backend port was unreachable. Do not stop
   or restart pre-existing processes without approval. No database records
   were written.
+
+## Currency, support, QR, and customer identity upgrades (2026-10-04)
+
+- [x] Added an insert-only currency seeder and seeded ten common currencies plus
+  Zambian Kwacha (ZMW, K); existing currency rows are preserved.
+- [x] Added active backend currency options, business currency relations,
+  platform default-currency relation, and ZMW/K fallback behavior.
+- [x] Added WhatsApp support configuration and a public support page with
+  call, WhatsApp, copy-number, and email actions.
+- [x] Added lifecycle QR PNG generation and media attachment for new tables;
+  the owner QR dialog reads the persisted image through the media URL helper.
+- [x] Changed customer session IDs to `customer-<installation key>` and made
+  order history lookup use the installation ID across businesses.
+- [x] Final frontend and Strapi production builds passed. Focused ESLint had
+  zero errors and 28 existing unused-variable warnings; `git diff --check`
+  passed.
+- [ ] Browser check of `/support` hit the already-running stale frontend, which
+  redirected to `/login` and returned a 404 resource. It was left untouched;
+  rebuild/restart only after checking ports and confirming the process is safe.
+- [ ] After safely deploying/restarting the existing app services, verify
+  currency and location selection, default-currency persistence, support links,
+  new-table QR upload/rendering, and cross-business history. Do not create a
+  persistent test table or order without approval.

@@ -151,6 +151,11 @@ export default function LandingPage() {
       >
         © {new Date().getFullYear()} SmartMenu AI · Built for hospitality
       </Typography>
+      <Typography sx={{ textAlign: "center", mt: 1 }}>
+        <Button component={Link} href="/support" size="small" sx={{ color: TEXT_SECONDARY }}>
+          Contact support
+        </Button>
+      </Typography>
     </Box>
   );
 }

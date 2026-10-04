@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Alert,
   Box,
@@ -63,7 +64,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
     try {
       const customerId = getOrCreateCustomerInstallationId();
       setInstallationId(customerId);
-      setSessionId(getCustomerSessionId(businessId, customerId));
+      setSessionId(getCustomerSessionId(customerId));
       window.localStorage.setItem(
         "smartmenu_last_customer_menu_url",
         `/m/${businessId}/${branchId}/${tableId}`
@@ -78,9 +79,11 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
     let cancelled = false;
     const loadOrders = async () => {
       try {
-        const result = await orderApi.getClientOrders(sessionId);
+        const result = await orderApi.getClientOrders(installationId);
         if (!cancelled) {
-          const orders = result.orders || [];
+          const orders = (result.orders || []).filter(
+            (order) => String(order.business?.id) === String(businessId)
+          );
           setCustomerOrders(orders);
           const orderToReview = orders.find(
             (order) => order.status === "completed" && !order.customer_rating
@@ -97,7 +100,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [sessionId]);
+  }, [businessId, installationId, sessionId]);
 
   useEffect(() => {
     if (!businessId || !tableId) return;
@@ -171,8 +174,10 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
       setNotes("");
       setNotice("Your order has been sent to the restaurant.");
       try {
-        const updatedOrders = await orderApi.getClientOrders(sessionId);
-        setCustomerOrders(updatedOrders.orders || []);
+        const updatedOrders = await orderApi.getClientOrders(installationId);
+        setCustomerOrders((updatedOrders.orders || []).filter(
+          (order) => String(order.business?.id) === String(businessId)
+        ));
       } catch (refreshError) {
         setError(`Order sent, but status could not be refreshed: ${refreshError.message}`);
       }
@@ -236,7 +241,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
     return <Box sx={{ maxWidth: 560, mx: "auto", p: 3 }}><Alert severity="error">{error || "This menu is unavailable."}</Alert></Box>;
   }
 
-  const currency = menu.business.currency || "USD";
+  const currency = menu.business.currency || "ZMW";
   const formatPrice = (value) => formatCurrency(Number(value) || 0, currency);
   const pendingOrder = customerOrders.find((order) => !["completed", "cancelled"].includes(order.status));
   const activeOrderId = pendingOrder?.id || lastPlacedOrder?.id;
@@ -282,6 +287,9 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           <Stack direction="row" spacing={1}>
             {menu.table && <Chip label={`Table ${menu.table.table_number}`} size="small" />}
             {menu.table?.status && <Chip label={menu.table.status.replaceAll("_", " ")} size="small" />}
+            <Button component={Link} href="/support" size="small" sx={{ color: "#D4A872" }}>
+              Support
+            </Button>
           </Stack>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             <Button

@@ -123,6 +123,9 @@ export const businessApi = {
   updateBusinessLocation: (payload) =>
     callStrapi("custom-functions/updateBusinessLocation", payload),
 
+  updateBusinessCurrency: (payload) =>
+    callStrapi("custom-functions/updateBusinessCurrency", payload),
+
   getBusinessCustomerAnalytics: (payload) =>
     callStrapi("custom-functions/getBusinessCustomerAnalytics", payload),
 };
@@ -251,8 +254,8 @@ export const orderApi = {
   placeOrder: (payload) =>
     callStrapi("custom-functions/placeOrder", payload, { auth: false }),
 
-  getClientOrders: (customerSessionId) =>
-    callStrapi("custom-functions/getClientOrders", { customerSessionId }, { auth: false }),
+  getClientOrders: (customerInstallationId) =>
+    callStrapi("custom-functions/getClientOrders", { customerInstallationId }, { auth: false }),
 
   getCustomerHistory: (customerInstallationId) =>
     callStrapi("custom-functions/getCustomerHistory", { customerInstallationId }, { auth: false }),
@@ -347,6 +350,11 @@ export const platformApi = {
 
   updateBusinessPlan: (businessId, planType) =>
     callStrapi("custom-functions/platformUpdateBusinessPlan", { businessId, planType }),
+};
+
+export const currencyApi = {
+  getActiveCurrencies: () =>
+    callStrapi("custom-functions/getActiveCurrencies", {}, { auth: false }),
 };
 
 // ─── Promotions ───────────────────────────────────────────────────────────────

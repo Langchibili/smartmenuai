@@ -79,7 +79,7 @@ function OrderCard({ order, installationId }) {
           <Typography variant="body2" color="#D4A872">{order.branch.branch_name}</Typography>
         )}
         <Typography variant="body2" color="#D4A872" sx={{ my: 1 }}>
-          {new Date(order.created_date).toLocaleString()} · {formatCurrency(Number(order.total) || 0, business?.currency || "USD")}
+          {new Date(order.created_date).toLocaleString()} · {formatCurrency(Number(order.total) || 0, business?.currency || "ZMW")}
         </Typography>
         <Stack spacing={0.5}>
           {(order.items || []).map((item, index) => (
@@ -92,7 +92,7 @@ function OrderCard({ order, installationId }) {
                 />
               )}
               <Typography variant="body1" fontWeight={900} sx={{ color: "#F9EDD8" }}>
-                {item.quantity} × {item.name} · {formatCurrency(Number(item.price) || 0, business?.currency || "USD")}
+                {item.quantity} × {item.name} · {formatCurrency(Number(item.price) || 0, business?.currency || "ZMW")}
               </Typography>
             </Stack>
           ))}
@@ -136,7 +136,7 @@ function OrderCard({ order, installationId }) {
                         <Typography fontWeight={600}>{item.name}</Typography>
                       </Stack>
                       <Typography color="#D4A872">
-                        {formatCurrency(Number(item.price) || 0, order.menu_snapshot.currency || business?.currency || "USD")}
+                        {formatCurrency(Number(item.price) || 0, order.menu_snapshot.currency || business?.currency || "ZMW")}
                       </Typography>
                     </Stack>
                     {item.category && <Typography variant="caption" color="#D4A872">{item.category}</Typography>}

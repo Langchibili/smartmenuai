@@ -110,7 +110,7 @@ export default function WaiterDashboard() {
     router.push(`/waiter/orders?tableId=${table.id}`);
   };
 
-  const currency = business?.currency ?? "USD";
+  const currency = business?.currency ?? "ZMW";
   const activeCalls = (data?.activeCalls ?? []).filter((c) => c.status === "pending");
   const myOrders = data?.activeOrders ?? [];
   const tables = [...(data?.assignedTables ?? [])].sort(

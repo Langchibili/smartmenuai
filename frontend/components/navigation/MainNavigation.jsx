@@ -26,6 +26,7 @@ import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SupportAgentOutlinedIcon from "@mui/icons-material/SupportAgentOutlined";
 import { alpha } from "@mui/material/styles";
 import { useAuth } from "@/lib/auth-context";
 import { getBusinessWord } from "@/lib/utils";
@@ -70,10 +71,14 @@ export default function MainNavigation() {
         { label: "Employees", path: "/owner/employees", icon: PeopleAltIcon },
         { label: "Reports", path: "/owner/reports", icon: AssessmentOutlinedIcon },
         { label: "Settings", path: "/owner/settings", icon: MoreHorizIcon },
+        { label: "Contact support", path: "/support", icon: SupportAgentOutlinedIcon },
       ]
     : role === "manager"
-      ? [{ label: "Reports", path: "/owner/reports", icon: AssessmentOutlinedIcon }]
-      : [];
+      ? [
+          { label: "Reports", path: "/owner/reports", icon: AssessmentOutlinedIcon },
+          { label: "Contact support", path: "/support", icon: SupportAgentOutlinedIcon },
+        ]
+      : [{ label: "Contact support", path: "/support", icon: SupportAgentOutlinedIcon }];
   const activePath = items.find((item) =>
     item.path !== "more" && (
       pathname === item.path ||

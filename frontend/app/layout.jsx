@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
     "/m/",
     "/customer",
     "/deal-and-promos",
+    "/support",
 ];
 
 export default function RootLayout({ children }) {

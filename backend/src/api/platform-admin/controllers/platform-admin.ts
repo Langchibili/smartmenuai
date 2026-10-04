@@ -131,6 +131,15 @@ export default factories.createCoreController(
           },
           email: settings.email || '',
           supportPhoneNumber: settings.support_phone_number || '',
+          whatsappSupportNumber: settings.whatsapp_support_number || '',
+          defaultCurrency: settings.default_currency
+            ? {
+                id: settings.default_currency.id || null,
+                name: settings.default_currency.name,
+                code: settings.default_currency.code,
+                symbol: settings.default_currency.symbol,
+              }
+            : null,
           waiterCallDelay: settings.waiter_call_delay || 1,
           requestBillDelay: settings.request_bill_delay || 1,
           businessTerminology: settings.business_terminology || {},
@@ -151,6 +160,8 @@ export default factories.createCoreController(
           ios,
           email,
           supportPhoneNumber,
+          whatsappSupportNumber,
+          defaultCurrencyId,
           waiterCallDelay,
           requestBillDelay,
           businessTerminology,
@@ -160,6 +171,9 @@ export default factories.createCoreController(
         const normalizedEmail = typeof email === 'string' ? email.trim() : '';
         const normalizedPhone = typeof supportPhoneNumber === 'string'
           ? supportPhoneNumber.trim()
+          : '';
+        const normalizedWhatsapp = typeof whatsappSupportNumber === 'string'
+          ? whatsappSupportNumber.trim()
           : '';
         const terminology = businessTerminology;
         const isValidLink = (value) => {
@@ -179,6 +193,16 @@ export default factories.createCoreController(
         }
         if (normalizedPhone.length > 50) {
           return ctx.badRequest('Support phone number must be 50 characters or fewer');
+        }
+        if (normalizedWhatsapp.length > 50) {
+          return ctx.badRequest('WhatsApp support number must be 50 characters or fewer');
+        }
+        let defaultCurrency = null;
+        if (defaultCurrencyId !== undefined && defaultCurrencyId !== null && defaultCurrencyId !== '') {
+          defaultCurrency = await strapi.db.query('api::currency.currency').findOne({
+            where: { id: defaultCurrencyId, isActive: true },
+          });
+          if (!defaultCurrency) return ctx.badRequest('Select an active default currency');
         }
         if (
           !terminology ||
@@ -207,6 +231,8 @@ export default factories.createCoreController(
         const settingsData = {
           email: normalizedEmail,
           support_phone_number: normalizedPhone || null,
+          whatsapp_support_number: normalizedWhatsapp || null,
+          default_currency: defaultCurrency?.id || null,
           android_app_link: android.trim() || null,
           ios_app_link: ios.trim() || null,
           waiter_call_delay: delay,
@@ -252,12 +278,37 @@ export default factories.createCoreController(
           city,
           country,
           currency,
+          currencyId,
           planType,
         } = ctx.request.body;
 
         if (!businessName || !ownerEmail) {
           return ctx.badRequest('businessName and ownerEmail are required');
         }
+
+        const selectedCurrency = currencyId
+          ? await strapi.db.query('api::currency.currency').findOne({
+              where: { id: currencyId, isActive: true },
+            })
+          : currency
+            ? await strapi.db.query('api::currency.currency').findOne({
+                where: { code: String(currency).toUpperCase(), isActive: true },
+              })
+            : null;
+        if ((currencyId || currency) && !selectedCurrency) {
+          return ctx.badRequest('Select an active currency');
+        }
+        const settings = await getAdminSettings(strapi);
+        const fallbackCurrencyId = settings.default_currency?.id;
+        const defaultCurrency = selectedCurrency || (
+          fallbackCurrencyId
+            ? await strapi.db.query('api::currency.currency').findOne({
+                where: { id: fallbackCurrencyId, isActive: true },
+              })
+            : null
+        ) || await strapi.db.query('api::currency.currency').findOne({
+          where: { code: 'ZMW', isActive: true },
+        });
 
         // Resolve or create owner user
         let ownerUser = await strapi.db
@@ -294,7 +345,8 @@ export default factories.createCoreController(
             address: address || '',
             city: city || '',
             country: country || '',
-            currency: currency || 'USD',
+            currency: defaultCurrency?.code || 'ZMW',
+            currency_record: defaultCurrency?.id || null,
             plan_type: planType || 'basic',
             is_active: true,
             is_published: false,

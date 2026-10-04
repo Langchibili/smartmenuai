@@ -19,6 +19,7 @@ export default factories.createCoreController('api::business.business', ({ strap
         address,
         countryId,
         cityId,
+        currencyId,
         currency,
         planType,
         branchName,
@@ -39,6 +40,34 @@ export default factories.createCoreController('api::business.business', ({ strap
       });
       if (!cityRecord) return ctx.badRequest('Select a city in the chosen country');
 
+      let currencyRecord = null;
+      if (currencyId) {
+        currencyRecord = await strapi.db.query('api::currency.currency').findOne({
+          where: { id: currencyId, isActive: true },
+        });
+        if (!currencyRecord) return ctx.badRequest('Select an active currency');
+      } else if (currency) {
+        currencyRecord = await strapi.db.query('api::currency.currency').findOne({
+          where: { code: String(currency).toUpperCase(), isActive: true },
+        });
+        if (!currencyRecord && String(currency).toUpperCase() !== 'ZMW') {
+          return ctx.badRequest('Select an active currency');
+        }
+      } else {
+        const adminSettings = await getAdminSettings(strapi);
+        const defaultCurrencyId = adminSettings.default_currency?.id;
+        currencyRecord = defaultCurrencyId
+          ? await strapi.db.query('api::currency.currency').findOne({
+              where: { id: defaultCurrencyId, isActive: true },
+            })
+          : null;
+        if (!currencyRecord) {
+          currencyRecord = await strapi.db.query('api::currency.currency').findOne({
+            where: { code: 'ZMW', isActive: true },
+          });
+        }
+      }
+
       // 1. Create business
       const business = await strapi.db.query('api::business.business').create({
         data: {
@@ -51,7 +80,8 @@ export default factories.createCoreController('api::business.business', ({ strap
           country: countryRecord.name,
           city_record: cityRecord.id,
           country_record: countryRecord.id,
-          currency: currency || 'USD',
+          currency: currencyRecord?.code || 'ZMW',
+          currency_record: currencyRecord?.id || null,
           plan_type: planType || 'basic',
           is_active: true,
           is_published: false,
@@ -74,12 +104,11 @@ export default factories.createCoreController('api::business.business', ({ strap
         },
       });
 
-      // 3. Create tables and generate QR URLs
+      // 3. Create tables; the table lifecycle generates and attaches each QR image.
       const tableCount = Math.min(Math.max(parseInt(numberOfTables) || 1, 1), 100);
-      const appUrl = (process.env.FRONTEND_URL || 'http://localhost:3007').replace(/\/$/, '');
 
       for (let i = 1; i <= tableCount; i++) {
-        const table = await strapi.db.query('api::table.table').create({
+        await strapi.db.query('api::table.table').create({
           data: {
             table_name: `Table ${i}`,
             table_number: i,
@@ -89,11 +118,6 @@ export default factories.createCoreController('api::business.business', ({ strap
             branch: branch.id,
             publishedAt: new Date(),
           },
-        });
-        // Save the QR menu URL now that we have the table ID
-        await strapi.db.query('api::table.table').update({
-          where: { id: table.id },
-          data: { qr_code_url: `${appUrl}/m/${business.id}/${branch.id}/${table.id}` },
         });
       }
 
@@ -251,6 +275,7 @@ export default factories.createCoreController('api::business.business', ({ strap
           country_record: true,
           city_record: true,
           branches: { populate: ['country_record', 'city_record'] },
+          currency_record: true,
         },
       });
 
@@ -300,7 +325,18 @@ export default factories.createCoreController('api::business.business', ({ strap
               business_type: business.business_type,
               terminology: businessTerminology,
               plan_type: business.plan_type,
-              currency: business.currency,
+              currency: business.currency_record?.code ||
+                business.currency ||
+                adminSettings.default_currency?.code ||
+                'ZMW',
+              currency_record: business.currency_record
+                ? {
+                    id: business.currency_record.id,
+                    name: business.currency_record.name,
+                    code: business.currency_record.code,
+                    symbol: business.currency_record.symbol,
+                  }
+                : null,
               city: business.city,
               country: business.country,
               country_record: business.country_record
@@ -425,6 +461,42 @@ export default factories.createCoreController('api::business.business', ({ strap
     } catch (err) {
       strapi.log.error(`[updateBusinessLocation] ${err?.stack || err?.message || err}`);
       ctx.throw(500, 'Unable to update business location');
+    }
+  },
+
+  async updateBusinessCurrency(ctx) {
+    try {
+      const { businessId, currencyId } = ctx.request.body || {};
+      if (!businessId || !currencyId) {
+        return ctx.badRequest('businessId and currencyId are required');
+      }
+      const user = ctx.state.user;
+      if (!user) return ctx.unauthorized('Not authenticated');
+      const employee = await strapi.db.query('api::employee.employee').findOne({
+        where: { user: user.id, business: businessId, is_active: true },
+      });
+      if (!employee || !['owner', 'manager'].includes(employee.role)) return ctx.forbidden();
+      const currency = await strapi.db.query('api::currency.currency').findOne({
+        where: { id: currencyId, isActive: true },
+      });
+      if (!currency) return ctx.badRequest('Select an active currency');
+
+      await strapi.db.query('api::business.business').update({
+        where: { id: businessId },
+        data: { currency: currency.code, currency_record: currency.id },
+      });
+      ctx.send({
+        success: true,
+        currency: {
+          id: currency.id,
+          name: currency.name,
+          code: currency.code,
+          symbol: currency.symbol,
+        },
+      });
+    } catch (err) {
+      strapi.log.error(`[updateBusinessCurrency] ${err?.stack || err?.message || err}`);
+      ctx.throw(500, 'Unable to update business currency');
     }
   },
 

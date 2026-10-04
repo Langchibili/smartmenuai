@@ -1,6 +1,7 @@
 "use client";
 
 import { BottomNavigation, BottomNavigationAction } from "@mui/material";
+import SupportAgentOutlinedIcon from "@mui/icons-material/SupportAgentOutlined";
 import { useRouter } from "next/navigation";
 
 export default function CustomerBottomNav({ selected, menuHref = "/" }) {
@@ -32,6 +33,12 @@ export default function CustomerBottomNav({ selected, menuHref = "/" }) {
         label="Businesses"
         value="businesses"
         onClick={() => router.push("/customer/places")}
+      />
+      <BottomNavigationAction
+        label="Support"
+        value="support"
+        icon={<SupportAgentOutlinedIcon />}
+        onClick={() => router.push("/support")}
       />
     </BottomNavigation>
   );

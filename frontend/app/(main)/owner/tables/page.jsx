@@ -12,7 +12,8 @@ import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { subscribeBusinessActivity } from "@/lib/socket";
-import { getBusinessWord } from "@/lib/utils";
+import { getBusinessWord, getMediaUrl } from "@/lib/utils";
+import ImagePreview from "@/components/ui/image-preview";
 import QRCode from "qrcode";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
@@ -591,7 +592,19 @@ export default function TablesPage() {
       >
         <Stack alignItems="center" spacing={3}>
           <Box sx={{ p: 3, borderRadius: "16px", background: "#F9EDD8" }}>
-            <canvas ref={qrCanvasRef} />
+            {qrModal?.qr_code_image?.url ? (
+              <>
+                <ImagePreview
+                  src={getMediaUrl(qrModal.qr_code_image.url)}
+                  alt={`Table ${qrModal.table_number} QR code`}
+                  sx={{ width: 220, height: 220 }}
+                  imageSx={{ objectFit: "contain" }}
+                />
+                <canvas ref={qrCanvasRef} style={{ display: "none" }} />
+              </>
+            ) : (
+              <canvas ref={qrCanvasRef} />
+            )}
           </Box>
           <Box textAlign="center">
             <Typography sx={{ fontWeight: 600, color: TEXT_P, mb: 0.5 }}>

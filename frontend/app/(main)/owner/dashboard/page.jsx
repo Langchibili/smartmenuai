@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
   const activeOrders = orders.filter(o => !["completed", "cancelled"].includes(o.status));
   const needsWaiter = tables.filter(t => t.status === "needs_waiter").length;
-  const currency = business?.currency ?? "USD";
+  const currency = business?.currency ?? "ZMW";
   const dashboardLinks = [
     { label: "Go to orders", href: "/owner/orders" },
     { label: "Go to tables", href: "/owner/tables" },

@@ -22,6 +22,11 @@ export default {
         },
         {
             method: 'POST',
+            path: '/custom-functions/updateBusinessCurrency',
+            handler: 'business.updateBusinessCurrency',
+        },
+        {
+            method: 'POST',
             path: '/custom-functions/getBusinessReports',
             handler: 'business.getBusinessReports',
         },

@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import {
   Autocomplete, Box, Typography, Button, Paper, Chip, Divider, Grid, Stack, TextField,
+  FormControl, InputLabel, MenuItem, Select,
   alpha,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
-import { branchApi, businessApi, flattenStrapiResponse, locationApi } from "@/lib/api";
+import { branchApi, businessApi, currencyApi, flattenStrapiResponse, locationApi } from "@/lib/api";
+import { DEFAULT_CURRENCY } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/smart-modal";
@@ -22,7 +24,6 @@ const TEXT_D = "#5F3E22";
 const GREEN = "#22c55e";
 const ERROR = "#ef4444";
 
-const CURRENCIES = ["USD", "EUR", "GBP", "ZMW", "KES", "ZAR", "NGN", "GHS", "TZS", "UGX"];
 const BUSINESS_TYPES = ["restaurant", "bar", "cafe", "lounge", "club"];
 
 // ─── Reusable input sx ───────────────────────────────────────────────────────
@@ -72,6 +73,11 @@ export default function SettingsPage() {
   const [locationCitySearch, setLocationCitySearch] = useState("");
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [currencyOptions, setCurrencyOptions] = useState([]);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState("");
+  const [currencyLoading, setCurrencyLoading] = useState(true);
+  const [savingCurrency, setSavingCurrency] = useState(false);
+  const [currencyError, setCurrencyError] = useState("");
 
   const [branchForm, setBranchForm] = useState({
     branch_name: "", location: "", address: "", city: "", phone: "",
@@ -106,6 +112,51 @@ export default function SettingsPage() {
       });
     return () => { active = false; };
   }, [catalogCountryId, locationCitySearch]);
+
+  useEffect(() => {
+    let active = true;
+    currencyApi.getActiveCurrencies()
+      .then(({ currencies = [] } = {}) => {
+        if (active) setCurrencyOptions(currencies.length ? currencies : [DEFAULT_CURRENCY]);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCurrencyOptions([DEFAULT_CURRENCY]);
+        setCurrencyError(error.message || "Currency options could not be loaded; using Zambian Kwacha.");
+      })
+      .finally(() => {
+        if (active) setCurrencyLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!business) return;
+    const currentCode = business.currency_record?.code || business.currency || DEFAULT_CURRENCY.code;
+    const current = currencyOptions.find((currency) => currency.code === currentCode);
+    setSelectedCurrencyId(String(business.currency_record?.id || current?.id || ""));
+  }, [business, currencyOptions]);
+
+  const saveCurrency = async () => {
+    if (!business?.id || !selectedCurrencyId) {
+      setCurrencyError("Select a currency from the active backend currency list.");
+      return;
+    }
+    setSavingCurrency(true);
+    setCurrencyError("");
+    try {
+      await businessApi.updateBusinessCurrency({
+        businessId: business.id,
+        currencyId: selectedCurrencyId,
+      });
+      await refreshBusiness();
+      toast("Business currency updated", "success");
+    } catch (error) {
+      setCurrencyError(error.message || "Unable to update business currency.");
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
 
   const saveBusinessLocation = async () => {
     if (!business?.id || !locationForm.countryId || !locationForm.cityId) return;
@@ -233,15 +284,49 @@ export default function SettingsPage() {
                 inputProps={{ style: { textTransform: "capitalize" } }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }} >
-              <TextField
-                label="Currency"
-                value={business?.currency ?? ""}
-                InputProps={{ readOnly: true }}
-                fullWidth
-                sx={inputSx}
-                InputLabelProps={{ shrink: true }}
-              />
+            <Grid size={{ xs: 12 }}>
+              {currencyOptions.some((currency) => currency.id) ? (
+                <Stack spacing={1}>
+                  <FormControl fullWidth sx={inputSx}>
+                    <InputLabel id="business-currency-label">Currency</InputLabel>
+                    <Select
+                      labelId="business-currency-label"
+                      label="Currency"
+                      value={selectedCurrencyId}
+                      onChange={(event) => setSelectedCurrencyId(event.target.value)}
+                      disabled={currencyLoading || savingCurrency}
+                    >
+                      {currencyOptions.filter((currency) => currency.id).map((currency) => (
+                        <MenuItem key={currency.id} value={String(currency.id)}>
+                          {currency.symbol} — {currency.name} ({currency.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    onClick={saveCurrency}
+                    disabled={currencyLoading || savingCurrency || !selectedCurrencyId}
+                    sx={{ alignSelf: "flex-start", color: TEXT_S, borderColor: "rgba(212,133,10,0.3)" }}
+                  >
+                    {savingCurrency ? "Saving currency…" : "Save currency"}
+                  </Button>
+                </Stack>
+              ) : (
+                <TextField
+                  label="Currency"
+                  value={`${DEFAULT_CURRENCY.symbol} — ${DEFAULT_CURRENCY.name} (${DEFAULT_CURRENCY.code})`}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                  sx={inputSx}
+                  helperText="Backend currency options are unavailable; using the Zambian Kwacha fallback."
+                />
+              )}
+              {currencyError && (
+                <Typography role="alert" color="error" variant="caption">
+                  {currencyError}
+                </Typography>
+              )}
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               {editingLocation ? (

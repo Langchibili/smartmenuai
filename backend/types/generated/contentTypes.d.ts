@@ -602,6 +602,10 @@ export interface ApiAdmnSettingAdmnSetting extends Struct.SingleTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    default_currency: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::currency.currency'
+    >;
     email: Schema.Attribute.Email & Schema.Attribute.Required;
     ios_app_link: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -633,6 +637,7 @@ export interface ApiAdmnSettingAdmnSetting extends Struct.SingleTypeSchema {
         number
       > &
       Schema.Attribute.DefaultTo<1>;
+    whatsapp_support_number: Schema.Attribute.String;
   };
 }
 
@@ -844,7 +849,11 @@ export interface ApiBusinessBusiness extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    currency: Schema.Attribute.String & Schema.Attribute.DefaultTo<'USD'>;
+    currency: Schema.Attribute.String;
+    currency_record: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::currency.currency'
+    >;
     is_active: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     is_published: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1556,6 +1565,7 @@ export interface ApiTableTable extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::table.table'> &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    qr_code_image: Schema.Attribute.Media<'images'>;
     qr_code_url: Schema.Attribute.String;
     status: Schema.Attribute.Enumeration<
       ['available', 'occupied', 'needs_waiter', 'ordering', 'bill_requested']

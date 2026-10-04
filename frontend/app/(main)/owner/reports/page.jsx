@@ -25,7 +25,7 @@ const RANGES = [
 ];
 
 // ─── Simple bar chart (MUI styled) ───────────────────────────────────────────
-function SimpleBarChart({ data, color = BRAND, currency = "USD" }) {
+function SimpleBarChart({ data, color = BRAND, currency = "ZMW" }) {
   const entries = Object.entries(data).slice(-14);
   const max = Math.max(...entries.map(([, v]) => v), 1);
 
@@ -129,7 +129,7 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const currency = business?.currency ?? "USD";
+  const currency = business?.currency ?? "ZMW";
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {

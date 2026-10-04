@@ -19,6 +19,14 @@
     "support_phone_number": {
       "type": "string"
     },
+    "whatsapp_support_number": {
+      "type": "string"
+    },
+    "default_currency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::currency.currency"
+    },
     "android_app_link": {
       "type": "string"
     },

@@ -119,14 +119,13 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
         ? await strapi.db.transaction(createTable)
         : await createTable();
 
-      // Build and save the QR / menu URL now that we have the real table ID
-      const appUrl = (process.env.FRONTEND_URL || 'http://localhost:3007').replace(/\/$/, '');
-      const qrCodeUrl = `${appUrl}/m/${businessId}/${finalBranchId}/${table.id}`;
-
-      await strapi.db.query('api::table.table').update({
+      const createdTable = await strapi.db.query('api::table.table').findOne({
         where: { id: table.id },
-        data: { qr_code_url: qrCodeUrl },
+        populate: ['qr_code_image'],
       });
+      if (!createdTable?.qr_code_url || !createdTable?.qr_code_image?.url) {
+        throw new Error(`Table ${table.id} was created without its QR code image`);
+      }
 
       ctx.send({
         success: true,
@@ -134,7 +133,8 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
           id: table.id,
           table_number: table.table_number,
           table_name: table.table_name,
-          qr_code_url: qrCodeUrl,
+          qr_code_url: createdTable.qr_code_url,
+          qr_code_image: createdTable.qr_code_image,
         },
       });
     } catch (err) {
@@ -169,7 +169,7 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
 
       const tables = await strapi.db.query('api::table.table').findMany({
         where,
-        populate: ['branch', 'assigned_waiter'],
+        populate: ['branch', 'assigned_waiter', 'qr_code_image'],
         orderBy: { table_number: 'asc' },
       });
 
@@ -181,6 +181,15 @@ export default factories.createCoreController('api::table.table', ({ strapi }) =
           capacity: t.capacity,
           status: t.status,
           qr_code_url: t.qr_code_url,
+          qr_code_image: t.qr_code_image
+            ? {
+                id: t.qr_code_image.id,
+                name: t.qr_code_image.name,
+                url: t.qr_code_image.url,
+                mime: t.qr_code_image.mime,
+                formats: t.qr_code_image.formats,
+              }
+            : null,
           branch: t.branch
             ? { id: t.branch.id, branch_name: t.branch.branch_name }
             : null,

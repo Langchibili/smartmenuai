@@ -9,7 +9,7 @@ const countryTokens = (country) =>
     .filter(Boolean)
     .map((value) => String(value).trim().toLocaleLowerCase());
 
-const mapOrder = (order, businessTerminology = {}) => {
+const mapOrder = (order, businessTerminology = {}, defaultCurrency = 'ZMW') => {
   const business = order.business;
   const branch = order.table?.branch;
   return {
@@ -53,7 +53,7 @@ const mapOrder = (order, businessTerminology = {}) => {
           address: business.address,
           city: business.city_record?.name || business.city || null,
           country: business.country_record?.name || business.country || null,
-          currency: business.currency,
+          currency: business.currency || defaultCurrency,
         }
       : null,
   };
@@ -62,10 +62,11 @@ const mapOrder = (order, businessTerminology = {}) => {
 const addBillCooldowns = async (strapi, orders) => {
   const settings = await getAdminSettings(strapi);
   const terminology = settings.business_terminology || {};
+  const defaultCurrency = settings.default_currency?.code || 'ZMW';
   const tableIds = [...new Set(orders.map((order) => order.table?.id).filter(Boolean))];
   if (!tableIds.length) {
     return orders.map((order) => ({
-      ...mapOrder(order, terminology),
+      ...mapOrder(order, terminology, defaultCurrency),
       bill_request_remaining_seconds: 0,
       bill_request_active: false,
     }));
@@ -94,7 +95,7 @@ const addBillCooldowns = async (strapi, orders) => {
       ? new Date(latest.createdAt).getTime() + delayMs
       : 0;
     return {
-      ...mapOrder(order, terminology),
+      ...mapOrder(order, terminology, defaultCurrency),
       bill_request_remaining_seconds: Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000)),
       bill_request_active: ['pending', 'acknowledged'].includes(latest?.status),
     };

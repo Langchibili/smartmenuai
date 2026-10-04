@@ -89,7 +89,7 @@ export default function OrdersPage() {
     finally { setUpdating(null); }
   };
 
-  const currency = business?.currency ?? "USD";
+  const currency = business?.currency ?? "ZMW";
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 10));
   const pagedOrders = filtered.slice((page - 1) * 10, page * 10);

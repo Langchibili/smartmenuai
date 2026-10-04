@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useRouter } from "next/navigation";
-import { platformApi } from "@/lib/api";
+import { currencyApi, platformApi } from "@/lib/api";
+import { DEFAULT_CURRENCY } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -14,6 +27,8 @@ export default function PlatformSettingsPage() {
   const [links, setLinks] = useState({
     email: "",
     supportPhoneNumber: "",
+    whatsappSupportNumber: "",
+    defaultCurrencyId: "",
     android: "",
     ios: "",
     waiterCallDelay: 1,
@@ -28,6 +43,8 @@ export default function PlatformSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [currencyOptions, setCurrencyOptions] = useState([]);
+  const [currencyError, setCurrencyError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -43,6 +60,10 @@ export default function PlatformSettingsPage() {
           setLinks({
             email: response.email || "",
             supportPhoneNumber: response.supportPhoneNumber || "",
+            whatsappSupportNumber: response.whatsappSupportNumber || "",
+            defaultCurrencyId: response.defaultCurrency?.id
+              ? String(response.defaultCurrency.id)
+              : "",
             android: response.appLinks?.android || "",
             ios: response.appLinks?.ios || "",
             waiterCallDelay: response.waiterCallDelay || 1,
@@ -59,6 +80,27 @@ export default function PlatformSettingsPage() {
       });
     return () => { active = false; };
   }, [authLoading, profile?.is_platform_admin, router, user]);
+
+  useEffect(() => {
+    let active = true;
+    currencyApi.getActiveCurrencies()
+      .then(({ currencies = [], defaultCurrency } = {}) => {
+        if (!active) return;
+        setCurrencyOptions(currencies);
+        const defaultId = defaultCurrency?.id ||
+          currencies.find((currency) => currency.code === (defaultCurrency?.code || DEFAULT_CURRENCY.code))?.id;
+        if (defaultId) {
+          setLinks((current) => ({
+            ...current,
+            defaultCurrencyId: current.defaultCurrencyId || String(defaultId),
+          }));
+        }
+      })
+      .catch((loadError) => {
+        if (active) setCurrencyError(loadError.message || "Currency options could not be loaded.");
+      });
+    return () => { active = false; };
+  }, []);
 
   const save = async (event) => {
     event.preventDefault();
@@ -139,6 +181,43 @@ export default function PlatformSettingsPage() {
             }))}
             fullWidth
           />
+          <TextField
+            label="WhatsApp support number"
+            type="tel"
+            value={links.whatsappSupportNumber}
+            onChange={(event) => setLinks((current) => ({
+              ...current,
+              whatsappSupportNumber: event.target.value,
+            }))}
+            fullWidth
+            helperText="Use the international number; the customer support page will open WhatsApp."
+          />
+          <FormControl fullWidth>
+            <InputLabel id="default-currency-label">Default currency</InputLabel>
+            <Select
+              labelId="default-currency-label"
+              label="Default currency"
+              value={links.defaultCurrencyId}
+              onChange={(event) => setLinks((current) => ({
+                ...current,
+                defaultCurrencyId: event.target.value,
+              }))}
+            >
+              <MenuItem value="">
+                {DEFAULT_CURRENCY.symbol} — {DEFAULT_CURRENCY.name} fallback ({DEFAULT_CURRENCY.code})
+              </MenuItem>
+              {currencyOptions.filter((currency) => currency.id).map((currency) => (
+                <MenuItem key={currency.id} value={String(currency.id)}>
+                  {currency.symbol} — {currency.name} ({currency.code})
+                </MenuItem>
+              ))}
+            </Select>
+            {currencyError && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                {currencyError} The app will use Zambian Kwacha (K) until a currency is available.
+              </Typography>
+            )}
+          </FormControl>
           <TextField
             label="Android app link"
             type="url"

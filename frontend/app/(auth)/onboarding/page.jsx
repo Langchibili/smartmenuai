@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { businessApi, locationApi } from "@/lib/api";
+import { businessApi, currencyApi, locationApi } from "@/lib/api";
+import { DEFAULT_CURRENCY } from "@/lib/utils";
 import {
   Autocomplete,
   Box,
@@ -38,17 +39,6 @@ const BUSINESS_TYPES = [
   { value: "cafe", label: "Café", icon: "☕" },
   { value: "lounge", label: "Lounge", icon: "🛋️" },
   { value: "club", label: "Club", icon: "🎵" },
-];
-
-const CURRENCIES = [
-  { code: "USD", symbol: "$", label: "US Dollar" },
-  { code: "EUR", symbol: "€", label: "Euro" },
-  { code: "GBP", symbol: "£", label: "British Pound" },
-  { code: "ZMW", symbol: "K", label: "Zambian Kwacha" },
-  { code: "KES", symbol: "KSh", label: "Kenyan Shilling" },
-  { code: "ZAR", symbol: "R", label: "South African Rand" },
-  { code: "NGN", symbol: "₦", label: "Nigerian Naira" },
-  { code: "GHS", symbol: "₵", label: "Ghanaian Cedi" },
 ];
 
 const STEPS = [
@@ -93,6 +83,9 @@ export default function OnboardingPage() {
   const [cities, setCities] = useState([]);
   const [citySearch, setCitySearch] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [currencies, setCurrencies] = useState([]);
+  const [currencyLoading, setCurrencyLoading] = useState(true);
+  const [currencyError, setCurrencyError] = useState("");
 
   const [form, setForm] = useState({
     businessType: "",
@@ -103,7 +96,7 @@ export default function OnboardingPage() {
     country: "",
     countryId: "",
     cityId: "",
-    currency: "USD",
+    currency: DEFAULT_CURRENCY.code,
     serviceCharge: "",
     branchName: "Main Branch",
     numberOfTables: "5",
@@ -130,6 +123,38 @@ export default function OnboardingPage() {
     return () => { active = false; };
   }, [form.countryId, citySearch]);
 
+  useEffect(() => {
+    let active = true;
+    currencyApi.getActiveCurrencies()
+      .then(({ currencies: currencyOptions = [], defaultCurrency } = {}) => {
+        if (!active) return;
+        const available = currencyOptions.length ? currencyOptions : [DEFAULT_CURRENCY];
+        setCurrencies(available);
+        setCurrencyError(
+          currencyOptions.length
+            ? ""
+            : "No active currencies are available; using Zambian Kwacha (K)."
+        );
+        const defaultCode = defaultCurrency?.code || DEFAULT_CURRENCY.code;
+        setForm((current) => ({
+          ...current,
+          currency: available.find((currency) => currency.code === defaultCode)?.code ||
+            available.find((currency) => currency.code === current.currency)?.code ||
+            DEFAULT_CURRENCY.code,
+        }));
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setCurrencies([DEFAULT_CURRENCY]);
+        setForm((current) => ({ ...current, currency: DEFAULT_CURRENCY.code }));
+        setCurrencyError(loadError.message || "Currency options could not be loaded; using Zambian Kwacha.");
+      })
+      .finally(() => {
+        if (active) setCurrencyLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
   const handleFinish = async () => {
     setError("");
     setLoading(true);
@@ -142,6 +167,7 @@ export default function OnboardingPage() {
         countryId: form.countryId,
         cityId: form.cityId,
         currency: form.currency,
+        currencyId: currencies.find((currency) => currency.code === form.currency)?.id || null,
         branchName: form.branchName,
         numberOfTables: parseInt(form.numberOfTables) || 5,
       });
@@ -487,13 +513,19 @@ export default function OnboardingPage() {
                   value={form.currency}
                   onChange={(e) => set("currency", e.target.value)}
                   label="Currency"
+                  disabled={currencyLoading}
                 >
-                  {CURRENCIES.map((c) => (
-                    <MenuItem key={c.code} value={c.code}>
-                      {c.symbol} — {c.label} ({c.code})
+                  {currencies.map((currency) => (
+                    <MenuItem key={currency.id || currency.code} value={currency.code}>
+                      {currency.symbol} — {currency.name} ({currency.code})
                     </MenuItem>
                   ))}
                 </Select>
+                {currencyError && (
+                  <Typography variant="caption" color="warning.main" sx={{ mt: 0.75 }}>
+                    {currencyError}
+                  </Typography>
+                )}
               </FormControl>
             </Box>
 

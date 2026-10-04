@@ -11,6 +11,7 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "seed:locations": "node scripts/seed-location-catalog.cjs",
+    "seed:currencies": "node scripts/seed-currencies.cjs",
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
@@ -21,6 +22,7 @@
     "@strapi/strapi": "5.48.1",
     "better-sqlite3": "12.8.0",
     "mysql2": "^3.24.5",
+    "qrcode": "^1.5.4",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-router-dom": "^6.0.0",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "typescript": "^5",

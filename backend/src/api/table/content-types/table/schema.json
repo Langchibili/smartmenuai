@@ -32,6 +32,13 @@
     "qr_code_url": {
       "type": "string"
     },
+    "qr_code_image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
     "business": {
       "type": "relation",
       "relation": "manyToOne",

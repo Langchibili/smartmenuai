@@ -5,12 +5,24 @@ export function cn(...inputs) {
     return clsx(inputs);
 }
 
+export const DEFAULT_CURRENCY = {
+    name: "Zambian Kwacha",
+    code: "ZMW",
+    symbol: "K",
+};
+
 /** Format a number as currency */
 export function formatCurrency(
     amount,
-    currency = "USD",
+    currency = DEFAULT_CURRENCY.code,
     locale = "en-US"
 ) {
+    if (currency === "ZMW") {
+        return `K ${new Intl.NumberFormat(locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(Number(amount) || 0)}`;
+    }
     return new Intl.NumberFormat(locale, {
         style: "currency",
         currency,
@@ -121,10 +133,10 @@ export function getOrCreateCustomerInstallationId() {
     return id;
 }
 
-/** Build a business-scoped customer session without using browser fingerprinting. */
-export function getCustomerSessionId(businessId, installationId) {
-    if (!businessId || !installationId) return "";
-    return `customer-${businessId}-${installationId}`;
+/** Build a customer session shared across businesses for the same installation. */
+export function getCustomerSessionId(installationId) {
+    if (!installationId) return "";
+    return `customer-${installationId}`;
 }
 
 export function getLastCustomerMenuUrl() {

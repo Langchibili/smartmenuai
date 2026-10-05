@@ -6,7 +6,7 @@ import {
   alpha,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
-import { branchApi, businessApi, currencyApi, flattenStrapiResponse, locationApi } from "@/lib/api";
+import { branchApi, businessApi, currencyApi, locationApi } from "@/lib/api";
 import { DEFAULT_CURRENCY } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
@@ -202,27 +202,27 @@ export default function SettingsPage() {
     if (!branchForm.branch_name || !branchForm.countryId || !branchForm.cityId) return;
     setSaving(true);
     try {
-    const selectedCity = locationCities.find((city) => String(city.id) === String(branchForm.cityId));
     const payload = {
       ...branchForm,
-      city: selectedCity?.name || branchForm.city,
-      country_record: branchForm.countryId,
-      city_record: branchForm.cityId,
-      business: business.id,
+      businessId: business.id,
+      countryId: branchForm.countryId,
+      cityId: branchForm.cityId,
     };
-    delete payload.countryId;
-    delete payload.cityId;
     if (editingBranch) {
-      await branchApi.updateBranch(editingBranch.id, payload);
+      const response = await branchApi.saveBusinessBranch({
+        ...payload,
+        branchId: editingBranch.id,
+      });
       toast("Branch updated", "success");
+      setBranches((current) => current.map((branch) =>
+        String(branch.id) === String(editingBranch.id) ? response.branch : branch
+      ));
     } else {
-      await branchApi.createBranch(payload);
-        toast("Branch created", "success");
+      const response = await branchApi.saveBusinessBranch(payload);
+      toast("Branch created", "success");
+      setBranches((current) => [...current, response.branch]);
       }
       setBranchModal(false);
-      const res = await branchApi.getBranches(business.id);
-      const brs = flattenStrapiResponse(res);
-      setBranches(Array.isArray(brs) ? brs : brs ? [brs] : []);
       refreshBusiness();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }

@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Alert, Box, Typography, Button, Paper, Card, CardContent, CardActions, Grid,
-  Chip, Stack, TextField, Switch, FormControlLabel, CircularProgress,
+  Chip, Stack, TextField, Switch, FormControlLabel, CircularProgress, Pagination,
   IconButton, Divider,
   alpha,
 } from "@mui/material";
@@ -60,6 +60,7 @@ export default function MenuPage() {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [activeCat, setActiveCat] = useState(null);
+  const [itemsPage, setItemsPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -100,6 +101,12 @@ export default function MenuPage() {
   const visibleItems = activeCat
     ? items.filter(i => String(i.menu_category?.id ?? i.menu_category_id) === String(activeCat))
     : items;
+  const itemsPageCount = Math.max(1, Math.ceil(visibleItems.length / 10));
+  const pageItems = visibleItems.slice((itemsPage - 1) * 10, itemsPage * 10);
+
+  useEffect(() => {
+    if (itemsPage > itemsPageCount) setItemsPage(itemsPageCount);
+  }, [itemsPage, itemsPageCount]);
 
   // ── Category CRUD ────────────────────────────────────────────────
   const openCatModal = (cat) => {
@@ -299,7 +306,7 @@ export default function MenuPage() {
             </Typography>
             <Stack spacing={0.5}>
               <Button
-                onClick={() => setActiveCat(null)}
+                onClick={() => { setActiveCat(null); setItemsPage(1); }}
                 fullWidth
                 sx={{
                   justifyContent: "flex-start",
@@ -318,7 +325,7 @@ export default function MenuPage() {
               {categories.map(cat => (
                 <Box key={cat.id} sx={{ position: "relative", "&:hover .cat-actions": { display: "flex" } }}>
                   <Button
-                    onClick={() => setActiveCat(cat.id)}
+                    onClick={() => { setActiveCat(cat.id); setItemsPage(1); }}
                     fullWidth
                     sx={{
                       justifyContent: "flex-start",
@@ -412,7 +419,7 @@ export default function MenuPage() {
             />
           ) : (
             <Grid container spacing={2}>
-              {visibleItems.map(item => (
+              {pageItems.map(item => (
                 <Grid size={{ xs: 12, sm: 6, xl: 4 }} key={item.id}>
                   <Card
                     elevation={0}
@@ -509,6 +516,15 @@ export default function MenuPage() {
                 </Grid>
               ))}
             </Grid>
+          )}
+          {itemsPageCount > 1 && (
+            <Pagination
+              count={itemsPageCount}
+              page={itemsPage}
+              onChange={(_, nextPage) => setItemsPage(nextPage)}
+              color="warning"
+              sx={{ display: "flex", justifyContent: "center", mt: 3 }}
+            />
           )}
         </Grid>
       </Grid>
@@ -705,9 +721,11 @@ export default function MenuPage() {
               ))}
             </Grid>
           </Box>
-          <Alert severity="info">
-            Create the menu first, then upload the image afterwards.
-          </Alert>
+          {!editing?.id && (
+            <Alert severity="info">
+              Create the menu first, then upload the image afterwards.
+            </Alert>
+          )}
           <MenuItemImageUpload
             menuItemId={editing?.id}
             image={editing?.image}

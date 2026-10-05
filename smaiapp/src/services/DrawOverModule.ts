@@ -56,6 +56,16 @@ class DrawOverModule {
     }
   }
 
+  async checkPermission(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      return Boolean(await DrawOverNativeModule.checkPermission());
+    } catch (error) {
+      logger.error('Unable to check draw-over permission:', error);
+      return false;
+    }
+  }
+
   async prepareServiceIfPermitted(): Promise<boolean> {
     if (Platform.OS !== 'android') return false;
     try {

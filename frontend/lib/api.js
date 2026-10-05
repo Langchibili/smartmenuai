@@ -304,8 +304,8 @@ export const waiterCallApi = {
 
 // ─── Employees ───────────────────────────────────────────────────────────────
 export const employeeApi = {
-  getEmployees: (businessId) =>
-    callStrapi("custom-functions/getBusinessEmployees", { businessId }),
+  getEmployees: (businessId, filters = {}) =>
+    callStrapi("custom-functions/getBusinessEmployees", { businessId, ...filters }),
 
   sendInvite: (payload) =>
     callStrapi("custom-functions/sendEmployeeInvite", payload),
@@ -385,11 +385,8 @@ export const branchApi = {
       { method: "GET" }
     ),
 
-  createBranch: (payload) =>
-    callStrapi("branches", { data: payload }),
-
-  updateBranch: (id, payload) =>
-    callStrapi(`branches/${id}`, { data: payload }, { method: "PUT" }),
+  saveBusinessBranch: (payload) =>
+    callStrapi("custom-functions/saveBusinessBranch", payload),
 
   deleteBranch: (id) =>
     callStrapi(`branches/${id}`, undefined, { method: "DELETE" }),

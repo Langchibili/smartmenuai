@@ -17,8 +17,10 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import SupportAgentOutlinedIcon from "@mui/icons-material/SupportAgentOutlined";
 import { platformApi } from "@/lib/api";
+import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
 
 export default function SupportPage() {
+  const { isNative, openEmail } = useReactNative();
   const [contacts, setContacts] = useState({ email: "", phone: "", whatsapp: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,6 +82,17 @@ export default function SupportPage() {
   const phoneLink = contacts.phone.replace(/[^\d+]/g, "");
   const whatsappNumber = contacts.whatsapp.replace(/\D/g, "");
 
+  const handleEmailClick = async (event) => {
+    if (!isNative) return;
+    event.preventDefault();
+    try {
+      const result = await openEmail(contacts.email, "SmartMenu AI support");
+      if (result?.message) setCopyMessage(result.message);
+    } catch (openError) {
+      setError(openError.message || "Unable to open an email app on this device.");
+    }
+  };
+
   return (
     <Box sx={{ minHeight: "100dvh", bgcolor: "#100904", color: "#F9EDD8", px: 2, py: 5 }}>
       <Card
@@ -113,7 +126,10 @@ export default function SupportPage() {
               </Alert>
             )}
             {copyMessage && (
-              <Alert severity={copyMessage === "Support number copied." ? "success" : "error"} sx={{ width: "100%" }}>
+              <Alert
+                severity={["Support number copied.", "Opening your email app."].includes(copyMessage) ? "success" : "error"}
+                sx={{ width: "100%" }}
+              >
                 {copyMessage}
               </Alert>
             )}
@@ -159,6 +175,7 @@ export default function SupportPage() {
               <Button
                 component="a"
                 href={`mailto:${contacts.email}?subject=SmartMenu%20AI%20support`}
+                onClick={handleEmailClick}
                 startIcon={<EmailOutlinedIcon />}
                 variant="outlined"
                 fullWidth

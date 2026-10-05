@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { employeeApi, flattenStrapiResponse } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/smart-modal";
 import { useToast } from "@/components/ui/toast-provider";
 import { initials } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [inviteModal, setInviteModal] = useState(false);
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
@@ -325,7 +327,7 @@ export default function EmployeesPage() {
               {emp.id !== me?.id && emp.role !== "owner" && (
                 <Button
                   size="small"
-                  onClick={() => toggleActive(emp)}
+                  onClick={() => emp.is_active ? setEmployeeToDeactivate(emp) : toggleActive(emp)}
                   sx={{
                     fontSize: "0.7rem",
                     fontWeight: 600,
@@ -475,6 +477,19 @@ export default function EmployeesPage() {
           </Grid>
         </Stack>
       </Modal>
+      <ConfirmModal
+        open={Boolean(employeeToDeactivate)}
+        onClose={() => setEmployeeToDeactivate(null)}
+        onConfirm={async () => {
+          const employee = employeeToDeactivate;
+          setEmployeeToDeactivate(null);
+          if (employee) await toggleActive(employee);
+        }}
+        title="Deactivate employee?"
+        message={`Are you sure you want to deactivate ${employeeToDeactivate?.full_name || "this employee"}? They will no longer be able to access this business.`}
+        confirmLabel="Deactivate"
+        danger
+      />
     </Box>
   );
 }

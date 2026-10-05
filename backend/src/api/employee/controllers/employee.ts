@@ -6,7 +6,7 @@ import { factories } from '@strapi/strapi';
 
 export default factories.createCoreController('api::employee.employee', ({ strapi }) => ({
   async getBusinessEmployees(ctx) {
-    const { businessId } = ctx.request.body || {};
+    const { businessId, role, is_active: isActive } = ctx.request.body || {};
     const user = ctx.state.user;
     if (!user) return ctx.unauthorized();
     if (!businessId) return ctx.badRequest('businessId is required');
@@ -16,8 +16,17 @@ export default factories.createCoreController('api::employee.employee', ({ strap
     });
     if (!owner) return ctx.forbidden();
 
+    const allowedRoles = ['owner', 'manager', 'waiter'];
+    if (role && !allowedRoles.includes(role)) return ctx.badRequest('Invalid employee role filter');
+    if (isActive !== undefined && typeof isActive !== 'boolean') {
+      return ctx.badRequest('is_active filter must be a boolean');
+    }
     const employees = await strapi.db.query('api::employee.employee').findMany({
-      where: { business: businessId },
+      where: {
+        business: businessId,
+        ...(role ? { role } : {}),
+        ...(isActive !== undefined ? { is_active: isActive } : {}),
+      },
       populate: ['user', 'branch'],
       orderBy: { full_name: 'asc' },
     });

@@ -86,8 +86,12 @@ const colorMap = {
   red: { text: ERROR, bg: alpha(ERROR, 0.1), border: alpha(ERROR, 0.2) },
 };
 
-export function StatCard({ label, value, sub, icon, trend, color = "amber", sx }) {
+export function StatCard({ label, value, sub, icon, trend, color = "amber", sx, valueSx }) {
   const c = colorMap[color] || colorMap.amber;
+  const isLongTextValue = typeof value === "string" && value.length > 10;
+  const calculatedFontSize = isLongTextValue
+    ? `clamp(0.75rem, ${Math.max(0.75, 20 / value.length)}rem, 2rem)`
+    : "2rem";
 
   return (
     <Box
@@ -138,10 +142,15 @@ export function StatCard({ label, value, sub, icon, trend, color = "amber", sx }
         sx={{
           fontFamily: '"Playfair Display", serif',
           fontWeight: 700,
-          fontSize: "2rem",
+          fontSize: calculatedFontSize,
           color: c.text,
           mb: 0.5,
           lineHeight: 1.1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          ...valueSx,
         }}
       >
         {value}

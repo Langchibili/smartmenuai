@@ -12,6 +12,7 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Pagination,
   Stack,
   TextField,
   Typography,
@@ -192,6 +193,7 @@ export default function CustomerOrdersPage() {
   const [reviewOrder, setReviewOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [ordersPage, setOrdersPage] = useState(1);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -243,6 +245,9 @@ export default function CustomerOrdersPage() {
     }
   };
 
+  const ordersPageCount = Math.max(1, Math.ceil(orders.length / 10));
+  const visibleOrders = orders.slice((ordersPage - 1) * 10, ordersPage * 10);
+
   return (
     <Box sx={{ minHeight: "100dvh", bgcolor: "#100904", color: "#F9EDD8", pb: 10 }}>
       <Box sx={{ maxWidth: 900, mx: "auto", px: { xs: 2, sm: 3 }, py: 4 }}>
@@ -279,11 +284,20 @@ export default function CustomerOrdersPage() {
           {loading ? (
             <Box sx={{ display: "grid", placeItems: "center", py: 6 }}><CircularProgress /></Box>
           ) : orders.length ? (
-            orders.map((order) => (
+            visibleOrders.map((order) => (
               <OrderCard key={order.id} order={order} installationId={installationId} />
             ))
           ) : (
             <Typography color="#D4A872">Your orders will appear here after you place an order from a QR menu.</Typography>
+          )}
+          {!loading && ordersPageCount > 1 && (
+            <Pagination
+              count={ordersPageCount}
+              page={ordersPage}
+              onChange={(_, page) => setOrdersPage(page)}
+              color="warning"
+              sx={{ display: "flex", justifyContent: "center", pt: 1 }}
+            />
           )}
         </Stack>
       </Box>

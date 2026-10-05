@@ -283,3 +283,57 @@ work only in SmartMenuAI, and do not run an app in development mode.
   currency and location selection, default-currency persistence, support links,
   new-table QR upload/rendering, and cross-business history. Do not create a
   persistent test table or order without approval.
+
+## Menu, owner, customer, and native support upgrades (2026-10-04)
+
+- [x] Added the branch save controller/route, wired the owner form to it, and
+  added validated active-role filters to the business waiter lookup.
+- [x] Added searchable waiter assignment, employee-deactivation confirmation,
+  menu-item creation guidance, owner/customer menu pagination, customer order
+  pagination, customer menu search, and cart-panel item removal.
+- [x] Adjusted fixed bottom navigation clearance and removed customer-facing
+  support entry points; made report KPI values fit long currency amounts.
+- [x] Replaced the QR canvas download path with a generated QR preview and
+  download flow. Browser review showed a rendered 512x512 QR preview and the
+  download success path; the browser harness did not surface a download event.
+- [x] Added native QR export through Android's folder picker and iOS's native
+  share sheet, plus a native email-app bridge for support mailto actions.
+- [x] Backend and frontend production builds passed; Expo TypeScript check
+  passed; focused ESLint reported zero errors and existing warnings;
+  `git diff --check` passed.
+- [x] Browser-reviewed customer menu search and cart removal without placing an
+  order or creating persistent test data.
+- [ ] Run the native Android/iOS app and verify QR export destinations and
+  email-app launch on devices. Port 8081 was occupied by an existing process,
+  so no native bundler or app process was started.
+- [ ] Verify branch editing, employee deactivation, report card fitting, and
+  pagination against the owner experience using approved test data.
+
+## Draw-over prompt and customer order sheet (2026-10-05)
+
+- [x] Removed the automatic Android draw-over settings launch from native
+  service initialization. Staff are asked in a confirmation modal first, with
+  “Already set” highlighted; permission is checked and the alert service
+  prepared only after the user confirms. Customer routes never show the prompt.
+- [x] Added a customer order-sheet handle, swipe-down collapse, compact order
+  summary strip, click-to-expand, and animated slide-up behavior.
+- [x] Frontend production build and native TypeScript check passed. Focused
+  ESLint had zero errors and four existing warnings; `git diff --check` passed.
+- [x] Browser-checked the public customer menu, swipe collapse to a 92px strip,
+  tap-to-expand, order summary, and absence of the staff permission prompt.
+  No order was submitted.
+- [ ] On Android, verify Set permission opens Android settings only after
+  confirmation, returning and selecting Already set succeeds, and customer QR
+  sessions do not open the settings screen. Native/device testing was not
+  available in this run.
+- [x] Reversed the order-sheet chevron direction and reduced the collapsed strip
+  to 64px; production browser verification confirmed down-facing when expanded,
+  up-facing when collapsed, and the summary remains visible.
+- [x] Centered the arrow at the top of the order sheet and aligned the sheet
+  against the bottom navigation border. Browser geometry checks measured the
+  arrow/card horizontal centers as equal and the cart-to-nav gap as 0px in both
+  expanded and collapsed states.
+- [x] Made draw-over permission optional: selecting “Already set” dismisses the
+  prompt whether permission is enabled or not, and missing permission no longer
+  raises a native bridge error or blocks the app. Frontend build and native
+  TypeScript validation passed.

@@ -1,10 +1,12 @@
 'use client'
 import "./globals.css";
+import { Alert, Button, Stack, Typography } from "@mui/material";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import SmartModal from "@/components/ui/smart-modal";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useReactNative, ReactNativeWrapper } from '@/lib/contexts/ReactNativeWrapper';
 
 // Public routes that never redirect to login
@@ -20,7 +22,6 @@ const PUBLIC_ROUTES = [
     "/m/",
     "/customer",
     "/deal-and-promos",
-    "/support",
 ];
 
 export default function RootLayout({ children }) {
@@ -76,12 +77,57 @@ function AppShell({ children }) {
         isNative,
         servicesInitialized,
         initializeNativeServices,
+        requestDrawOverPermission,
+        confirmDrawOverPermission,
         getNativeLocation,
         startLocationTracking,
         stopLocationTracking,
     } = useReactNative();
+    const [drawOverPromptOpen, setDrawOverPromptOpen] = useState(false);
+    const [drawOverPromptPending, setDrawOverPromptPending] = useState(false);
+    const [drawOverPromptBusy, setDrawOverPromptBusy] = useState(false);
+    const [drawOverPromptError, setDrawOverPromptError] = useState("");
 
     const isPublic = pathname === "/" || PUBLIC_ROUTES.some(r => pathname.startsWith(r));
+    const isCustomerRoute = pathname === "/" ||
+        pathname.startsWith("/m/") ||
+        pathname.startsWith("/customer") ||
+        pathname.startsWith("/deal-and-promos");
+
+    useEffect(() => {
+        if (!isCustomerRoute && drawOverPromptPending) {
+            setDrawOverPromptOpen(true);
+            setDrawOverPromptPending(false);
+        }
+    }, [drawOverPromptPending, isCustomerRoute]);
+
+    const handleSetDrawOverPermission = async () => {
+        setDrawOverPromptBusy(true);
+        setDrawOverPromptError("");
+        try {
+            await requestDrawOverPermission();
+            setDrawOverPromptError("After enabling the permission in Android settings, return here and choose “Already set”.");
+        } catch (error) {
+            setDrawOverPromptError(error.message || "Unable to open Android permission settings.");
+        } finally {
+            setDrawOverPromptBusy(false);
+        }
+    };
+
+    const handleConfirmDrawOverPermission = async () => {
+        setDrawOverPromptBusy(true);
+        setDrawOverPromptError("");
+        try {
+            await confirmDrawOverPermission();
+        } catch (error) {
+            console.warn("Draw-over permission is optional and was not enabled:", error);
+        } finally {
+            setDrawOverPromptOpen(false);
+            setDrawOverPromptError("");
+            setDrawOverPromptBusy(false);
+        }
+    };
+
     useEffect(() => {
         if (loading) return;
         if (!user && !isPublic) {
@@ -101,6 +147,9 @@ function AppShell({ children }) {
                     );
 
                     if (window.ReactNativeWebView || result.success) {
+                        if (result.drawOverSupported && !result.permissions?.drawOver) {
+                            setDrawOverPromptPending(true);
+                        }
                         if (typeof window !== 'undefined') {
                             window.ReactNativeWebView.postMessage(JSON.stringify({
                                 type: 'GET_CURRENT_LOCATION',
@@ -178,6 +227,46 @@ function AppShell({ children }) {
         <ThemeProvider>
             <ToastProvider>
                 {children}
+                <SmartModal
+                    open={drawOverPromptOpen}
+                    onClose={() => {}}
+                    title="Enable display over other apps?"
+                    subtitle="This lets staff receive order alerts in the floating bubble."
+                    icon="🔔"
+                    size="sm"
+                    disableClose
+                >
+                    <SmartModal.Body>
+                        <Stack spacing={2}>
+                            <Typography sx={{ color: "#D4A872", lineHeight: 1.7 }}>
+                                Have you enabled the SmartMenu display-over-other-apps permission in Android settings?
+                            </Typography>
+                            {drawOverPromptError && (
+                                <Alert severity={drawOverPromptError.startsWith("After enabling") ? "info" : "error"}>
+                                    {drawOverPromptError}
+                                </Alert>
+                            )}
+                        </Stack>
+                    </SmartModal.Body>
+                    <SmartModal.Footer>
+                        <Button
+                            onClick={handleSetDrawOverPermission}
+                            disabled={drawOverPromptBusy}
+                            variant="outlined"
+                            sx={{ color: "#F9EDD8", borderColor: "rgba(212,133,10,0.45)" }}
+                        >
+                            Set permission
+                        </Button>
+                        <Button
+                            onClick={handleConfirmDrawOverPermission}
+                            disabled={drawOverPromptBusy}
+                            variant="contained"
+                            sx={{ bgcolor: "#D4850A", color: "#1C0A00", fontWeight: 700 }}
+                        >
+                            Already set
+                        </Button>
+                    </SmartModal.Footer>
+                </SmartModal>
             </ToastProvider>
         </ThemeProvider>
     );

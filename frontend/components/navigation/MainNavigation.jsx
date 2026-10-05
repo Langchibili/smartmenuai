@@ -180,7 +180,6 @@ export default function MainNavigation() {
           bottom: 0,
           left: 0,
           right: 0,
-          pb: "env(safe-area-inset-bottom, 0px)",
           bgcolor: "rgba(13,4,0,0.97)",
           borderTop: `1px solid ${alpha("#D4850A", 0.17)}`,
           backdropFilter: "blur(16px)",

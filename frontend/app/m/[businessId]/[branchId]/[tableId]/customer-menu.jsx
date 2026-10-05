@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -12,14 +11,19 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  InputAdornment,
+  Pagination,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import SearchIcon from "@mui/icons-material/Search";
 import WavingHandIcon from "@mui/icons-material/WavingHand";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import { motion } from "framer-motion";
 import { menuApi, orderApi, waiterCallApi } from "@/lib/api";
 import {
   formatCurrency,
@@ -45,6 +49,11 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const [installationId, setInstallationId] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [categoryId, setCategoryId] = useState("all");
+  const [menuSearch, setMenuSearch] = useState("");
+  const [menuPage, setMenuPage] = useState(1);
+  const [customerOrdersPage, setCustomerOrdersPage] = useState(1);
+  const [cartExpanded, setCartExpanded] = useState(true);
+  const [expandedCartHeight, setExpandedCartHeight] = useState(92);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,6 +68,9 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   const [confirmBillOrderId, setConfirmBillOrderId] = useState(null);
   const [reviewOrder, setReviewOrder] = useState(null);
   const categoryTouchStart = useRef(null);
+  const cartTouchStart = useRef(null);
+  const cartSwiped = useRef(false);
+  const cartContentRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -132,11 +144,42 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   }, []);
 
   const visibleItems = useMemo(() => {
-    const items = menu?.items || [];
-    return categoryId === "all"
-      ? items
-      : items.filter((item) => String(item.category_id) === String(categoryId));
-  }, [categoryId, menu?.items]);
+    const categoryItems = (menu?.items || []).filter((item) =>
+      categoryId === "all" || String(item.category_id) === String(categoryId)
+    );
+    const query = menuSearch.trim().toLocaleLowerCase();
+    if (!query) return categoryItems;
+    const menuMatches = [
+      menu?.menuSettings?.display_name,
+      menu?.menuSettings?.tagline,
+      menu?.menuSettings?.welcome_message,
+      menu?.business?.business_name,
+      menu?.business?.business_type,
+    ].some((value) => String(value || "").toLocaleLowerCase().includes(query));
+    if (menuMatches) return categoryItems;
+    return categoryItems.filter((item) => [
+      item.name,
+      item.description,
+      item.category,
+      item.tags,
+      item.preparation_time,
+      ...(Array.isArray(item.variants) ? item.variants.map((variant) => variant.name) : []),
+      ...(Array.isArray(item.modifiers) ? item.modifiers.map((modifier) => modifier.name) : []),
+    ].some((value) => String(value || "").toLocaleLowerCase().includes(query)));
+  }, [categoryId, menu?.business?.business_name, menu?.business?.business_type, menu?.items, menu?.menuSettings, menuSearch]);
+  const menuPageCount = Math.max(1, Math.ceil(visibleItems.length / 10));
+  const pageItems = visibleItems.slice((menuPage - 1) * 10, menuPage * 10);
+  const customerOrdersPageCount = Math.max(1, Math.ceil(customerOrders.length / 10));
+  const visibleCustomerOrders = customerOrders.slice(
+    (customerOrdersPage - 1) * 10,
+    customerOrdersPage * 10
+  );
+
+  useEffect(() => {
+    if (customerOrdersPage > customerOrdersPageCount) {
+      setCustomerOrdersPage(customerOrdersPageCount);
+    }
+  }, [customerOrdersPage, customerOrdersPageCount]);
 
   const cartItems = useMemo(
     () => Object.values(cart).filter((item) => item.quantity > 0),
@@ -144,8 +187,28 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
   );
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const serviceCharge = subtotal * ((menu?.business?.service_charge_percent || 0) / 100);
+  const cartQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartSummary = cartItems
+    .slice(0, 2)
+    .map((item) => `${item.quantity} × ${item.name}`)
+    .join(", ");
+  const additionalCartItems = cartItems.length - 2;
+
+  useLayoutEffect(() => {
+    const content = cartContentRef.current;
+    if (!cartExpanded || !content) return undefined;
+    const updateHeight = () => {
+      const maxHeight = Math.max(92, window.innerHeight - 160);
+      setExpandedCartHeight(Math.min(content.scrollHeight + 4, maxHeight));
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [cartExpanded, cartItems, notes, serviceCharge, subtotal]);
 
   const changeQuantity = useCallback((item, amount) => {
+    if (amount > 0) setCartExpanded(true);
     setCart((current) => {
       const quantity = Math.min(50, Math.max(0, (current[item.id]?.quantity || 0) + amount));
       const next = { ...current };
@@ -259,6 +322,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
       Math.max(0, currentIndex + (deltaX < 0 ? 1 : -1))
     );
     setCategoryId(categoryIds[nextIndex]);
+    setMenuPage(1);
   };
   const cooldownLabel = waiterCooldownSeconds > 0
     ? ` (${Math.floor(waiterCooldownSeconds / 60)}:${String(waiterCooldownSeconds % 60).padStart(2, "0")})`
@@ -287,9 +351,6 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           <Stack direction="row" spacing={1}>
             {menu.table && <Chip label={`Table ${menu.table.table_number}`} size="small" />}
             {menu.table?.status && <Chip label={menu.table.status.replaceAll("_", " ")} size="small" />}
-            <Button component={Link} href="/support" size="small" sx={{ color: "#D4A872" }}>
-              Support
-            </Button>
           </Stack>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             <Button
@@ -366,7 +427,7 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
             <CardContent>
               <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Your orders</Typography>
               <Stack spacing={1.5}>
-                {customerOrders.map((order) => (
+                {visibleCustomerOrders.map((order) => (
                   <Box key={order.id}>
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
                       <Typography fontWeight={600}>Order #{order.numeric_order_number || order.order_number}</Typography>
@@ -394,6 +455,15 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
                   </Box>
                 ))}
               </Stack>
+              {customerOrdersPageCount > 1 && (
+                <Pagination
+                  count={customerOrdersPageCount}
+                  page={customerOrdersPage}
+                  onChange={(_, nextPage) => setCustomerOrdersPage(nextPage)}
+                  color="warning"
+                  sx={{ display: "flex", justifyContent: "center", mt: 2 }}
+                />
+              )}
             </CardContent>
           </Card>
         )}
@@ -405,20 +475,36 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
           onTouchEnd={changeCategoryBySwipe}
           sx={{ mb: 2, overflowX: "auto", pb: 1 }}
         >
-          <Chip label="All" clickable color={categoryId === "all" ? "warning" : "default"} onClick={() => setCategoryId("all")} />
+          <Chip label="All" clickable color={categoryId === "all" ? "warning" : "default"} onClick={() => { setCategoryId("all"); setMenuPage(1); }} />
           {(menu.categories || []).map((category) => (
             <Chip
               key={category.id}
               label={`${category.icon || ""} ${category.name}`.trim()}
               clickable
               color={String(categoryId) === String(category.id) ? "warning" : "default"}
-              onClick={() => setCategoryId(category.id)}
+              onClick={() => { setCategoryId(category.id); setMenuPage(1); }}
             />
           ))}
         </Stack>
 
+        <TextField
+          value={menuSearch}
+          onChange={(event) => { setMenuSearch(event.target.value); setMenuPage(1); }}
+          placeholder="Search menu or dishes"
+          aria-label="Search menu and items"
+          fullWidth
+          sx={{ mb: 2, "& .MuiInputBase-root": { color: "#F9EDD8", bgcolor: "#21150D" } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: "#D4A872" }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
         <Stack spacing={1.5}>
-          {visibleItems.map((item) => (
+          {pageItems.map((item) => (
             <Card key={item.id} sx={{ display: "flex", bgcolor: "#21150D", color: "inherit", border: "1px solid #49301B" }}>
               {item.image && (
                 <ImagePreview
@@ -441,30 +527,148 @@ export default function CustomerMenu({ businessId, branchId, tableId }) {
               </CardContent>
             </Card>
           ))}
-          {!visibleItems.length && <Typography color="#D4A872">No available items in this category.</Typography>}
+          {!visibleItems.length && <Typography color="#D4A872">No available items match this search or category.</Typography>}
         </Stack>
+        {menuPageCount > 1 && (
+          <Pagination
+            count={menuPageCount}
+            page={menuPage}
+            onChange={(_, nextPage) => setMenuPage(nextPage)}
+            color="warning"
+            sx={{ display: "flex", justifyContent: "center", mt: 3 }}
+          />
+        )}
 
         {cartItems.length > 0 && (
-          <Card sx={{ position: "fixed", zIndex: 5, bottom: 78, left: "50%", transform: "translateX(-50%)", width: "min(860px, calc(100% - 24px))", bgcolor: "#21150D", color: "inherit", border: "1px solid #D4850A" }}>
-            <CardContent>
-              <Stack spacing={1}>
-                {cartItems.map((item) => (
-                  <Stack key={item.id} direction="row" justifyContent="space-between">
-                    <Typography>{item.quantity} × {item.name}</Typography>
-                    <Typography>{formatPrice(item.price * item.quantity)}</Typography>
-                  </Stack>
-                ))}
-                <Divider sx={{ borderColor: "#49301B" }} />
-                <Typography>Subtotal: {formatPrice(subtotal)}</Typography>
-                {serviceCharge > 0 && <Typography variant="body2">Service charge: {formatPrice(serviceCharge)}</Typography>}
-                <Typography fontWeight={800}>Total: {formatPrice(subtotal + serviceCharge)}</Typography>
-                <TextField value={notes} onChange={(event) => setNotes(event.target.value)} label="Order notes" size="small" multiline maxRows={2} />
-                <Button variant="contained" color="warning" disabled={submitting || !sessionId} onClick={placeOrder}>
-                  {submitting ? "Sending order…" : "Place order"}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={false}
+            animate={{ height: cartExpanded ? expandedCartHeight : 64 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              cartTouchStart.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchEnd={(event) => {
+              if (!cartTouchStart.current) return;
+              const touch = event.changedTouches[0];
+              const deltaY = touch.clientY - cartTouchStart.current.y;
+              const deltaX = touch.clientX - cartTouchStart.current.x;
+              const target = event.target;
+              const isInteractive = target instanceof Element && target.closest(
+                'input, textarea, button:not([aria-label="Collapse order summary"]):not([aria-label="Expand order summary"])'
+              );
+              if (deltaY > 45 && deltaY > Math.abs(deltaX) && !isInteractive) {
+                cartSwiped.current = true;
+                window.setTimeout(() => { cartSwiped.current = false; }, 300);
+                setCartExpanded(false);
+              } else if (deltaY < -45 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                cartSwiped.current = true;
+                window.setTimeout(() => { cartSwiped.current = false; }, 300);
+                setCartExpanded(true);
+              }
+              cartTouchStart.current = null;
+            }}
+            onTouchCancel={() => { cartTouchStart.current = null; }}
+            style={{
+              position: "fixed",
+              zIndex: 5,
+              bottom: cartExpanded ? 62 : 64,
+              left: "50%",
+              width: "min(860px, calc(100% - 24px))",
+              transform: "translateX(-50%)",
+              overflow: "hidden",
+            }}
+          >
+            <Card sx={{ height: "100%", overflowY: cartExpanded ? "auto" : "hidden", bgcolor: "#21150D", color: "inherit", border: "1px solid #D4850A" }}>
+              <CardContent
+                ref={cartContentRef}
+                sx={{
+                  p: cartExpanded ? 1.5 : 0.5,
+                  "&:last-child": { pb: cartExpanded ? 1.5 : 0.5 },
+                }}
+              >
+                <Box sx={{ position: "relative", display: "flex", justifyContent: "center" }}>
+                  <IconButton
+                    aria-label={cartExpanded ? "Collapse order summary" : "Expand order summary"}
+                    onClick={() => {
+                      if (cartSwiped.current) {
+                        cartSwiped.current = false;
+                        return;
+                      }
+                      setCartExpanded((expanded) => !expanded);
+                    }}
+                    size="small"
+                    sx={{
+                      mt: cartExpanded ? -0.75 : -0.25,
+                      mb: cartExpanded ? 0.25 : 0,
+                      p: cartExpanded ? 0.5 : 0,
+                      width: cartExpanded ? 34 : 24,
+                      height: cartExpanded ? 34 : 24,
+                      color: "#D4A872",
+                    }}
+                  >
+                    <KeyboardArrowDownIcon sx={{ transform: cartExpanded ? "none" : "rotate(180deg)" }} />
+                  </IconButton>
+                  {!cartExpanded && (
+                    <Button
+                      onClick={() => setCartExpanded(true)}
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        zIndex: 0,
+                        minWidth: 0,
+                        width: "100%",
+                        p: 0,
+                        color: "#F9EDD8",
+                        textTransform: "none",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography noWrap sx={{ fontSize: "0.75rem", lineHeight: 1.3 }}>
+                        Your order · {cartQuantity} {cartQuantity === 1 ? "item" : "items"} · {cartSummary}
+                        {additionalCartItems > 0 ? ` +${additionalCartItems} more` : ""} · {formatPrice(subtotal + serviceCharge)}
+                      </Typography>
+                    </Button>
+                  )}
+                </Box>
+                {cartExpanded && (
+                  <motion.div
+                    key="expanded-order"
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                      <Stack spacing={1}>
+                        {cartItems.map((item) => (
+                          <Stack key={item.id} direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                            <Typography sx={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+                              {item.quantity} × {item.name}
+                            </Typography>
+                            <Typography sx={{ whiteSpace: "nowrap" }}>{formatPrice(item.price * item.quantity)}</Typography>
+                            <IconButton
+                              aria-label={`Remove ${item.name} from order`}
+                              onClick={() => changeQuantity(item, -item.quantity)}
+                              size="small"
+                              sx={{ color: "#ef7777" }}
+                            >
+                              <RemoveIcon />
+                            </IconButton>
+                          </Stack>
+                        ))}
+                        <Divider sx={{ borderColor: "#49301B" }} />
+                        <Typography>Subtotal: {formatPrice(subtotal)}</Typography>
+                        {serviceCharge > 0 && <Typography variant="body2">Service charge: {formatPrice(serviceCharge)}</Typography>}
+                        <Typography fontWeight={800}>Total: {formatPrice(subtotal + serviceCharge)}</Typography>
+                        <TextField value={notes} onChange={(event) => setNotes(event.target.value)} label="Order notes" size="small" multiline maxRows={2} />
+                        <Button variant="contained" color="warning" disabled={submitting || !sessionId} onClick={placeOrder}>
+                          {submitting ? "Sending order…" : "Place order"}
+                        </Button>
+                      </Stack>
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </Box>
       <CustomerBottomNav

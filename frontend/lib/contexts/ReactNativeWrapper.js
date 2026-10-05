@@ -62,6 +62,10 @@ const NATIVE_MESSAGES = {
     LOG_DATA: 'LOG_DATA',
     THEME_MODE_CHANGE: 'THEME_MODE_CHANGE',
     OPEN_CUSTOMER_QR_SCANNER: 'OPEN_CUSTOMER_QR_SCANNER',
+    DOWNLOAD_FILE: 'DOWNLOAD_FILE',
+    OPEN_EMAIL: 'OPEN_EMAIL',
+    REQUEST_DRAW_OVER_PERMISSION: 'REQUEST_DRAW_OVER_PERMISSION',
+    CONFIRM_DRAW_OVER_PERMISSION: 'CONFIRM_DRAW_OVER_PERMISSION',
 };
 
 // ─── Per-request timeouts ─────────────────────────────────────────────────────
@@ -291,6 +295,26 @@ export function ReactNativeWrapper({ children }) {
 
     const openCustomerQrScanner = useCallback(
         () => sendToNative(NATIVE_MESSAGES.OPEN_CUSTOMER_QR_SCANNER),
+        [sendToNative],
+    );
+
+    const downloadFile = useCallback(
+        (fileName, dataUrl) => sendToNative(NATIVE_MESSAGES.DOWNLOAD_FILE, { fileName, dataUrl }),
+        [sendToNative],
+    );
+
+    const openEmail = useCallback(
+        (email, subject) => sendToNative(NATIVE_MESSAGES.OPEN_EMAIL, { email, subject }),
+        [sendToNative],
+    );
+
+    const requestDrawOverPermission = useCallback(
+        () => sendToNative(NATIVE_MESSAGES.REQUEST_DRAW_OVER_PERMISSION),
+        [sendToNative],
+    );
+
+    const confirmDrawOverPermission = useCallback(
+        () => sendToNative(NATIVE_MESSAGES.CONFIRM_DRAW_OVER_PERMISSION),
         [sendToNative],
     );
 
@@ -584,6 +608,10 @@ export function ReactNativeWrapper({ children }) {
         // Core bridge
         sendToNative,
         openCustomerQrScanner,
+        downloadFile,
+        openEmail,
+        requestDrawOverPermission,
+        confirmDrawOverPermission,
         on,
 
         // Services

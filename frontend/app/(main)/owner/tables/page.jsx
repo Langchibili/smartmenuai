@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Box, Typography, Button, Paper, Stack, Grid, Chip, Select, MenuItem,
+  Autocomplete, Box, Typography, Button, Paper, Stack, Grid, Chip, Select, MenuItem,
   FormControl, InputLabel, TextField, IconButton, CircularProgress,
   Divider, alpha, Pagination,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
+import { useReactNative } from "@/lib/contexts/ReactNativeWrapper";
 import { tableApi, employeeApi, flattenStrapiResponse } from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Modal } from "@/components/ui/modal";
@@ -60,6 +61,7 @@ const inputSx = {
 
 export default function TablesPage() {
   const { business } = useAuth();
+  const { isNative, downloadFile } = useReactNative();
   const waiterWord = getBusinessWord(business, "waiter", "waiter");
   const { toast } = useToast();
 
@@ -70,8 +72,9 @@ export default function TablesPage() {
   const [page, setPage] = useState(1);
   const [addModal, setAddModal] = useState(false);
   const [qrModal, setQrModal] = useState(null);
+  const [qrPreviewUrl, setQrPreviewUrl] = useState("");
+  const [qrDownloadUrl, setQrDownloadUrl] = useState("");
   const [assigningTableId, setAssigningTableId] = useState(null);
-  const qrCanvasRef = useRef(null);
 
   const [form, setForm] = useState({
     tableNumber: "", tableName: "", capacity: "4", assignedWaiterId: "",
@@ -84,11 +87,13 @@ export default function TablesPage() {
     try {
       const [tablesRes, waitersRes] = await Promise.all([
         tableApi.getBusinessTables(business.id),
-        employeeApi.getEmployees(business.id),
+        employeeApi.getEmployees(business.id, { role: "waiter", is_active: true }),
       ]);
       setTables(tablesRes.tables ?? []);
       const emps = flattenStrapiResponse(waitersRes) ?? [];
-      setWaiters((Array.isArray(emps) ? emps : [emps]).filter((e) => e.role === "waiter"));
+      setWaiters((Array.isArray(emps) ? emps : [emps]).filter(
+        (employee) => employee.role === "waiter" && employee.is_active
+      ));
     } catch { toast("Failed to load tables", "error"); }
     finally { setLoading(false); setRefreshing(false); }
   }, [business?.id, toast]);
@@ -96,15 +101,34 @@ export default function TablesPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => subscribeBusinessActivity(load, business?.id), [load, business?.id]);
 
-  // Generate QR on canvas when qrModal changes
   useEffect(() => {
-    if (!qrModal || !qrCanvasRef.current) return;
-    QRCode.toCanvas(qrCanvasRef.current, qrModal.qr_code_url, {
-      width: 220,
+    setQrPreviewUrl("");
+    setQrDownloadUrl("");
+    if (!qrModal?.qr_code_url) return undefined;
+    let active = true;
+    let downloadUrl = "";
+    QRCode.toDataURL(qrModal.qr_code_url, {
+      width: 512,
       margin: 2,
       color: { dark: "#1C0A00", light: "#F9EDD8" },
-    });
-  }, [qrModal]);
+      errorCorrectionLevel: "H",
+    })
+      .then(async (dataUrl) => {
+        if (active) setQrPreviewUrl(dataUrl);
+        const response = await fetch(dataUrl);
+        const downloadBlob = await response.blob();
+        downloadUrl = URL.createObjectURL(downloadBlob);
+        if (active) setQrDownloadUrl(downloadUrl);
+        else URL.revokeObjectURL(downloadUrl);
+      })
+      .catch((error) => {
+        if (active) toast(error.message || "Unable to generate the QR code.", "error");
+      });
+    return () => {
+      active = false;
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    };
+  }, [qrModal?.qr_code_url, toast]);
 
   const addTable = async () => {
     if (!form.tableNumber) return;
@@ -152,12 +176,32 @@ export default function TablesPage() {
     }
   };
 
-  const downloadQr = () => {
-    if (!qrCanvasRef.current || !qrModal) return;
-    const a = document.createElement("a");
-    a.download = `table-${qrModal.table_number}-qr.png`;
-    a.href = qrCanvasRef.current.toDataURL();
-    a.click();
+  const downloadQr = async () => {
+    if (!qrModal?.qr_code_url) {
+      toast("QR code URL is unavailable", "error");
+      return;
+    }
+    if (!qrDownloadUrl) {
+      toast("QR code is still being generated. Please try again.", "error");
+      return;
+    }
+    const fileName = `table-${qrModal.table_number}-qr.png`;
+    if (isNative) {
+      try {
+        const result = await downloadFile(fileName, qrPreviewUrl);
+        toast(result?.message || "QR image exported successfully.", "success");
+      } catch (error) {
+        toast(error.message || "Unable to save the QR code in this app.", "error");
+      }
+      return;
+    }
+    const link = document.createElement("a");
+    link.download = fileName;
+    link.href = qrDownloadUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast("QR code downloaded", "success");
   };
 
   const copyQrUrl = async () => {
@@ -398,23 +442,27 @@ export default function TablesPage() {
                 </Box>
 
                 {/* Actions */}
-                <FormControl fullWidth size="small" sx={inputSx}>
-                  <InputLabel id={`assigned-waiter-${table.id}`} sx={{ color: TEXT_M }}>
-                    Assigned {waiterWord}
-                  </InputLabel>
-                  <Select
-                    labelId={`assigned-waiter-${table.id}`}
-                    value={table.assigned_waiter?.id ?? ""}
-                    label={`Assigned ${waiterWord}`}
-                    disabled={assigningTableId === table.id}
-                    onChange={(event) => assignWaiter(table, event.target.value)}
-                  >
-                    <MenuItem value="">Unassigned</MenuItem>
-                    {waiters.map((waiter) => (
-                      <MenuItem key={waiter.id} value={waiter.id}>{waiter.full_name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  options={waiters}
+                  value={waiters.find((waiter) =>
+                    String(waiter.id) === String(table.assigned_waiter?.id)
+                  ) || null}
+                  getOptionLabel={(waiter) => waiter.full_name || ""}
+                  isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                  onChange={(_, waiter) => assignWaiter(table, waiter?.id || null)}
+                  disabled={assigningTableId === table.id}
+                  clearText="Unassign waiter"
+                  noOptionsText="No active waiters in this business"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={`Search and assign ${waiterWord}`}
+                      placeholder={`Search ${waiterWord} name`}
+                      size="small"
+                      sx={inputSx}
+                    />
+                  )}
+                />
 
                 <Stack direction="row" spacing={0.8}>
                   <Button
@@ -568,19 +616,28 @@ export default function TablesPage() {
             fullWidth
             sx={inputSx}
           />
-          <FormControl fullWidth sx={inputSx}>
-            <InputLabel sx={{ color: TEXT_M, "&.Mui-focused": { color: BRAND } }}>Assign {waiterWord}</InputLabel>
-            <Select
-              value={form.assignedWaiterId}
-              label={`Assign ${waiterWord}`}
-              onChange={e => setForm(f => ({ ...f, assignedWaiterId: e.target.value }))}
-            >
-              <MenuItem value="">None</MenuItem>
-              {waiters.map(w => (
-                <MenuItem key={w.id} value={w.id}>{w.full_name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            options={waiters}
+            value={waiters.find((waiter) =>
+              String(waiter.id) === String(form.assignedWaiterId)
+            ) || null}
+            getOptionLabel={(waiter) => waiter.full_name || ""}
+            isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+            onChange={(_, waiter) => setForm((current) => ({
+              ...current,
+              assignedWaiterId: waiter?.id || "",
+            }))}
+            clearText="No waiter"
+            noOptionsText="No active waiters in this business"
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={`Search and assign ${waiterWord}`}
+                placeholder={`Search ${waiterWord} name`}
+                sx={inputSx}
+              />
+            )}
+          />
         </Stack>
       </Modal>
 
@@ -593,17 +650,21 @@ export default function TablesPage() {
         <Stack alignItems="center" spacing={3}>
           <Box sx={{ p: 3, borderRadius: "16px", background: "#F9EDD8" }}>
             {qrModal?.qr_code_image?.url ? (
-              <>
-                <ImagePreview
-                  src={getMediaUrl(qrModal.qr_code_image.url)}
-                  alt={`Table ${qrModal.table_number} QR code`}
-                  sx={{ width: 220, height: 220 }}
-                  imageSx={{ objectFit: "contain" }}
-                />
-                <canvas ref={qrCanvasRef} style={{ display: "none" }} />
-              </>
+              <ImagePreview
+                src={getMediaUrl(qrModal.qr_code_image.url)}
+                alt={`Table ${qrModal.table_number} QR code`}
+                sx={{ width: 220, height: 220 }}
+                imageSx={{ objectFit: "contain" }}
+              />
+            ) : qrPreviewUrl ? (
+              <Box
+                component="img"
+                src={qrPreviewUrl}
+                alt={`Table ${qrModal.table_number} QR code`}
+                sx={{ display: "block", width: 220, height: 220 }}
+              />
             ) : (
-              <canvas ref={qrCanvasRef} />
+              <Box sx={{ width: 220, height: 220 }} />
             )}
           </Box>
           <Box textAlign="center">

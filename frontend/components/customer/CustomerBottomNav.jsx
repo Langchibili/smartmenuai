@@ -1,7 +1,6 @@
 "use client";
 
 import { BottomNavigation, BottomNavigationAction } from "@mui/material";
-import SupportAgentOutlinedIcon from "@mui/icons-material/SupportAgentOutlined";
 import { useRouter } from "next/navigation";
 
 export default function CustomerBottomNav({ selected, menuHref = "/" }) {
@@ -17,6 +16,7 @@ export default function CustomerBottomNav({ selected, menuHref = "/" }) {
         left: 0,
         right: 0,
         bottom: 0,
+        height: 64,
         bgcolor: "#1C0A00",
         borderTop: "1px solid #49301B",
         "& .MuiBottomNavigationAction-root": { color: "#D4A872" },
@@ -33,12 +33,6 @@ export default function CustomerBottomNav({ selected, menuHref = "/" }) {
         label="Businesses"
         value="businesses"
         onClick={() => router.push("/customer/places")}
-      />
-      <BottomNavigationAction
-        label="Support"
-        value="support"
-        icon={<SupportAgentOutlinedIcon />}
-        onClick={() => router.push("/support")}
       />
     </BottomNavigation>
   );

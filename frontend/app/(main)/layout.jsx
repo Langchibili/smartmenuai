@@ -13,7 +13,7 @@ export default function MainLayout({ children }) {
   return (
     <>
       <MainNavigation />
-      <Box component="main" sx={{ minHeight: "calc(100dvh - 122px)", pb: 10 }}>
+      <Box component="main" sx={{ minHeight: "calc(100dvh - 122px)", pb: 12 }}>
         {children}
       </Box>
     </>

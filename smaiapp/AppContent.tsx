@@ -3,6 +3,8 @@ import { StatusBar, Platform, AppState, StyleSheet, View, BackHandler, Image, Li
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 import BackgroundService from './src/services/BackgroundService';
 import DrawOverModule from './src/services/DrawOverModule';
@@ -209,12 +211,15 @@ export default function AppContent() {
       if (!started) return { success: false, error: 'Failed to start services' };
       setupSocketListeners();
       servicesInitializedRef.current = true;
-      const drawOverPermission = await DrawOverModule.requestPermission();
+      const drawOverPermission = Platform.OS === 'android'
+        ? await DrawOverModule.checkPermission()
+        : false;
       if (drawOverPermission) await DrawOverModule.prepareServiceIfPermitted();
       return {
         success: true,
         deviceId,
         permissions: { ...permissions, drawOver: drawOverPermission },
+        drawOverSupported: Platform.OS === 'android',
         socketConnected: DeviceSocketService.isConnected(),
       };
     } catch (e: any) { return { success: false, error: e.message }; }
@@ -236,6 +241,77 @@ export default function AppContent() {
           response = await openCustomerScanner()
             ? { success: true }
             : { error: 'Camera permission is required to scan a table QR code.' };
+          break;
+        case 'REQUEST_DRAW_OVER_PERMISSION':
+          if (Platform.OS !== 'android') throw new Error('Display-over-other-apps permission is only available on Android.');
+          await DrawOverModule.requestPermission();
+          response = { success: true };
+          break;
+        case 'CONFIRM_DRAW_OVER_PERMISSION':
+          if (Platform.OS !== 'android') {
+            response = { success: true, enabled: false };
+            break;
+          }
+          if (await DrawOverModule.checkPermission()) {
+            const servicePrepared = await DrawOverModule.prepareServiceIfPermitted();
+            response = { success: true, enabled: true, servicePrepared };
+          } else {
+            response = { success: true, enabled: false };
+          }
+          break;
+        case 'DOWNLOAD_FILE':
+          try {
+            const fileName = String(payload?.fileName || '');
+            const dataUrl = String(payload?.dataUrl || '');
+            const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+            if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.png$/i.test(fileName) || !match) {
+              throw new Error('The QR image data is invalid.');
+            }
+
+            if (Platform.OS === 'android') {
+              const directory = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+              if (!directory.granted) throw new Error('Folder selection was cancelled.');
+              const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+                directory.directoryUri,
+                fileName,
+                'image/png',
+              );
+              await FileSystem.writeAsStringAsync(fileUri, match[1], {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              response = { success: true, message: 'QR image saved to the selected folder.' };
+            } else {
+              if (!FileSystem.cacheDirectory) throw new Error('Temporary file storage is unavailable.');
+              const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+              await FileSystem.writeAsStringAsync(fileUri, match[1], {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              if (!await Sharing.isAvailableAsync()) throw new Error('Native file sharing is unavailable.');
+              await Sharing.shareAsync(fileUri, {
+                mimeType: 'image/png',
+                dialogTitle: 'Save or share QR code',
+                UTI: 'public.png',
+              });
+              response = { success: true, message: 'Choose Save to Files in the sharing menu to keep the QR image.' };
+            }
+          } catch (error: any) {
+            logger.error('QR image export error:', error);
+            response = { error: error.message || 'Unable to save the QR image.' };
+          }
+          break;
+        case 'OPEN_EMAIL':
+          try {
+            const email = String(payload?.email || '').trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+              throw new Error('The support email address is invalid.');
+            }
+            const subject = encodeURIComponent(String(payload?.subject || 'SmartMenu AI support'));
+            await Linking.openURL(`mailto:${email}?subject=${subject}`);
+            response = { success: true, message: 'Opening your email app.' };
+          } catch (error: any) {
+            logger.error('Open support email error:', error);
+            response = { error: error.message || 'Unable to open an email app on this device.' };
+          }
           break;
         case 'LOG_DATA': console.log('Log from webview', payload); response = { success: true }; break;
         default: response = { error: 'Unknown message type' };
@@ -324,7 +400,10 @@ export default function AppContent() {
           ref={webViewRef}
           source={{ uri: webViewUrl }}
           onShouldStartLoadWithRequest={(request) => {
-            if (request.url.startsWith('tel:') || request.url.startsWith('mailto:')) { Linking.openURL(request.url); return false; }
+            if (request.url.startsWith('tel:') || request.url.startsWith('mailto:')) {
+              Linking.openURL(request.url).catch((error) => logger.warn('Unable to open external link:', error));
+              return false;
+            }
             if (request.url === 'about:blank') return true;
             try {
               return new URL(request.url).origin === FRONTEND_ORIGIN;
